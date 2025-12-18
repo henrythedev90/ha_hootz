@@ -17,10 +17,19 @@ export interface Question {
 
 export interface Presentation {
   id: string;
+  userId: string;
   title: string;
   description?: string;
   createdAt: string;
   updatedAt: string;
   questions: Question[];
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 

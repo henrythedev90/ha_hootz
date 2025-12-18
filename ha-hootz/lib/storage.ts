@@ -1,52 +1,88 @@
-import { Presentation } from '@/types';
+import { Presentation } from "@/types";
 
-const STORAGE_KEY = 'ha-hootz-presentations';
+const API_BASE = "/api/presentations";
 
-export function getAllPresentations(): Presentation[] {
-  if (typeof window === 'undefined') return [];
-  
+export async function getAllPresentations(): Promise<Presentation[]> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error('Error reading presentations from storage:', error);
-    return [];
-  }
-}
-
-export function savePresentation(presentation: Presentation): void {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    const presentations = getAllPresentations();
-    const existingIndex = presentations.findIndex(p => p.id === presentation.id);
-    
-    if (existingIndex >= 0) {
-      presentations[existingIndex] = presentation;
-    } else {
-      presentations.push(presentation);
+    const response = await fetch(API_BASE);
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Unauthorized - Please sign in");
+      }
+      throw new Error("Failed to fetch presentations");
     }
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(presentations));
+    return await response.json();
   } catch (error) {
-    console.error('Error saving presentation to storage:', error);
+    console.error("Error fetching presentations:", error);
+    throw error;
   }
 }
 
-export function getPresentationById(id: string): Presentation | null {
-  const presentations = getAllPresentations();
-  return presentations.find(p => p.id === id) || null;
-}
-
-export function deletePresentation(id: string): void {
-  if (typeof window === 'undefined') return;
-  
+export async function savePresentation(
+  presentation: Presentation
+): Promise<Presentation> {
   try {
-    const presentations = getAllPresentations();
-    const filtered = presentations.filter(p => p.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    const isNew = !presentation.id || presentation.id === "new";
+    const url = isNew ? API_BASE : `${API_BASE}/${presentation.id}`;
+    const method = isNew ? "POST" : "PUT";
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(presentation),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Unauthorized - Please sign in");
+      }
+      throw new Error("Failed to save presentation");
+    }
+
+    return await response.json();
   } catch (error) {
-    console.error('Error deleting presentation from storage:', error);
+    console.error("Error saving presentation:", error);
+    throw error;
   }
 }
 
+export async function getPresentationById(
+  id: string
+): Promise<Presentation | null> {
+  try {
+    const response = await fetch(`${API_BASE}/${id}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      if (response.status === 401) {
+        throw new Error("Unauthorized - Please sign in");
+      }
+      throw new Error("Failed to fetch presentation");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching presentation:", error);
+    throw error;
+  }
+}
+
+export async function deletePresentation(id: string): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE}/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Unauthorized - Please sign in");
+      }
+      throw new Error("Failed to delete presentation");
+    }
+  } catch (error) {
+    console.error("Error deleting presentation:", error);
+    throw error;
+  }
+}
