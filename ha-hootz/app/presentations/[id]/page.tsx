@@ -8,6 +8,7 @@ import { getPresentationById, savePresentation } from "@/lib/storage";
 import { generateId } from "@/lib/utils";
 import QuestionList from "@/components/QuestionList";
 import Modal from "@/components/Modal";
+import Loading from "@/components/Loading";
 import Link from "next/link";
 
 export default function PresentationEditor() {
@@ -213,11 +214,7 @@ export default function PresentationEditor() {
   };
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!session || !presentation) {

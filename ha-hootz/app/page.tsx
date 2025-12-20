@@ -7,6 +7,7 @@ import { Presentation } from "@/types";
 import { getAllPresentations, deletePresentation } from "@/lib/storage";
 import PresentationCard from "@/components/PresentationCard";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
+import Loading from "@/components/Loading";
 import Link from "next/link";
 
 export default function Home() {
@@ -79,11 +80,7 @@ export default function Home() {
   };
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!session) {
