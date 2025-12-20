@@ -5,11 +5,27 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 ## Features
 
 ### ✅ Host-Created Presentations (MVP)
-- Create and manage trivia game presentations
-- Add multiple-choice and true/false questions
-- Edit and delete questions
-- User authentication and profiles
-- Persistent storage with MongoDB Atlas
+
+- **Presentation Management**
+
+  - Create and manage trivia game presentations
+  - Add multiple-choice and true/false questions
+  - Edit and delete questions
+  - Save presentations with success modal
+  - Delete presentations with confirmation modal
+
+- **User Authentication**
+
+  - Secure user registration and login
+  - Password visibility toggle on sign in/sign up
+  - User profiles with MongoDB Atlas storage
+  - Session management with NextAuth.js
+
+- **User Experience**
+  - Custom loading animations
+  - Reusable modal components
+  - Responsive design with dark mode support
+  - Intuitive UI with modern styling
 
 ## Tech Stack
 
@@ -31,17 +47,20 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <your-repo-url>
 cd ha-hootz
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Set up MongoDB Atlas (see [MONGODB_SETUP.md](./MONGODB_SETUP.md) for detailed instructions):
+
    - Create a MongoDB Atlas account
    - Create a cluster
    - Create a database user
@@ -49,6 +68,7 @@ npm install
    - Get your connection string
 
 4. Create a `.env.local` file in the root directory:
+
 ```env
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
 MONGODB_DB_NAME=ha-hootz
@@ -56,12 +76,14 @@ NEXTAUTH_SECRET=your_generated_secret_here
 NEXTAUTH_URL=http://localhost:3000
 ```
 
-   Generate a secret:
+Generate a secret:
+
 ```bash
 openssl rand -base64 32
 ```
 
 5. Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -71,10 +93,18 @@ npm run dev
 ### First Steps
 
 1. **Create an Account**: Navigate to `/auth/signup` to create your host profile
+   - Use the eye icon to toggle password visibility while typing
+   - Both password fields have visibility toggles for convenience
 2. **Sign In**: Use your credentials to sign in at `/auth/signin`
+   - Password visibility toggle available for easy verification
 3. **Create a Presentation**: Click "New Presentation" to start creating your trivia game
 4. **Add Questions**: Add multiple-choice or true/false questions to your presentation
-5. **Save & Manage**: Your presentations are automatically saved to MongoDB Atlas
+   - Questions can be added even before setting a title (saved locally)
+   - Questions are automatically saved once the presentation has a title
+5. **Save & Manage**:
+   - Click "Save Presentation" to persist your work to MongoDB Atlas
+   - After saving, choose to go to dashboard, continue editing, or start presentation (coming soon)
+   - Delete presentations with confirmation modal for safety
 
 ## Project Structure
 
@@ -111,13 +141,45 @@ ha-hootz/
     └── next-auth.d.ts                      # NextAuth type extensions
 ```
 
+## Reusable Components
+
+### Modal Components
+
+- **`Modal.tsx`**: Base reusable modal component with customizable size, title, and content
+- **`DeleteConfirmationModal.tsx`**: Specialized modal for delete confirmations with customizable messages
+- **`Loading.tsx`**: Loading component with custom animation, supports full-screen or inline modes
+
+### Usage Examples
+
+```tsx
+// Basic Modal
+<Modal isOpen={isOpen} onClose={handleClose} title="My Modal">
+  <p>Modal content here</p>
+</Modal>
+
+// Delete Confirmation
+<DeleteConfirmationModal
+  isOpen={isOpen}
+  onClose={handleClose}
+  onConfirm={handleDelete}
+  title="My Presentation"
+  itemName="presentation"
+  deleting={isDeleting}
+/>
+
+// Loading State
+<Loading message="Loading presentations..." />
+```
+
 ## API Routes
 
 ### Authentication
+
 - `POST /api/auth/register` - Register a new user
 - `GET/POST /api/auth/[...nextauth]` - NextAuth endpoints
 
 ### Presentations
+
 - `GET /api/presentations` - Get all presentations for current user
 - `POST /api/presentations` - Create a new presentation
 - `GET /api/presentations/[id]` - Get a specific presentation
@@ -127,6 +189,7 @@ ha-hootz/
 ## Database Schema
 
 ### Users Collection
+
 ```typescript
 {
   _id: ObjectId,
@@ -139,6 +202,7 @@ ha-hootz/
 ```
 
 ### Presentations Collection
+
 ```typescript
 {
   _id: ObjectId,
@@ -153,12 +217,12 @@ ha-hootz/
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `MONGODB_URI` | MongoDB Atlas connection string | Yes |
-| `MONGODB_DB_NAME` | Database name (defaults to 'ha-hootz') | No |
-| `NEXTAUTH_SECRET` | Secret for JWT signing | Yes |
-| `NEXTAUTH_URL` | Base URL of your application | Yes |
+| Variable          | Description                            | Required |
+| ----------------- | -------------------------------------- | -------- |
+| `MONGODB_URI`     | MongoDB Atlas connection string        | Yes      |
+| `MONGODB_DB_NAME` | Database name (defaults to 'ha-hootz') | No       |
+| `NEXTAUTH_SECRET` | Secret for JWT signing                 | Yes      |
+| `NEXTAUTH_URL`    | Base URL of your application           | Yes      |
 
 ## Development
 
