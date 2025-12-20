@@ -7,6 +7,7 @@ import { Presentation, Question } from "@/types";
 import { getPresentationById, savePresentation } from "@/lib/storage";
 import { generateId } from "@/lib/utils";
 import QuestionList from "@/components/QuestionList";
+import Modal from "@/components/Modal";
 import Link from "next/link";
 
 export default function PresentationEditor() {
@@ -280,51 +281,56 @@ export default function PresentationEditor() {
       </div>
 
       {/* Save Success Modal */}
-      {showSaveSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Presentation Saved!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              What would you like to do next?
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  // Future implementation - Start Presentation
-                  alert("Start Presentation feature coming soon!");
-                }}
-                disabled
-                className="px-6 py-3 bg-gray-400 text-white rounded-md font-medium cursor-not-allowed opacity-60"
-              >
-                Start Presentation
-                <span className="ml-2 text-xs">(Coming Soon)</span>
-              </button>
-              <button
-                onClick={() => {
-                  router.push("/");
-                }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
-              >
-                Go to Dashboard
-              </button>
-              <button
-                onClick={() => {
-                  setShowSaveSuccessModal(false);
-                  // If it was a new presentation, update the URL
-                  if (isNew && savedPresentationId) {
-                    router.replace(`/presentations/${savedPresentationId}`);
-                  }
-                }}
-                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-medium transition-colors"
-              >
-                Continue Editing
-              </button>
-            </div>
+      <Modal
+        isOpen={showSaveSuccessModal}
+        onClose={() => {
+          setShowSaveSuccessModal(false);
+          // If it was a new presentation, update the URL
+          if (isNew && savedPresentationId) {
+            router.replace(`/presentations/${savedPresentationId}`);
+          }
+        }}
+        title="Presentation Saved!"
+      >
+        <div>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
+            What would you like to do next?
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                // Future implementation - Start Presentation
+                alert("Start Presentation feature coming soon!");
+              }}
+              disabled
+              className="px-6 py-3 bg-gray-400 text-white rounded-md font-medium cursor-not-allowed opacity-60"
+            >
+              Start Presentation
+              <span className="ml-2 text-xs">(Coming Soon)</span>
+            </button>
+            <button
+              onClick={() => {
+                router.push("/");
+              }}
+              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+            >
+              Go to Dashboard
+            </button>
+            <button
+              onClick={() => {
+                setShowSaveSuccessModal(false);
+                // If it was a new presentation, update the URL
+                if (isNew && savedPresentationId) {
+                  router.replace(`/presentations/${savedPresentationId}`);
+                }
+              }}
+              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-medium transition-colors"
+            >
+              Continue Editing
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }
