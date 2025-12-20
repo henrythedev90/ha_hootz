@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { Question } from '@/types';
-import QuestionEditor from './QuestionEditor';
-import { useState } from 'react';
+import { Question } from "@/types";
+import QuestionEditor from "./QuestionEditor";
+import { useState } from "react";
 
 interface QuestionListProps {
   questions: Question[];
@@ -11,7 +11,12 @@ interface QuestionListProps {
   onAdd: (question: Question) => void;
 }
 
-export default function QuestionList({ questions, onUpdate, onDelete, onAdd }: QuestionListProps) {
+export default function QuestionList({
+  questions,
+  onUpdate,
+  onDelete,
+  onAdd,
+}: QuestionListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -62,9 +67,9 @@ export default function QuestionList({ questions, onUpdate, onDelete, onAdd }: Q
       {isAdding && (
         <QuestionEditor
           question={{
-            id: 'new',
-            type: 'multiple-choice',
-            text: '',
+            id: "new",
+            type: "multiple-choice",
+            text: "",
             options: [],
           }}
           onSave={handleSave}
@@ -87,7 +92,9 @@ export default function QuestionList({ questions, onUpdate, onDelete, onAdd }: Q
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
-                      {question.type === 'multiple-choice' ? 'Multiple Choice' : 'True/False'}
+                      {question.type === "multiple-choice"
+                        ? "Multiple Choice"
+                        : "True/False"}
                     </span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -99,11 +106,11 @@ export default function QuestionList({ questions, onUpdate, onDelete, onAdd }: Q
                         key={option.id}
                         className={`text-sm ${
                           option.isCorrect
-                            ? 'text-green-600 dark:text-green-400 font-medium'
-                            : 'text-gray-600 dark:text-gray-400'
+                            ? "text-green-600 dark:text-green-400 font-medium"
+                            : "text-gray-600 dark:text-gray-400"
                         }`}
                       >
-                        {option.isCorrect ? '✓ ' : '○ '}
+                        {option.isCorrect ? "✓ " : "○ "}
                         {option.text}
                       </div>
                     ))}
@@ -131,4 +138,3 @@ export default function QuestionList({ questions, onUpdate, onDelete, onAdd }: Q
     </div>
   );
 }
-

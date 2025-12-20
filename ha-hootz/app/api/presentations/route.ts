@@ -1,19 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { getPresentationsCollection } from '@/lib/db';
-import { Presentation } from '@/types';
-import { ObjectId } from 'mongodb';
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { getPresentationsCollection } from "@/lib/db";
+import { Presentation } from "@/types";
+import { ObjectId } from "mongodb";
 
 // GET all presentations for the current user
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const presentationsCollection = await getPresentationsCollection();
@@ -32,9 +29,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedPresentations);
   } catch (error) {
-    console.error('Error fetching presentations:', error);
+    console.error("Error fetching presentations:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -44,31 +41,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
     const { title, description, questions } = body;
 
     if (!title) {
-      return NextResponse.json(
-        { error: 'Title is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
     const presentationsCollection = await getPresentationsCollection();
     const now = new Date().toISOString();
 
-    const presentation: Omit<Presentation, 'id'> = {
+    const presentation: Omit<Presentation, "id"> = {
       userId: session.user.id,
       title,
-      description: description || '',
+      description: description || "",
       createdAt: now,
       updatedAt: now,
       questions: questions || [],
@@ -84,11 +75,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating presentation:', error);
+    console.error("Error creating presentation:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
-

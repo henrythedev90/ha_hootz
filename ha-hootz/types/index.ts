@@ -1,4 +1,4 @@
-export type QuestionType = 'multiple-choice' | 'true-false';
+export type QuestionType = "multiple-choice" | "true-false";
 
 export interface AnswerOption {
   id: string;
@@ -32,4 +32,3 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
-

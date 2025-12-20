@@ -1,17 +1,16 @@
-import clientPromise from './mongodb';
+import clientPromise from "./mongodb";
 
 export async function getDb() {
   const client = await clientPromise;
-  return client.db(process.env.MONGODB_DB_NAME || 'ha-hootz');
+  return client.db(process.env.MONGODB_DB_NAME || "ha-hootz");
 }
 
-export async function getUsersCollection() {
+export async function getHostCollection() {
   const db = await getDb();
-  return db.collection('users');
+  return db.collection("hosts");
 }
 
 export async function getPresentationsCollection() {
   const db = await getDb();
-  return db.collection('presentations');
+  return db.collection("presentations");
 }
-

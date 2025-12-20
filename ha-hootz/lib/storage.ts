@@ -9,12 +9,27 @@ export async function getAllPresentations(): Promise<Presentation[]> {
       if (response.status === 401) {
         throw new Error("Unauthorized - Please sign in");
       }
-      throw new Error("Failed to fetch presentations");
+
+      // Try to extract error message from response
+      let errorMessage = "Failed to fetch presentations";
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // If response is not JSON, use default message
+      }
+
+      throw new Error(errorMessage);
     }
     return await response.json();
   } catch (error) {
     console.error("Error fetching presentations:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to fetch presentations");
   }
 }
 
@@ -38,13 +53,29 @@ export async function savePresentation(
       if (response.status === 401) {
         throw new Error("Unauthorized - Please sign in");
       }
-      throw new Error("Failed to save presentation");
+
+      // Try to extract error message from response
+      let errorMessage = "Failed to save presentation";
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // If response is not JSON, use default message
+      }
+
+      throw new Error(errorMessage);
     }
 
     return await response.json();
   } catch (error) {
     console.error("Error saving presentation:", error);
-    throw error;
+    // Re-throw the error, preserving the message
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to save presentation");
   }
 }
 
@@ -60,12 +91,27 @@ export async function getPresentationById(
       if (response.status === 401) {
         throw new Error("Unauthorized - Please sign in");
       }
-      throw new Error("Failed to fetch presentation");
+
+      // Try to extract error message from response
+      let errorMessage = "Failed to fetch presentation";
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // If response is not JSON, use default message
+      }
+
+      throw new Error(errorMessage);
     }
     return await response.json();
   } catch (error) {
     console.error("Error fetching presentation:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to fetch presentation");
   }
 }
 
@@ -79,10 +125,25 @@ export async function deletePresentation(id: string): Promise<void> {
       if (response.status === 401) {
         throw new Error("Unauthorized - Please sign in");
       }
-      throw new Error("Failed to delete presentation");
+
+      // Try to extract error message from response
+      let errorMessage = "Failed to delete presentation";
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // If response is not JSON, use default message
+      }
+
+      throw new Error(errorMessage);
     }
   } catch (error) {
     console.error("Error deleting presentation:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to delete presentation");
   }
 }
