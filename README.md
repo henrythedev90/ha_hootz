@@ -1,6 +1,6 @@
 # Ha Hootz - Trivia Game Creator
 
-A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB Atlas, and NextAuth.js.
+A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB Atlas, Redis, and NextAuth.js.
 
 ## Features
 
@@ -9,10 +9,18 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 - **Presentation Management**
 
   - Create and manage trivia game presentations
-  - Add multiple-choice and true/false questions
+  - Add multiple-choice questions (4 options required)
   - Edit and delete questions
   - Save presentations with success modal
   - Delete presentations with confirmation modal
+  - Start game sessions from saved presentations
+
+- **Game Sessions**
+
+  - Start live game sessions from presentations
+  - Redis-powered session management
+  - Session status tracking (waiting, live, ended)
+  - Real-time game state storage (ready for Socket.io integration)
 
 - **User Authentication**
 
@@ -31,7 +39,8 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
-- **Database**: MongoDB Atlas
+- **Database**: MongoDB Atlas (for persistent data)
+- **Cache/Real-time**: Redis (Upstash compatible, serverless-safe)
 - **Authentication**: NextAuth.js v5
 - **Styling**: Tailwind CSS v4
 - **Password Hashing**: bcryptjs
@@ -67,11 +76,18 @@ npm install
    - Whitelist your IP address
    - Get your connection string
 
-4. Create a `.env.local` file in the root directory:
+4. Set up Redis (see [REDIS_SETUP.md](./REDIS_SETUP.md) for detailed instructions):
+
+   - Create a Redis instance (Upstash recommended for serverless)
+   - Get your Redis connection URL
+   - Redis is used for real-time game session management
+
+5. Create a `.env.local` file in the root directory:
 
 ```env
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
 MONGODB_DB_NAME=ha-hootz
+REDIS_URL=redis://default:<password>@<host>:<port>
 NEXTAUTH_SECRET=your_generated_secret_here
 NEXTAUTH_URL=http://localhost:3000
 ```
@@ -82,13 +98,15 @@ Generate a secret:
 openssl rand -base64 32
 ```
 
-5. Run the development server:
+6. Run the development server:
 
 ```bash
 npm run dev
 ```
 
-6. Open [http://localhost:3000](http://localhost:3000) in your browser
+7. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+   - You should see a Redis connection log in your terminal: `✅ Redis configured - URL: redis://...`
 
 ### First Steps
 
@@ -98,13 +116,19 @@ npm run dev
 2. **Sign In**: Use your credentials to sign in at `/auth/signin`
    - Password visibility toggle available for easy verification
 3. **Create a Presentation**: Click "New Presentation" to start creating your trivia game
-4. **Add Questions**: Add multiple-choice or true/false questions to your presentation
+4. **Add Questions**: Add multiple-choice questions to your presentation
+   - Each question must have exactly 4 answer options
+   - At least one option must be marked as correct
    - Questions can be added even before setting a title (saved locally)
    - Questions are automatically saved once the presentation has a title
 5. **Save & Manage**:
    - Click "Save Presentation" to persist your work to MongoDB Atlas
-   - After saving, choose to go to dashboard, continue editing, or start presentation (coming soon)
+   - After saving, choose to go to dashboard, continue editing, or start a game session
    - Delete presentations with confirmation modal for safety
+6. **Start Game Sessions**:
+   - Click "Start Presentation" button on saved presentations
+   - Creates a Redis-backed game session ready for players to join
+   - Game session page coming soon for live gameplay
 
 ## Project Structure
 
@@ -115,9 +139,13 @@ ha-hootz/
 │   │   ├── auth/
 │   │   │   ├── [...nextauth]/route.ts    # NextAuth configuration
 │   │   │   └── register/route.ts         # User registration
-│   │   └── presentations/
-│   │       ├── route.ts                   # GET all, POST new
-│   │       └── [id]/route.ts              # GET, PUT, DELETE by ID
+│   │   ├── presentations/
+│   │   │   ├── route.ts                   # GET all, POST new
+│   │   │   └── [id]/route.ts              # GET, PUT, DELETE by ID
+│   │   ├── sessions/
+│   │   │   ├── start/route.ts             # POST - Start game session
+│   │   │   └── [sessionId]/route.ts       # GET, PUT - Manage session
+│   │   └── test-redis/route.ts             # Test Redis connection
 │   ├── auth/
 │   │   ├── signin/page.tsx                # Sign in page
 │   │   └── signup/page.tsx                # Sign up page
@@ -134,6 +162,11 @@ ha-hootz/
 │   ├── auth.ts                            # Session helper
 │   ├── db.ts                               # Database helpers
 │   ├── mongodb.ts                          # MongoDB connection
+│   ├── redis/
+│   │   ├── client.ts                       # Redis connection (serverless-safe)
+│   │   └── triviaRedis.ts                  # Redis helpers for trivia sessions
+│   ├── types.ts                            # Trivia session types
+│   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
 │   └── utils.ts                            # Utility functions
 └── types/
@@ -186,6 +219,12 @@ ha-hootz/
 - `PUT /api/presentations/[id]` - Update a presentation
 - `DELETE /api/presentations/[id]` - Delete a presentation
 
+### Game Sessions
+
+- `POST /api/sessions/start` - Start a game session from a presentation
+- `GET /api/sessions/[sessionId]` - Get session status and details
+- `PUT /api/sessions/[sessionId]` - Update session status (waiting, live, ended)
+
 ## Database Schema
 
 ### Users Collection
@@ -217,12 +256,13 @@ ha-hootz/
 
 ## Environment Variables
 
-| Variable          | Description                            | Required |
-| ----------------- | -------------------------------------- | -------- |
-| `MONGODB_URI`     | MongoDB Atlas connection string        | Yes      |
-| `MONGODB_DB_NAME` | Database name (defaults to 'ha-hootz') | No       |
-| `NEXTAUTH_SECRET` | Secret for JWT signing                 | Yes      |
-| `NEXTAUTH_URL`    | Base URL of your application           | Yes      |
+| Variable          | Description                               | Required |
+| ----------------- | ----------------------------------------- | -------- |
+| `MONGODB_URI`     | MongoDB Atlas connection string           | Yes      |
+| `MONGODB_DB_NAME` | Database name (defaults to 'ha-hootz')    | No       |
+| `REDIS_URL`       | Redis connection URL (Upstash compatible) | Yes      |
+| `NEXTAUTH_SECRET` | Secret for JWT signing                    | Yes      |
+| `NEXTAUTH_URL`    | Base URL of your application              | Yes      |
 
 ## Development
 
@@ -250,14 +290,14 @@ npm run lint
 
 ## Next Steps / Future Features
 
+- [x] Redis integration for game sessions
+- [x] Start game session functionality
 - [ ] Player participation (join games with codes)
-- [ ] Real-time game sessions
+- [ ] Real-time game sessions (Socket.io integration)
 - [ ] Live results and leaderboards
 - [ ] Question timers
+- [ ] Game session host view
+- [ ] Game session player view
 - [ ] Image support for questions
 - [ ] Presentation sharing and collaboration
 - [ ] Game history and analytics
-
-## License
-
-MIT

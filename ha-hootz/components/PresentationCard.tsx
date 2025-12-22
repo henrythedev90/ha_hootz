@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Presentation } from "@/types";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface PresentationCardProps {
   presentation: Presentation;
@@ -13,6 +15,50 @@ export default function PresentationCard({
   presentation,
   onDelete,
 }: PresentationCardProps) {
+  const router = useRouter();
+  const [starting, setStarting] = useState(false);
+
+  const handleStartPresentation = async () => {
+    if (presentation.questions.length === 0) {
+      alert(
+        "Please add at least one question before starting the presentation."
+      );
+      return;
+    }
+
+    try {
+      setStarting(true);
+      const response = await fetch("/api/sessions/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          presentationId: presentation.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to start presentation");
+      }
+
+      // Navigate to game session page (to be created)
+      // For now, show session ID and navigate to dashboard
+      alert(
+        `Game session started! Session ID: ${data.sessionId}\n\nGame session page coming soon!`
+      );
+      // TODO: Navigate to game session page when created
+      // router.push(`/sessions/${data.sessionId}`);
+    } catch (error: any) {
+      console.error("Error starting presentation:", error);
+      alert(error.message || "Failed to start presentation. Please try again.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start mb-4">
@@ -34,15 +80,16 @@ export default function PresentationCard({
       </div>
       <div className="flex gap-2">
         <button
-          onClick={() => {
-            // Future implementation - Start Presentation
-            alert("Start Presentation feature coming soon!");
-          }}
-          disabled
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium cursor-not-allowed opacity-60 disabled:opacity-60"
-          title="Start Presentation (Coming Soon)"
+          onClick={handleStartPresentation}
+          disabled={starting || presentation.questions.length === 0}
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+          title={
+            presentation.questions.length === 0
+              ? "Add at least one question to start"
+              : "Start Presentation"
+          }
         >
-          Start
+          {starting ? "Starting..." : "Start"}
         </button>
         <Link
           href={`/presentations/${presentation.id}`}
