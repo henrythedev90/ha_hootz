@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import redisPromise from "@/lib/redis";
+import redisPromise from "@/lib/redis/client";
 
 // This route will trigger Redis module to load and show the log
 export async function GET() {

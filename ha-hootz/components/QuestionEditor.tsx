@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Question, QuestionType, AnswerOption } from '@/types';
-import { generateId } from '@/lib/utils';
+import { useState } from "react";
+import { Question, AnswerOption } from "@/types";
+import { generateId } from "@/lib/utils";
 
 interface QuestionEditorProps {
   question: Question;
@@ -11,28 +11,18 @@ interface QuestionEditorProps {
   onDelete?: () => void;
 }
 
-export default function QuestionEditor({ question, onSave, onCancel, onDelete }: QuestionEditorProps) {
+export default function QuestionEditor({
+  question,
+  onSave,
+  onCancel,
+  onDelete,
+}: QuestionEditorProps) {
   const [editedQuestion, setEditedQuestion] = useState<Question>(question);
-  const [newOptionText, setNewOptionText] = useState('');
-
-  const handleTypeChange = (type: QuestionType) => {
-    if (type === 'true-false') {
-      setEditedQuestion({
-        ...editedQuestion,
-        type,
-        options: [
-          { id: generateId(), text: 'True', isCorrect: editedQuestion.options[0]?.isCorrect || false },
-          { id: generateId(), text: 'False', isCorrect: editedQuestion.options[1]?.isCorrect || false },
-        ],
-      });
-    } else {
-      setEditedQuestion({ ...editedQuestion, type });
-    }
-  };
+  const [newOptionText, setNewOptionText] = useState("");
 
   const handleAddOption = () => {
     if (!newOptionText.trim()) return;
-    
+
     setEditedQuestion({
       ...editedQuestion,
       options: [
@@ -40,13 +30,16 @@ export default function QuestionEditor({ question, onSave, onCancel, onDelete }:
         { id: generateId(), text: newOptionText.trim(), isCorrect: false },
       ],
     });
-    setNewOptionText('');
+    setNewOptionText("");
   };
 
-  const handleUpdateOption = (optionId: string, updates: Partial<AnswerOption>) => {
+  const handleUpdateOption = (
+    optionId: string,
+    updates: Partial<AnswerOption>
+  ) => {
     setEditedQuestion({
       ...editedQuestion,
-      options: editedQuestion.options.map(opt =>
+      options: editedQuestion.options.map((opt) =>
         opt.id === optionId ? { ...opt, ...updates } : opt
       ),
     });
@@ -55,21 +48,21 @@ export default function QuestionEditor({ question, onSave, onCancel, onDelete }:
   const handleDeleteOption = (optionId: string) => {
     setEditedQuestion({
       ...editedQuestion,
-      options: editedQuestion.options.filter(opt => opt.id !== optionId),
+      options: editedQuestion.options.filter((opt) => opt.id !== optionId),
     });
   };
 
   const handleSave = () => {
     if (!editedQuestion.text.trim()) {
-      alert('Question text is required');
+      alert("Question text is required");
       return;
     }
     if (editedQuestion.options.length < 2) {
-      alert('At least 2 answer options are required');
+      alert("At least 2 answer options are required");
       return;
     }
-    if (!editedQuestion.options.some(opt => opt.isCorrect)) {
-      alert('At least one correct answer is required');
+    if (!editedQuestion.options.some((opt) => opt.isCorrect)) {
+      alert("At least one correct answer is required");
       return;
     }
     onSave(editedQuestion);
@@ -79,39 +72,13 @@ export default function QuestionEditor({ question, onSave, onCancel, onDelete }:
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-4">
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Question Type
-        </label>
-        <div className="flex gap-4">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              value="multiple-choice"
-              checked={editedQuestion.type === 'multiple-choice'}
-              onChange={() => handleTypeChange('multiple-choice')}
-              className="mr-2"
-            />
-            Multiple Choice
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              value="true-false"
-              checked={editedQuestion.type === 'true-false'}
-              onChange={() => handleTypeChange('true-false')}
-              className="mr-2"
-            />
-            True/False
-          </label>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Question Text
         </label>
         <textarea
           value={editedQuestion.text}
-          onChange={(e) => setEditedQuestion({ ...editedQuestion, text: e.target.value })}
+          onChange={(e) =>
+            setEditedQuestion({ ...editedQuestion, text: e.target.value })
+          }
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           rows={3}
           placeholder="Enter your question..."
@@ -128,48 +95,51 @@ export default function QuestionEditor({ question, onSave, onCancel, onDelete }:
               <input
                 type="text"
                 value={option.text}
-                onChange={(e) => handleUpdateOption(option.id, { text: e.target.value })}
+                onChange={(e) =>
+                  handleUpdateOption(option.id, { text: e.target.value })
+                }
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                disabled={editedQuestion.type === 'true-false'}
               />
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={option.isCorrect}
-                  onChange={(e) => handleUpdateOption(option.id, { isCorrect: e.target.checked })}
+                  onChange={(e) =>
+                    handleUpdateOption(option.id, {
+                      isCorrect: e.target.checked,
+                    })
+                  }
                   className="w-4 h-4"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Correct</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Correct
+                </span>
               </label>
-              {editedQuestion.type === 'multiple-choice' && (
-                <button
-                  onClick={() => handleDeleteOption(option.id)}
-                  className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
-                >
-                  Delete
-                </button>
-              )}
+              <button
+                onClick={() => handleDeleteOption(option.id)}
+                className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+              >
+                Delete
+              </button>
             </div>
           ))}
         </div>
-        {editedQuestion.type === 'multiple-choice' && (
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newOptionText}
-              onChange={(e) => setNewOptionText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddOption()}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Add new option..."
-            />
-            <button
-              onClick={handleAddOption}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-            >
-              Add Option
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newOptionText}
+            onChange={(e) => setNewOptionText(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleAddOption()}
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="Add new option..."
+          />
+          <button
+            onClick={handleAddOption}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+          >
+            Add Option
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 justify-end">
@@ -197,4 +167,3 @@ export default function QuestionEditor({ question, onSave, onCancel, onDelete }:
     </div>
   );
 }
-

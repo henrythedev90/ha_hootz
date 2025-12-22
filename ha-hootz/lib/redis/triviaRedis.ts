@@ -1,11 +1,12 @@
-import redisPromise from "./redis";
-import { TriviaSession, TriviaQuestion } from "./types";
+import redisPromise from "./client";
+import { TriviaSession, TriviaQuestion } from "../types";
 
 async function getRedis() {
   return await redisPromise;
 }
 
 const sessionKey = (sessionId: string) => `trivia:session:${sessionId}`;
+// const joinCodeKey = (joinCode: string) => `trivia:joinCode:${joinCode}`;
 const playersKey = (sessionId: string) => `trivia:players:${sessionId}`;
 const questionKey = (sessionId: string, index: number) =>
   `trivia:${sessionId}:question${index}`;

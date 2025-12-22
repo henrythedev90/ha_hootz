@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getSession as getRedisSession, updateSessionStatus } from "@/lib/traviaRedis";
+import {
+  getSession as getRedisSession,
+  updateSessionStatus,
+} from "@/lib/redis/triviaRedis";
 
 // GET - Get session status
 export async function GET(
@@ -18,10 +21,7 @@ export async function GET(
     const redisSession = await getRedisSession(sessionId);
 
     if (!redisSession) {
-      return NextResponse.json(
-        { error: "Session not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
     // Only host can view session details
@@ -68,10 +68,7 @@ export async function PUT(
     const redisSession = await getRedisSession(sessionId);
 
     if (!redisSession) {
-      return NextResponse.json(
-        { error: "Session not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
     // Only host can update session
@@ -79,7 +76,10 @@ export async function PUT(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await updateSessionStatus(sessionId, status as "waiting" | "live" | "ended");
+    await updateSessionStatus(
+      sessionId,
+      status as "waiting" | "live" | "ended"
+    );
 
     return NextResponse.json({
       success: true,
@@ -94,4 +94,3 @@ export async function PUT(
     );
   }
 }
-

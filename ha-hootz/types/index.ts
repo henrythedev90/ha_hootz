@@ -1,5 +1,3 @@
-export type QuestionType = "multiple-choice" | "true-false";
-
 export interface AnswerOption {
   id: string;
   text: string;
@@ -8,7 +6,7 @@ export interface AnswerOption {
 
 export interface Question {
   id: string;
-  type: QuestionType;
+  type: "multiple-choice";
   text: string;
   timeLimit?: number; // in seconds
   points?: number;

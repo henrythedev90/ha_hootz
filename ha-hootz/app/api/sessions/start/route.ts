@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getPresentationsCollection } from "@/lib/db";
-import { createSession, setQuestion } from "@/lib/traviaRedis";
+import { createSession, setQuestion } from "@/lib/redis/triviaRedis";
 import { convertQuestionToTrivia } from "@/lib/questionConverter";
 import { TriviaSession } from "@/lib/types";
 import { generateId } from "@/lib/utils";
