@@ -27,6 +27,7 @@ export default function PresentationEditor() {
   const [savedPresentationId, setSavedPresentationId] = useState<string | null>(
     null
   );
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -213,6 +214,55 @@ export default function PresentationEditor() {
     }
   };
 
+  const handleStartPresentation = async () => {
+    if (!presentation || presentation.id === "new") {
+      alert("Please save the presentation before starting.");
+      return;
+    }
+
+    if (presentation.questions.length === 0) {
+      alert(
+        "Please add at least one question before starting the presentation."
+      );
+      return;
+    }
+
+    try {
+      setStarting(true);
+      const response = await fetch("/api/sessions/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          presentationId: presentation.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to start presentation");
+      }
+
+      // Close the save success modal
+      setShowSaveSuccessModal(false);
+
+      // Navigate to game session page (to be created)
+      // For now, show session ID
+      alert(
+        `Game session started! Session ID: ${data.sessionId}\n\nGame session page coming soon!`
+      );
+      // TODO: Navigate to game session page when created
+      // router.push(`/sessions/${data.sessionId}`);
+    } catch (error: any) {
+      console.error("Error starting presentation:", error);
+      alert(error.message || "Failed to start presentation. Please try again.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
   if (status === "loading" || loading) {
     return <Loading />;
   }
@@ -295,15 +345,13 @@ export default function PresentationEditor() {
           </p>
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => {
-                // Future implementation - Start Presentation
-                alert("Start Presentation feature coming soon!");
-              }}
-              disabled
-              className="px-6 py-3 bg-gray-400 text-white rounded-md font-medium cursor-not-allowed opacity-60"
+              onClick={handleStartPresentation}
+              disabled={
+                starting || !presentation || presentation.questions.length === 0
+              }
+              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Start Presentation
-              <span className="ml-2 text-xs">(Coming Soon)</span>
+              {starting ? "Starting..." : "Start Presentation"}
             </button>
             <button
               onClick={() => {
