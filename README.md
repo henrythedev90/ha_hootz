@@ -72,6 +72,7 @@ npm install
 ```env
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
 MONGODB_DB_NAME=ha-hootz
+REDIS_URL=redis://default:<password>@<host>:<port>
 NEXTAUTH_SECRET=your_generated_secret_here
 NEXTAUTH_URL=http://localhost:3000
 ```
@@ -134,6 +135,10 @@ ha-hootz/
 │   ├── auth.ts                            # Session helper
 │   ├── db.ts                               # Database helpers
 │   ├── mongodb.ts                          # MongoDB connection
+│   ├── redis.ts                            # Redis connection (serverless-safe)
+│   ├── traviaRedis.ts                      # Redis helpers for trivia sessions
+│   ├── types.ts                            # Trivia session types
+│   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
 │   └── utils.ts                            # Utility functions
 └── types/
@@ -217,12 +222,13 @@ ha-hootz/
 
 ## Environment Variables
 
-| Variable          | Description                            | Required |
-| ----------------- | -------------------------------------- | -------- |
-| `MONGODB_URI`     | MongoDB Atlas connection string        | Yes      |
-| `MONGODB_DB_NAME` | Database name (defaults to 'ha-hootz') | No       |
-| `NEXTAUTH_SECRET` | Secret for JWT signing                 | Yes      |
-| `NEXTAUTH_URL`    | Base URL of your application           | Yes      |
+| Variable          | Description                               | Required |
+| ----------------- | ----------------------------------------- | -------- |
+| `MONGODB_URI`     | MongoDB Atlas connection string           | Yes      |
+| `MONGODB_DB_NAME` | Database name (defaults to 'ha-hootz')    | No       |
+| `REDIS_URL`       | Redis connection URL (Upstash compatible) | Yes      |
+| `NEXTAUTH_SECRET` | Secret for JWT signing                    | Yes      |
+| `NEXTAUTH_URL`    | Base URL of your application              | Yes      |
 
 ## Development
 
