@@ -25,7 +25,11 @@ export function convertQuestionToTrivia(
   }
 
   // Map index to letter (A, B, C, D)
-  const correctLetter = ["A", "B", "C", "D"][correctIndex] as "A" | "B" | "C" | "D";
+  const correctLetter = ["A", "B", "C", "D"][correctIndex] as
+    | "A"
+    | "B"
+    | "C"
+    | "D";
 
   return {
     text: question.text,
@@ -47,10 +51,26 @@ export function convertTriviaToQuestion(
   questionId: string
 ): Question {
   const options = [
-    { id: `${questionId}-A`, text: triviaQuestion.A, isCorrect: triviaQuestion.correct === "A" },
-    { id: `${questionId}-B`, text: triviaQuestion.B, isCorrect: triviaQuestion.correct === "B" },
-    { id: `${questionId}-C`, text: triviaQuestion.C, isCorrect: triviaQuestion.correct === "C" },
-    { id: `${questionId}-D`, text: triviaQuestion.D, isCorrect: triviaQuestion.correct === "D" },
+    {
+      id: `${questionId}-A`,
+      text: triviaQuestion.A,
+      isCorrect: triviaQuestion.correct === "A",
+    },
+    {
+      id: `${questionId}-B`,
+      text: triviaQuestion.B,
+      isCorrect: triviaQuestion.correct === "B",
+    },
+    {
+      id: `${questionId}-C`,
+      text: triviaQuestion.C,
+      isCorrect: triviaQuestion.correct === "C",
+    },
+    {
+      id: `${questionId}-D`,
+      text: triviaQuestion.D,
+      isCorrect: triviaQuestion.correct === "D",
+    },
   ];
 
   return {
@@ -61,4 +81,3 @@ export function convertTriviaToQuestion(
     options,
   };
 }
-
