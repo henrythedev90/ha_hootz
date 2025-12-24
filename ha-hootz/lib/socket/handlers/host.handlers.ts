@@ -5,6 +5,8 @@ import {
   getSessionCodeFromId,
   updateSessionStatus,
   getSessionIdFromCode,
+  getQuestion,
+  getSession,
 } from "../../redis/triviaRedis";
 
 async function getRedis() {
@@ -148,6 +150,168 @@ export function registerHostHandlers(io: Server, socket: Socket) {
     } catch (error) {
       console.error("Error cancelling session:", error);
       socket.emit("error", { message: "Failed to cancel session" });
+    }
+  });
+
+  socket.on("REVEAL_ANSWER", async ({ sessionCode, questionIndex }) => {
+    try {
+      const redis = await getRedis();
+      const sessionId = await getSessionIdFromCode(sessionCode);
+      if (!sessionId) {
+        socket.emit("error", { message: "Session code not found" });
+        return;
+      }
+
+      // Get question to find correct answer
+      const question = await getQuestion(sessionId, questionIndex);
+      if (!question) {
+        socket.emit("error", { message: "Question not found" });
+        return;
+      }
+
+      // Update game state to show answer is revealed
+      const currentState = await redis.get(gameStateKey(sessionId));
+      const gameState = currentState ? JSON.parse(currentState) : {};
+
+      await redis.set(
+        gameStateKey(sessionId),
+        JSON.stringify({
+          ...gameState,
+          answerRevealed: true,
+          correctAnswer: question.correct,
+        })
+      );
+
+      // Broadcast to all players
+      io.to(sessionCode).emit("answer-revealed", {
+        questionIndex,
+        correctAnswer: question.correct,
+      });
+
+      console.log(
+        `✅ Answer revealed for question ${questionIndex} in session ${sessionCode}`
+      );
+    } catch (error) {
+      console.error("Error revealing answer:", error);
+      socket.emit("error", { message: "Failed to reveal answer" });
+    }
+  });
+
+  socket.on("NAVIGATE_QUESTION", async ({ sessionCode, questionIndex }) => {
+    try {
+      const redis = await getRedis();
+      const sessionId = await getSessionIdFromCode(sessionCode);
+      if (!sessionId) {
+        socket.emit("error", { message: "Session code not found" });
+        return;
+      }
+
+      // Get session to validate question index
+      const session = await getSession(sessionId);
+      if (!session) {
+        socket.emit("error", { message: "Session not found" });
+        return;
+      }
+
+      if (questionIndex < 0 || questionIndex >= session.questionCount) {
+        socket.emit("error", { message: "Invalid question index" });
+        return;
+      }
+
+      // Get current game state
+      const currentState = await redis.get(gameStateKey(sessionId));
+      const gameState = currentState ? JSON.parse(currentState) : {};
+
+      // Check if question is active (navigation disabled during active question)
+      if (gameState.status === "QUESTION_ACTIVE") {
+        socket.emit("error", {
+          message: "Cannot navigate while question is active",
+        });
+        return;
+      }
+
+      // Get question data from Redis
+      const question = await getQuestion(sessionId, questionIndex);
+      if (!question) {
+        socket.emit("error", {
+          message: `Question ${
+            questionIndex + 1
+          } not found in Redis. This may happen if questions expired. Please refresh the page.`,
+        });
+        return;
+      }
+
+      // Update game state
+      const newState = {
+        status: "IN_PROGRESS",
+        questionIndex,
+        questionCount: session.questionCount,
+        question: {
+          text: question.text,
+          A: question.A,
+          B: question.B,
+          C: question.C,
+          D: question.D,
+          correct: question.correct,
+        },
+        answerRevealed: false,
+      };
+
+      await redis.set(gameStateKey(sessionId), JSON.stringify(newState));
+
+      // Broadcast to all players
+      io.to(sessionCode).emit("question-navigated", {
+        questionIndex,
+        question: newState.question,
+      });
+
+      // Notify host
+      socket.emit("question-navigated", {
+        questionIndex,
+        question: newState.question,
+      });
+
+      console.log(
+        `📄 Navigated to question ${questionIndex} in session ${sessionCode}`
+      );
+    } catch (error) {
+      console.error("Error navigating question:", error);
+      socket.emit("error", { message: "Failed to navigate question" });
+    }
+  });
+
+  socket.on("END_QUESTION", async ({ sessionCode, questionIndex }) => {
+    try {
+      const redis = await getRedis();
+      const sessionId = await getSessionIdFromCode(sessionCode);
+      if (!sessionId) {
+        socket.emit("error", { message: "Session code not found" });
+        return;
+      }
+
+      // Update game state to mark question as ended
+      const currentState = await redis.get(gameStateKey(sessionId));
+      const gameState = currentState ? JSON.parse(currentState) : {};
+
+      await redis.set(
+        gameStateKey(sessionId),
+        JSON.stringify({
+          ...gameState,
+          status: "QUESTION_ENDED",
+        })
+      );
+
+      // Broadcast to all players
+      io.to(sessionCode).emit("question-ended", {
+        questionIndex,
+      });
+
+      console.log(
+        `⏹️ Question ${questionIndex} ended in session ${sessionCode}`
+      );
+    } catch (error) {
+      console.error("Error ending question:", error);
+      socket.emit("error", { message: "Failed to end question" });
     }
   });
 }

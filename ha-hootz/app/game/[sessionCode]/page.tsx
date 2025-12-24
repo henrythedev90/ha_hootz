@@ -25,6 +25,8 @@ interface GameState {
   };
   endAt?: number;
   playerAnswers?: Record<number, string>;
+  answerRevealed?: boolean;
+  correctAnswer?: "A" | "B" | "C" | "D";
 }
 
 export default function GamePage() {
@@ -212,6 +214,48 @@ export default function GamePage() {
     });
 
     newSocket.on(
+      "question-navigated",
+      (data: {
+        questionIndex: number;
+        question: { text: string; A: string; B: string; C: string; D: string };
+      }) => {
+        console.log("📄 Question navigated:", data);
+        setGameState(
+          (prev) =>
+            ({
+              ...prev,
+              status: "IN_PROGRESS",
+              questionIndex: data.questionIndex,
+              question: data.question,
+              endAt: undefined,
+            } as GameState)
+        );
+        setSelectedAnswer(null);
+        setIsTimerExpired(false);
+      }
+    );
+
+    newSocket.on(
+      "answer-revealed",
+      (data: {
+        questionIndex: number;
+        correctAnswer: "A" | "B" | "C" | "D";
+      }) => {
+        console.log("✅ Answer revealed:", data);
+        // Keep the question view but mark answer as revealed
+        setGameState((prev) =>
+          prev
+            ? {
+                ...prev,
+                answerRevealed: true,
+                correctAnswer: data.correctAnswer,
+              }
+            : null
+        );
+      }
+    );
+
+    newSocket.on(
       "ANSWER_RECEIVED",
       (data: { accepted: boolean; updated?: boolean }) => {
         if (data.accepted) {
@@ -317,8 +361,13 @@ export default function GamePage() {
     );
   }
 
-  // Active Question View
-  if (gameState.status === "QUESTION_ACTIVE" && gameState.question) {
+  // Active Question View - Show when question is active OR when game is in progress with a question
+  if (
+    gameState.question &&
+    (gameState.status === "QUESTION_ACTIVE" ||
+      gameState.status === "IN_PROGRESS" ||
+      gameState.status === "QUESTION_ENDED")
+  ) {
     const getTimerColor = () => {
       if (timeRemaining <= 5) return "text-red-600 dark:text-red-400";
       if (timeRemaining <= 10) return "text-orange-600 dark:text-orange-400";
@@ -329,14 +378,32 @@ export default function GamePage() {
       const baseClass =
         "w-full px-6 py-6 text-left rounded-lg transition-all font-medium text-lg";
       const isSelected = selectedAnswer === option;
-      const isDisabled = isTimerExpired;
+      const isDisabled =
+        isTimerExpired || gameState.status === "QUESTION_ENDED";
+      const isCorrect =
+        gameState.answerRevealed && gameState.correctAnswer === option;
+      const isIncorrect = gameState.answerRevealed && isSelected && !isCorrect;
 
-      if (isDisabled) {
+      if (isDisabled && !gameState.answerRevealed) {
         return `${baseClass} bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`;
       }
 
-      if (isSelected) {
+      // Show correct answer highlighted when revealed
+      if (isCorrect) {
+        return `${baseClass} bg-green-600 dark:bg-green-700 text-white shadow-lg border-4 border-green-400`;
+      }
+
+      // Show incorrect selected answer when revealed
+      if (isIncorrect) {
+        return `${baseClass} bg-red-600 dark:bg-red-700 text-white`;
+      }
+
+      if (isSelected && !gameState.answerRevealed) {
         return `${baseClass} bg-green-600 dark:bg-green-700 text-white shadow-lg transform scale-105`;
+      }
+
+      if (isDisabled) {
+        return `${baseClass} bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`;
       }
 
       return `${baseClass} bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95`;
@@ -370,27 +437,45 @@ export default function GamePage() {
               <button
                 key={option}
                 onClick={() => handleAnswerSelect(option)}
-                disabled={isTimerExpired}
+                disabled={
+                  isTimerExpired || gameState.status === "QUESTION_ENDED"
+                }
                 className={getAnswerButtonClass(option)}
               >
                 <span className="font-bold mr-3">{option}:</span>
                 {gameState.question![option]}
+                {gameState.answerRevealed &&
+                  gameState.correctAnswer === option && (
+                    <span className="ml-auto">✓ Correct</span>
+                  )}
               </button>
             ))}
           </div>
 
           {/* Status indicator */}
-          {isTimerExpired && (
+          {isTimerExpired && !gameState.answerRevealed && (
             <div className="text-center text-sm text-gray-500 dark:text-gray-400">
               Time's up! Your answer has been submitted.
             </div>
           )}
+          {gameState.answerRevealed && (
+            <div className="text-center text-sm text-green-600 dark:text-green-400 font-semibold">
+              The correct answer has been revealed!
+            </div>
+          )}
+          {gameState.status === "IN_PROGRESS" &&
+            !gameState.answerRevealed &&
+            !isTimerExpired && (
+              <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                Waiting for host to start the question...
+              </div>
+            )}
         </div>
       </div>
     );
   }
 
-  // Question ended or game in progress
+  // Fallback: No question available
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">

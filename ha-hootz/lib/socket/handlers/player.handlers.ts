@@ -5,6 +5,7 @@ import {
   playersKey,
   answersKey,
   playerSocketKey,
+  resultsKey,
 } from "../../redis/keys";
 import {
   getSessionIdFromCode,
@@ -256,7 +257,32 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         playerId
       );
 
+      // Get previous answer if updating (to update distribution correctly)
+      let previousAnswer: string | null = null;
+      if (isUpdate) {
+        previousAnswer = await redis.hGet(
+          answersKey(gameId, questionIndex),
+          playerId
+        );
+      }
+
+      // Store the new answer
       await redis.hSet(answersKey(gameId, questionIndex), playerId, answer);
+
+      // Update results distribution for answer statistics
+      // If player changed their answer, decrement old answer and increment new one
+      if (isUpdate && previousAnswer && previousAnswer !== answer) {
+        await redis.zIncrBy(
+          resultsKey(gameId, questionIndex),
+          -1,
+          previousAnswer
+        );
+        await redis.zIncrBy(resultsKey(gameId, questionIndex), 1, answer);
+      } else if (!isUpdate) {
+        // First time submitting - just increment
+        await redis.zIncrBy(resultsKey(gameId, questionIndex), 1, answer);
+      }
+      // If isUpdate but same answer, no need to change distribution
 
       socket.emit("ANSWER_RECEIVED", {
         accepted: true,

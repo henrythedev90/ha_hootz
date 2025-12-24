@@ -78,7 +78,59 @@ export async function setQuestion(
     duration: question.duration.toString(),
   });
 
-  await redis.expire(questionKey(sessionId, index), question.duration + 10);
+  // Set expiration to match session expiration (2 hours) so questions persist for the entire game
+  await redis.expire(questionKey(sessionId, index), 60 * 60 * 2);
+}
+
+export async function getQuestion(
+  sessionId: string,
+  index: number
+): Promise<TriviaQuestion | null> {
+  const redis = await getRedis();
+  const data = await redis.hGetAll(questionKey(sessionId, index));
+  if (!Object.keys(data).length) return null;
+
+  return {
+    text: data.text,
+    A: data.A,
+    B: data.B,
+    C: data.C,
+    D: data.D,
+    correct: data.correct as "A" | "B" | "C" | "D",
+    startTime: Number(data.startTime),
+    duration: Number(data.duration),
+  };
+}
+
+export async function getAnswerDistribution(
+  sessionId: string,
+  questionIndex: number
+): Promise<{ A: number; B: number; C: number; D: number }> {
+  const redis = await getRedis();
+  const results = await redis.zRangeWithScores(
+    resultsKey(sessionId, questionIndex),
+    0,
+    -1
+  );
+
+  const distribution = { A: 0, B: 0, C: 0, D: 0 };
+  for (const result of results) {
+    const answer = result.value as "A" | "B" | "C" | "D";
+    if (answer in distribution) {
+      distribution[answer] = result.score;
+    }
+  }
+
+  return distribution;
+}
+
+export async function getAnswerCount(
+  sessionId: string,
+  questionIndex: number
+): Promise<number> {
+  const redis = await getRedis();
+  const answers = await redis.hGetAll(answersKey(sessionId, questionIndex));
+  return Object.keys(answers).length;
 }
 
 export async function submitAnswer(
