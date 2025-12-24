@@ -1,35 +1,19 @@
 import { Server } from "socket.io";
-import { initSocket } from "./initSocket";
 
-// Store Socket.io server instance globally to reuse across requests
+// Store Socket.io server instance globally (set by custom server.js)
 declare global {
   var io: Server | undefined;
 }
 
 /**
- * Ensures Socket.io server is initialized and returns the instance
- * This can be called from any API route to guarantee Socket.io is ready
+ * Gets the Socket.io server instance
+ * The server is initialized in server.js and stored globally
  */
-export async function getSocketServer(): Promise<Server> {
+export function getSocketServer(): Server {
   if (!global.io) {
-    console.log("🔌 Initializing Socket.io server");
-
-    const io = new Server({
-      path: "/api/socket",
-      addTrailingSlash: false,
-      cors: {
-        origin: process.env.NEXTAUTH_URL || "http://localhost:3000",
-        methods: ["GET", "POST"],
-        credentials: true,
-      },
-    });
-
-    // Initialize socket handlers
-    await initSocket(io);
-
-    global.io = io;
-    console.log("✅ Socket.io server initialized");
+    throw new Error(
+      "Socket.io server not initialized. Make sure you're using the custom server (npm run dev)"
+    );
   }
-
   return global.io;
 }

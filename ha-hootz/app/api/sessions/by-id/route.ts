@@ -5,7 +5,7 @@ import {
   updateSessionStatus,
 } from "@/lib/redis/triviaRedis";
 
-// GET - Get session status
+// GET - Get session status (accepts sessionId)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
@@ -42,7 +42,7 @@ export async function GET(
   }
 }
 
-// PUT - Update session status (e.g., start game, end game)
+// PUT - Update session status (accepts sessionId)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }

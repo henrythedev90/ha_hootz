@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getPresentationsCollection } from "@/lib/db";
-import { createSession, setQuestion } from "@/lib/redis/triviaRedis";
+import {
+  createSession,
+  setQuestion,
+  createSessionCode,
+} from "@/lib/redis/triviaRedis";
 import { convertQuestionToTrivia } from "@/lib/questionConverter";
 import { TriviaSession } from "@/lib/types";
 import { generateId } from "@/lib/utils";
@@ -50,8 +54,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure Socket.io server is initialized
-    const io = await getSocketServer();
+    // Get Socket.io server instance (initialized in server.js)
+    const io = getSocketServer();
 
     // Generate session ID
     const sessionId = generateId();
@@ -66,6 +70,9 @@ export async function POST(request: NextRequest) {
     };
 
     await createSession(sessionId, triviaSession);
+
+    // Generate 6-digit session code and store mapping (1 hour TTL)
+    const sessionCode = await createSessionCode(sessionId, 60 * 60);
 
     // Initialize game state for Socket.io
     const redis = await redisPromise;
@@ -105,8 +112,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       sessionId,
+      sessionCode,
       message: "Game session created successfully",
       socketPath: "/api/socket",
+      joinUrl: `/join/${sessionCode}`,
     });
   } catch (error: any) {
     console.error("Error starting session:", error);

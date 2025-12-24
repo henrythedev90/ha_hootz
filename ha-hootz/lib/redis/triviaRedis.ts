@@ -8,6 +8,8 @@ import {
   resultsKey,
   leaderboardKey,
   presenceKey,
+  sessionCodeKey,
+  sessionCodeToIdKey,
 } from "./keys";
 
 async function getRedis() {
@@ -130,4 +132,69 @@ export async function canSubmitAnswer(sessionId: string, playerId: string) {
   }
 
   return count <= 1;
+}
+
+/**
+ * Create a session code mapping to sessionId
+ * Returns the session code
+ */
+export async function createSessionCode(
+  sessionId: string,
+  ttl: number = 60 * 60
+): Promise<string> {
+  const redis = await getRedis();
+  let sessionCode: string;
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  // Generate unique 6-digit code
+  do {
+    sessionCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const exists = await redis.exists(sessionCodeToIdKey(sessionCode));
+    if (!exists) break;
+    attempts++;
+  } while (attempts < maxAttempts);
+
+  if (attempts >= maxAttempts) {
+    throw new Error("Failed to generate unique session code");
+  }
+
+  // Store mapping: sessionCode -> sessionId
+  await redis.set(sessionCodeToIdKey(sessionCode), sessionId, { EX: ttl });
+
+  // Store reverse mapping: sessionId -> sessionCode (for quick lookup)
+  await redis.set(sessionCodeKey(sessionId), sessionCode, { EX: ttl });
+
+  return sessionCode;
+}
+
+/**
+ * Get sessionId from session code
+ */
+export async function getSessionIdFromCode(
+  sessionCode: string
+): Promise<string | null> {
+  const redis = await getRedis();
+  return await redis.get(sessionCodeToIdKey(sessionCode));
+}
+
+/**
+ * Get session code from sessionId
+ */
+export async function getSessionCodeFromId(
+  sessionId: string
+): Promise<string | null> {
+  const redis = await getRedis();
+  return await redis.get(sessionCodeKey(sessionId));
+}
+
+/**
+ * Check if session code is valid and active
+ */
+export async function isSessionCodeValid(
+  sessionCode: string
+): Promise<boolean> {
+  const redis = await getRedis();
+  const exists = await redis.exists(sessionCodeToIdKey(sessionCode));
+  return exists === 1;
 }

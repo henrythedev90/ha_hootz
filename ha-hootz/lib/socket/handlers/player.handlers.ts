@@ -6,76 +6,156 @@ import {
   answersKey,
   playerSocketKey,
 } from "../../redis/keys";
+import {
+  getSessionIdFromCode,
+  getSession,
+  addPlayer as addPlayerToSession,
+} from "../../redis/triviaRedis";
 
 async function getRedis() {
   return await redisPromise;
 }
 
 export function registerPlayerHandlers(io: Server, socket: Socket) {
-  // Store playerId and gameId for this socket connection
-  const socketData = new Map<string, { playerId: string; gameId: string }>();
+  // Store playerId and sessionCode for this socket connection
+  const socketData = new Map<
+    string,
+    { playerId: string; sessionCode: string; sessionId: string; name: string }
+  >();
 
-  socket.on("JOIN_GAME", async ({ gameId, playerId, name }) => {
+  // New join-session event using session code
+  socket.on("join-session", async ({ sessionCode, name }) => {
     try {
-      const redis = await getRedis();
-      const state = await redis.get(gameStateKey(gameId));
-
-      if (!state) {
-        socket.emit("JOIN_ERROR", { reason: "Game not found" });
+      if (!sessionCode || !name || !name.trim()) {
+        socket.emit("join-error", {
+          reason: "Session code and name are required",
+        });
         return;
       }
 
-      // Check if this player already has a socket connected
+      const redis = await getRedis();
+
+      // Validate session code format
+      if (!/^\d{6}$/.test(sessionCode)) {
+        socket.emit("join-error", { reason: "Invalid session code format" });
+        return;
+      }
+
+      // Get sessionId from session code
+      const sessionId = await getSessionIdFromCode(sessionCode);
+      if (!sessionId) {
+        socket.emit("join-error", {
+          reason: "Session code not found or expired",
+        });
+        return;
+      }
+
+      // Get session details
+      const session = await getSession(sessionId);
+      if (!session) {
+        socket.emit("join-error", { reason: "Session not found" });
+        return;
+      }
+
+      // Check if session is locked/live (prevent new joins)
+      if (session.status === "live") {
+        socket.emit("join-error", {
+          reason: "Game has already started. New players cannot join.",
+        });
+        return;
+      }
+
+      // Check for duplicate names in session
+      const players = await redis.hGetAll(playersKey(sessionId));
+      const normalizedName = name.trim().toLowerCase();
+      const isDuplicate = Object.values(players).some(
+        (playerName) => playerName.toLowerCase() === normalizedName
+      );
+
+      if (isDuplicate) {
+        socket.emit("join-error", {
+          reason: "This name is already taken in this session",
+        });
+        return;
+      }
+
+      // Generate unique playerId
+      const playerId = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
+      // Check if this player already has a socket connected (by name)
+      // We'll use name as the identifier for one-socket-per-player
       const existingSocketId = await redis.get(
-        playerSocketKey(gameId, playerId)
+        playerSocketKey(sessionId, playerId)
       );
 
       if (existingSocketId && existingSocketId !== socket.id) {
         // Player already connected with a different socket
-        // Disconnect the old socket
         const oldSocket = io.sockets.sockets.get(existingSocketId);
         if (oldSocket) {
-          oldSocket.emit("FORCE_DISCONNECT", {
+          oldSocket.emit("force-disconnect", {
             reason: "Another connection detected for this player",
           });
           oldSocket.disconnect(true);
           console.log(
-            `🔌 Disconnected old socket ${existingSocketId} for player ${playerId}`
+            `🔌 Disconnected old socket ${existingSocketId} for player ${name}`
           );
         }
       }
 
-      // Store player info and map socket to playerId
-      await redis.hSet(playersKey(gameId), playerId, name);
-      await redis.set(playerSocketKey(gameId, playerId), socket.id, {
+      // Store player info in Redis (using playerId as key, name as value)
+      await redis.hSet(playersKey(sessionId), playerId, name.trim());
+      await redis.set(playerSocketKey(sessionId, playerId), socket.id, {
         EX: 60 * 60 * 2, // 2 hours expiration
       });
 
       // Store socket data locally
-      socketData.set(socket.id, { playerId, gameId });
-      socket.join(gameId);
+      socketData.set(socket.id, {
+        playerId,
+        sessionCode,
+        sessionId,
+        name: name.trim(),
+      });
+
+      // Join Socket.io room using session code
+      socket.join(sessionCode);
+
+      // Get game state
+      const state = await redis.get(gameStateKey(sessionId));
+      const gameState = state ? JSON.parse(state) : { status: "WAITING" };
 
       // Get player's previous answers if they reconnected
-      const gameState = JSON.parse(state);
       const playerAnswers: Record<number, string> = {};
-
-      // Check all questions up to the current question index
       const currentQuestionIndex = gameState.questionIndex || 0;
       for (let i = 0; i <= currentQuestionIndex; i++) {
-        const answer = await redis.hGet(answersKey(gameId, i), playerId);
+        const answer = await redis.hGet(answersKey(sessionId, i), playerId);
         if (answer) {
           playerAnswers[i] = answer;
         }
       }
 
-      socket.emit("GAME_STATE", {
-        ...gameState,
-        playerAnswers, // Include their previous answers
+      // Emit success to the joining player
+      socket.emit("joined-session", {
+        sessionCode,
+        sessionId,
+        playerId,
+        name: name.trim(),
+        gameState: {
+          ...gameState,
+          playerAnswers,
+        },
       });
 
-      io.to(gameId).emit("PLAYER_JOINED", { playerId, name });
+      // Broadcast to all players in the session (including host)
+      io.to(sessionCode).emit("player-joined", {
+        playerId,
+        name: name.trim(),
+        sessionCode,
+      });
+
       console.log(
-        `✅ Player ${playerId} joined game ${gameId} on socket ${socket.id}${
+        `✅ Player ${name.trim()} (${playerId}) joined session ${sessionCode}${
           Object.keys(playerAnswers).length > 0
             ? ` (reconnected with ${
                 Object.keys(playerAnswers).length
@@ -84,8 +164,8 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         }`
       );
     } catch (error) {
-      console.error("Error joining game:", error);
-      socket.emit("JOIN_ERROR", { reason: "Failed to join game" });
+      console.error("Error joining session:", error);
+      socket.emit("join-error", { reason: "Failed to join session" });
     }
   });
 
@@ -104,7 +184,7 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
 
       // Get playerId for this socket
       const socketInfo = socketData.get(socket.id);
-      if (!socketInfo || socketInfo.gameId !== gameId) {
+      if (!socketInfo || socketInfo.sessionId !== gameId) {
         socket.emit("ANSWER_RECEIVED", {
           accepted: false,
           reason: "Not joined to game. Please join first.",
@@ -189,19 +269,28 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
     // Clean up socket-to-player mapping
     const socketInfo = socketData.get(socket.id);
     if (socketInfo) {
-      const { playerId, gameId } = socketInfo;
+      const { playerId, sessionId, sessionCode, name } = socketInfo;
       try {
         const redis = await getRedis();
         // Remove the player socket mapping
         const storedSocketId = await redis.get(
-          playerSocketKey(gameId, playerId)
+          playerSocketKey(sessionId, playerId)
         );
         // Only delete if this is still the active socket
         if (storedSocketId === socket.id) {
-          await redis.del(playerSocketKey(gameId, playerId));
+          await redis.del(playerSocketKey(sessionId, playerId));
+          // Remove player from session
+          await redis.hDel(playersKey(sessionId), playerId);
           console.log(
-            `🧹 Cleaned up socket mapping for player ${playerId} in game ${gameId}`
+            `🧹 Cleaned up socket mapping for player ${name} (${playerId}) in session ${sessionCode}`
           );
+
+          // Broadcast player left event
+          io.to(sessionCode).emit("player-left", {
+            playerId,
+            name,
+            sessionCode,
+          });
         }
       } catch (error) {
         console.error("Error cleaning up socket mapping:", error);

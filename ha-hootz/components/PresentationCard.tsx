@@ -44,13 +44,14 @@ export default function PresentationCard({
         throw new Error(data.error || "Failed to start presentation");
       }
 
-      // Navigate to game session page (to be created)
-      // For now, show session ID and navigate to dashboard
-      alert(
-        `Game session started! Session ID: ${data.sessionId}\n\nGame session page coming soon!`
-      );
-      // TODO: Navigate to game session page when created
-      // router.push(`/sessions/${data.sessionId}`);
+      // Navigate to host dashboard
+      if (data.sessionCode) {
+        router.push(`/host/${data.sessionCode}`);
+      } else {
+        alert(
+          `Game session started! Session ID: ${data.sessionId}\n\nPlease note the session code.`
+        );
+      }
     } catch (error: any) {
       console.error("Error starting presentation:", error);
       alert(error.message || "Failed to start presentation. Please try again.");
