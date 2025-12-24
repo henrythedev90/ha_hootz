@@ -15,7 +15,7 @@ export async function GET(
     // Validate format
     if (!/^\d{6}$/.test(sessionCode)) {
       return NextResponse.json(
-        { valid: false, error: "Invalid session code format" },
+        { isValid: false, error: "Invalid session code format" },
         { status: 400 }
       );
     }
@@ -24,8 +24,8 @@ export async function GET(
     const isValid = await isSessionCodeValid(sessionCode);
     if (!isValid) {
       return NextResponse.json(
-        { valid: false, error: "Session code not found or expired" },
-        { status: 404 }
+        { isValid: false, error: "Session code not found or expired" },
+        { status: 200 }
       );
     }
 
@@ -33,31 +33,35 @@ export async function GET(
     const sessionId = await getSessionIdFromCode(sessionCode);
     if (!sessionId) {
       return NextResponse.json(
-        { valid: false, error: "Session not found" },
-        { status: 404 }
+        { isValid: false, error: "Session not found" },
+        { status: 200 }
       );
     }
 
     const session = await getSession(sessionId);
     if (!session) {
       return NextResponse.json(
-        { valid: false, error: "Session not found" },
-        { status: 404 }
+        { isValid: false, error: "Session not found" },
+        { status: 200 }
       );
     }
 
     // Check if session is locked/live (prevent new joins)
-    if (session.status === "live") {
+    if (session.status === "live" || session.status === "ended") {
       return NextResponse.json(
-        { valid: false, error: "Game has already started. New players cannot join." },
-        { status: 403 }
+        {
+          isValid: false,
+          sessionStatus: session.status,
+          error: "Game has already started. New players cannot join.",
+        },
+        { status: 200 }
       );
     }
 
     return NextResponse.json({
-      valid: true,
+      isValid: true,
       sessionId,
-      status: session.status,
+      sessionStatus: session.status,
     });
   } catch (error: any) {
     console.error("Error validating session code:", error);
@@ -67,4 +71,3 @@ export async function GET(
     );
   }
 }
-

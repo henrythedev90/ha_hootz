@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionIdFromCode } from "@/lib/redis/triviaRedis";
-import { getPlayers } from "@/lib/redis/triviaRedis";
 import redisPromise from "@/lib/redis/client";
 import { playersKey } from "@/lib/redis/keys";
 
@@ -11,11 +10,11 @@ export async function POST(
   try {
     const { sessionCode } = await params;
     const body = await request.json();
-    const { name } = body;
+    const { playerName } = body;
 
-    if (!name || !name.trim()) {
+    if (!playerName || !playerName.trim()) {
       return NextResponse.json(
-        { duplicate: false, error: "Name is required" },
+        { isAvailable: false, error: "Player name is required" },
         { status: 400 }
       );
     }
@@ -24,7 +23,7 @@ export async function POST(
     const sessionId = await getSessionIdFromCode(sessionCode);
     if (!sessionId) {
       return NextResponse.json(
-        { duplicate: false, error: "Session code not found" },
+        { isAvailable: false, error: "Invalid or expired session code" },
         { status: 404 }
       );
     }
@@ -34,13 +33,13 @@ export async function POST(
     const players = await redis.hGetAll(playersKey(sessionId));
 
     // Check for duplicate names (case-insensitive)
-    const normalizedName = name.trim().toLowerCase();
+    const normalizedName = playerName.trim().toLowerCase();
     const isDuplicate = Object.values(players).some(
-      (playerName) => playerName.toLowerCase() === normalizedName
+      (name) => name.toLowerCase() === normalizedName
     );
 
     return NextResponse.json({
-      duplicate: isDuplicate,
+      isAvailable: !isDuplicate,
       error: isDuplicate
         ? "This name is already taken in this session"
         : undefined,
@@ -48,7 +47,7 @@ export async function POST(
   } catch (error: any) {
     console.error("Error checking name:", error);
     return NextResponse.json(
-      { duplicate: false, error: "Internal server error" },
+      { isAvailable: false, error: error.message || "Internal server error" },
       { status: 500 }
     );
   }

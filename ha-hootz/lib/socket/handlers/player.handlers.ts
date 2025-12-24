@@ -135,12 +135,17 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         }
       }
 
+      // Get player count
+      const allPlayers = await redis.hGetAll(playersKey(sessionId));
+      const playerCount = Object.keys(allPlayers).length;
+
       // Emit success to the joining player
       socket.emit("joined-session", {
         sessionCode,
         sessionId,
         playerId,
         name: name.trim(),
+        playerCount,
         gameState: {
           ...gameState,
           playerAnswers,
@@ -152,6 +157,7 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         playerId,
         name: name.trim(),
         sessionCode,
+        playerCount,
       });
 
       console.log(
@@ -285,11 +291,16 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
             `🧹 Cleaned up socket mapping for player ${name} (${playerId}) in session ${sessionCode}`
           );
 
+          // Get updated player count
+          const remainingPlayers = await redis.hGetAll(playersKey(sessionId));
+          const playerCount = Object.keys(remainingPlayers).length;
+
           // Broadcast player left event
           io.to(sessionCode).emit("player-left", {
             playerId,
             name,
             sessionCode,
+            playerCount,
           });
         }
       } catch (error) {

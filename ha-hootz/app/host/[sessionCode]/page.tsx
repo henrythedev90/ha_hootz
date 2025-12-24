@@ -102,6 +102,14 @@ export default function HostDashboard() {
       }
     );
 
+    newSocket.on("session-cancelled", () => {
+      console.log("❌ Session cancelled");
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        router.push("/");
+      }, 2000);
+    });
+
     newSocket.on("disconnect", () => {
       console.log("🔌 Host disconnected from server");
       setConnected(false);
@@ -124,6 +132,18 @@ export default function HostDashboard() {
       question,
       questionIndex,
     });
+  };
+
+  const handleCancelSession = () => {
+    if (!socket) return;
+    if (
+      !confirm(
+        "Are you sure you want to cancel this session? All players will be disconnected."
+      )
+    ) {
+      return;
+    }
+    socket.emit("CANCEL_SESSION", { sessionCode });
   };
 
   if (status === "loading") {
@@ -193,6 +213,13 @@ export default function HostDashboard() {
                 Start Game
               </button>
             )}
+            <button
+              onClick={handleCancelSession}
+              disabled={!connected}
+              className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              Cancel Session
+            </button>
           </div>
         </div>
       </div>

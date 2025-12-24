@@ -2,24 +2,24 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { isSessionCodeValid } from "@/lib/redis/triviaRedis";
 import Loading from "@/components/Loading";
 
 export default function JoinPage() {
   const params = useParams();
   const router = useRouter();
   const sessionCode = params.sessionCode as string;
-  const [displayName, setDisplayName] = useState("");
+  const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(true);
-  const [validating, setValidating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [isValid, setIsValid] = useState(false);
+  const [isValidSession, setIsValidSession] = useState(false);
+  const [isSessionLocked, setIsSessionLocked] = useState(false);
 
   useEffect(() => {
-    validateSessionCode();
+    validateSession();
   }, [sessionCode]);
 
-  const validateSessionCode = async () => {
+  const validateSession = async () => {
     try {
       setLoading(true);
       setError("");
@@ -27,73 +27,86 @@ export default function JoinPage() {
       // Validate session code format (6 digits)
       if (!/^\d{6}$/.test(sessionCode)) {
         setError("Invalid session code format. Must be 6 digits.");
-        setIsValid(false);
+        setIsValidSession(false);
         return;
       }
 
-      // Check if session code exists in Redis
+      // Check if session code exists and is valid
       const response = await fetch(`/api/sessions/validate/${sessionCode}`);
       const data = await response.json();
 
-      if (!response.ok || !data.valid) {
+      if (!response.ok || !data.isValid) {
         setError(
           data.error ||
-            "Session code not found or has expired. Please check and try again."
+            "Invalid or expired session code. Please check and try again."
         );
-        setIsValid(false);
+        setIsValidSession(false);
         return;
       }
 
-      setIsValid(true);
+      // Check if session is locked
+      if (data.sessionStatus === "live" || data.sessionStatus === "ended") {
+        setIsSessionLocked(true);
+        setError("This game has already started. New players cannot join.");
+        setIsValidSession(false);
+        return;
+      }
+
+      setIsValidSession(true);
     } catch (err: any) {
-      console.error("Error validating session code:", err);
-      setError("Failed to validate session code. Please try again.");
-      setIsValid(false);
+      console.error("Error validating session:", err);
+      setError("Failed to validate session. Please try again.");
+      setIsValidSession(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleJoin = async (e: React.FormEvent) => {
+  const handleJoinGame = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!displayName.trim()) {
-      setError("Please enter a display name");
+
+    // Validation: Nickname is required
+    if (!nickname.trim()) {
+      setError("Please enter your nickname");
       return;
     }
 
-    setValidating(true);
+    setSubmitting(true);
     setError("");
 
     try {
-      // Check for duplicate names in session
+      // Check if nickname is already taken
       const checkResponse = await fetch(
         `/api/sessions/${sessionCode}/check-name`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: displayName.trim() }),
+          body: JSON.stringify({ playerName: nickname.trim() }),
         }
       );
 
       const checkData = await checkResponse.json();
 
-      if (!checkResponse.ok || checkData.duplicate) {
-        setError(
-          checkData.error ||
-            "This name is already taken in this session. Please choose another."
-        );
-        setValidating(false);
+      if (!checkResponse.ok) {
+        setError(checkData.error || "Failed to check name availability");
+        setSubmitting(false);
         return;
       }
 
-      // Redirect to game page with session code and name
+      if (!checkData.isAvailable) {
+        setError("This nickname is already taken. Please choose another.");
+        setSubmitting(false);
+        return;
+      }
+
+      // Redirect to game page - the game page will handle Socket.io join-session event
       router.push(
-        `/game/${sessionCode}?name=${encodeURIComponent(displayName.trim())}`
+        `/game/${sessionCode}?name=${encodeURIComponent(nickname.trim())}`
       );
     } catch (err: any) {
-      console.error("Error joining session:", err);
-      setError("Failed to join session. Please try again.");
-      setValidating(false);
+      console.error("Error joining game:", err);
+      setError("Failed to join game. Please try again.");
+      setSubmitting(false);
     }
   };
 
@@ -101,17 +114,17 @@ export default function JoinPage() {
     return <Loading message="Validating session code..." />;
   }
 
-  if (!isValid) {
+  if (!isValidSession) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full mx-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Invalid Session Code
+            {isSessionLocked ? "Game Already Started" : "Invalid Session Code"}
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
           <button
             onClick={() => router.push("/")}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
           >
             Go to Home
           </button>
@@ -121,53 +134,57 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full mx-4">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Join Game
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Enter your display name to join session <strong>{sessionCode}</strong>
-        </p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 text-center">
+            Join Game
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-8 text-center">
+            Session:{" "}
+            <span className="font-mono font-semibold">{sessionCode}</span>
+          </p>
 
-        {error && (
-          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-6 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-md">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleJoin}>
-          <div className="mb-6">
-            <label
-              htmlFor="displayName"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          <form onSubmit={handleJoinGame} className="space-y-6">
+            <div>
+              <label
+                htmlFor="nickname"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Enter your nickname
+              </label>
+              <input
+                type="text"
+                id="nickname"
+                value={nickname}
+                onChange={(e) => {
+                  setNickname(e.target.value);
+                  setError(""); // Clear error when user types
+                }}
+                className="w-full px-4 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter your nickname"
+                maxLength={50}
+                disabled={submitting}
+                autoFocus
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting || !nickname.trim()}
+              className="w-full px-6 py-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
             >
-              Display Name
-            </label>
-            <input
-              type="text"
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Enter your name"
-              maxLength={50}
-              disabled={validating}
-              autoFocus
-            />
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              This name will be visible to other players
-            </p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={validating || !displayName.trim()}
-            className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            {validating ? "Joining..." : "Join Game"}
-          </button>
-        </form>
+              {submitting ? "Joining..." : "Join Game"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

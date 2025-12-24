@@ -112,4 +112,42 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       }
     }
   );
+
+  socket.on("CANCEL_SESSION", async ({ sessionCode }) => {
+    try {
+      const redis = await getRedis();
+
+      // Get sessionId from sessionCode
+      const sessionId = await getSessionIdFromCode(sessionCode);
+      if (!sessionId) {
+        socket.emit("error", { message: "Session code not found" });
+        return;
+      }
+
+      // Update session status to "ended"
+      await updateSessionStatus(sessionId, "ended");
+
+      // Update game state to ended
+      const endedState = {
+        status: "ENDED",
+      };
+      await redis.set(gameStateKey(sessionId), JSON.stringify(endedState));
+
+      // Broadcast to all players in the session
+      io.to(sessionCode).emit("session-cancelled", {
+        sessionCode,
+        message: "The host has cancelled this session",
+      });
+
+      // Notify host
+      socket.emit("session-cancelled", {
+        sessionCode,
+      });
+
+      console.log(`❌ Session ${sessionCode} cancelled by host`);
+    } catch (error) {
+      console.error("Error cancelling session:", error);
+      socket.emit("error", { message: "Failed to cancel session" });
+    }
+  });
 }
