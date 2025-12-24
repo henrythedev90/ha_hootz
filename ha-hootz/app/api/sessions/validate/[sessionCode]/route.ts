@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  isSessionCodeValid,
+  getSessionIdFromCode,
+  getSession,
+} from "@/lib/redis/triviaRedis";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ sessionCode: string }> }
+) {
+  try {
+    const { sessionCode } = await params;
+
+    // Validate format
+    if (!/^\d{6}$/.test(sessionCode)) {
+      return NextResponse.json(
+        { isValid: false, error: "Invalid session code format" },
+        { status: 400 }
+      );
+    }
+
+    // Check if code exists and is active
+    const isValid = await isSessionCodeValid(sessionCode);
+    if (!isValid) {
+      return NextResponse.json(
+        { isValid: false, error: "Session code not found or expired" },
+        { status: 200 }
+      );
+    }
+
+    // Get session details
+    const sessionId = await getSessionIdFromCode(sessionCode);
+    if (!sessionId) {
+      return NextResponse.json(
+        { isValid: false, error: "Session not found" },
+        { status: 200 }
+      );
+    }
+
+    const session = await getSession(sessionId);
+    if (!session) {
+      return NextResponse.json(
+        { isValid: false, error: "Session not found" },
+        { status: 200 }
+      );
+    }
+
+    // Check if session is locked/live (prevent new joins)
+    if (session.status === "live" || session.status === "ended") {
+      return NextResponse.json(
+        {
+          isValid: false,
+          sessionStatus: session.status,
+          error: "Game has already started. New players cannot join.",
+        },
+        { status: 200 }
+      );
+    }
+
+    return NextResponse.json({
+      isValid: true,
+      sessionId,
+      sessionStatus: session.status,
+    });
+  } catch (error: any) {
+    console.error("Error validating session code:", error);
+    return NextResponse.json(
+      { valid: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

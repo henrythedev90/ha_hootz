@@ -14,3 +14,7 @@ export const presenceKey = (sessionId: string, playerId: string) =>
   `trivia:${sessionId}:presence:${playerId}`;
 export const playerSocketKey = (gameId: string, playerId: string) =>
   `trivia:${gameId}:playerSocket:${playerId}`;
+export const sessionCodeKey = (sessionCode: string) =>
+  `trivia:sessionCode:${sessionCode}`;
+export const sessionCodeToIdKey = (sessionCode: string) =>
+  `trivia:codeToId:${sessionCode}`;

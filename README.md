@@ -18,12 +18,28 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 - **Game Sessions**
 
   - Start live game sessions from presentations
+  - 6-digit session codes for easy player joining
+  - QR code generation for quick mobile access
   - Redis-powered session management
   - Session status tracking (waiting, live, ended)
   - Real-time game state storage with Socket.io
   - One socket connection per player (automatic reconnection handling)
   - Answer persistence across disconnections
   - Time-based answer submission (can change answers while question is active, locked after expiration)
+  - Session cancellation by host
+
+- **Player Experience (Mobile-First)**
+
+  - **Nickname Entry**: Full-screen form for entering player nickname with validation
+  - **Lobby/Waiting Room**: Shows waiting message and live player count
+  - **Active Question View**:
+    - Prominent countdown timer with visual urgency indicators
+    - Large, touch-friendly answer buttons stacked vertically
+    - Real-time answer selection and updates
+    - Automatic answer submission when timer expires
+  - **Mobile-Optimized**: Single-column layout, no scrolling during questions, thumb-friendly tap targets
+  - **Real-Time Updates**: Instant response to game-started, question-started, and question-ended events
+  - **Resilient**: Handles refreshes and reconnects with answer restoration
 
 - **User Authentication**
 
@@ -40,7 +56,7 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
+- **Framework**: Next.js 16 (App Router) with custom server
 - **Language**: TypeScript
 - **Database**: MongoDB Atlas (for persistent data)
 - **Cache/Real-time**: Redis (Upstash compatible, serverless-safe)
@@ -48,6 +64,8 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 - **Authentication**: NextAuth.js v5
 - **Styling**: Tailwind CSS v4
 - **Password Hashing**: bcryptjs
+- **QR Code Generation**: qrcode (server-side)
+- **Server Runtime**: tsx for TypeScript server execution
 
 ## Getting Started
 
@@ -108,9 +126,12 @@ openssl rand -base64 32
 npm run dev
 ```
 
+**Note**: This project uses a custom server (`server.ts`) to properly integrate Socket.io with Next.js. The server automatically loads environment variables from `.env.local`.
+
 7. Open [http://localhost:3000](http://localhost:3000) in your browser
 
    - You should see a Redis connection log in your terminal: `✅ Redis configured - URL: redis://...`
+   - You should see Socket.io initialization logs: `✅ Socket.io initialized`
 
 ### First Steps
 
@@ -132,10 +153,17 @@ npm run dev
 6. **Start Game Sessions**:
    - Click "Start Presentation" button on saved presentations
    - Creates a Redis-backed game session with Socket.io real-time support
-   - Host can control game flow via Socket.io events
-   - Players can join and participate in real-time
-   - Answers persist across disconnections
-   - One socket connection per player (old connections auto-disconnect)
+   - Receive a 6-digit session code for players to join
+   - Share QR code or session code with players
+   - Host dashboard shows live player count and session controls
+   - Host can start game, start questions, or cancel session
+7. **Join as Player**:
+   - Navigate to `/join/[sessionCode]` or scan QR code
+   - Enter a unique nickname (validated in real-time)
+   - Join the lobby and wait for host to start
+   - Answer questions with large, touch-friendly buttons
+   - See countdown timer and change answers while time is active
+   - Answers auto-submit when timer expires
 
 ## Project Structure
 
@@ -151,20 +179,30 @@ ha-hootz/
 │   │   │   └── [id]/route.ts              # GET, PUT, DELETE by ID
 │   │   ├── sessions/
 │   │   │   ├── start/route.ts             # POST - Start game session
-│   │   │   └── [sessionId]/route.ts       # GET, PUT - Manage session
-│   │   ├── socket/route.ts                # Socket.io server initialization
+│   │   │   ├── by-id/[sessionId]/route.ts # GET, PUT - Manage session by ID
+│   │   │   ├── validate/[sessionCode]/route.ts # GET - Validate session code
+│   │   │   └── [sessionCode]/check-name/route.ts # POST - Check nickname availability
+│   │   ├── qr/[sessionCode]/route.ts      # GET - Generate QR code for session
+│   │   ├── socket/route.ts                # Socket.io server status
 │   │   └── test-redis/route.ts             # Test Redis connection
 │   ├── auth/
 │   │   ├── signin/page.tsx                # Sign in page
 │   │   └── signup/page.tsx                # Sign up page
 │   ├── presentations/
 │   │   └── [id]/page.tsx                  # Presentation editor
+│   ├── host/[sessionCode]/page.tsx        # Host dashboard for game session
+│   ├── join/[sessionCode]/page.tsx        # Player join page (nickname entry)
+│   ├── game/[sessionCode]/page.tsx        # Player game view (lobby + questions)
 │   ├── page.tsx                           # Dashboard
 │   └── layout.tsx                         # Root layout
 ├── components/
 │   ├── PresentationCard.tsx               # Presentation card component
 │   ├── QuestionEditor.tsx                 # Question editing form
 │   ├── QuestionList.tsx                   # List of questions
+│   ├── Modal.tsx                          # Reusable modal component
+│   ├── DeleteConfirmationModal.tsx        # Delete confirmation modal
+│   ├── Loading.tsx                        # Loading component with animation
+│   ├── SessionQRCode.tsx                  # QR code display component
 │   └── Providers.tsx                      # Session provider wrapper
 ├── lib/
 │   ├── auth.ts                            # Session helper
@@ -175,15 +213,16 @@ ha-hootz/
 │   │   ├── keys.ts                         # Redis key generators
 │   │   └── triviaRedis.ts                  # Redis helpers for trivia sessions
 │   ├── socket/
-│   │   ├── server.ts                        # Socket.io server initialization
+│   │   ├── server.ts                       # Socket.io server getter (accesses global instance)
 │   │   ├── initSocket.ts                   # Socket.io setup with Redis adapter
 │   │   └── handlers/
-│   │       ├── host.handlers.ts            # Host event handlers (START_GAME, START_QUESTION)
-│   │       └── player.handlers.ts          # Player event handlers (JOIN_GAME, SUBMIT_ANSWER)
+│   │       ├── host.handlers.ts            # Host event handlers (host-join, START_GAME, START_QUESTION, CANCEL_SESSION)
+│   │       └── player.handlers.ts         # Player event handlers (join-session, SUBMIT_ANSWER)
 │   ├── types.ts                            # Trivia session types
 │   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
-│   └── utils.ts                            # Utility functions
+│   └── utils.ts                            # Utility functions (generateId, generateSessionCode, formatDate)
+├── server.ts                               # Custom Next.js server with Socket.io integration
 └── types/
     ├── index.ts                            # TypeScript types
     └── next-auth.d.ts                      # NextAuth type extensions
@@ -236,30 +275,47 @@ ha-hootz/
 
 ### Game Sessions
 
-- `POST /api/sessions/start` - Start a game session from a presentation
-- `GET /api/sessions/[sessionId]` - Get session status and details
-- `PUT /api/sessions/[sessionId]` - Update session status (waiting, live, ended)
+- `POST /api/sessions/start` - Start a game session from a presentation (returns sessionCode)
+- `GET /api/sessions/by-id/[sessionId]` - Get session status and details by sessionId
+- `PUT /api/sessions/by-id/[sessionId]` - Update session status (waiting, live, ended)
+- `GET /api/sessions/validate/[sessionCode]` - Validate a 6-digit session code
+- `POST /api/sessions/[sessionCode]/check-name` - Check if a player nickname is available
+- `GET /api/qr/[sessionCode]` - Generate QR code for session join URL
 
 ### Socket.io Events
 
+**Host Events (Client → Server):**
+
+- `host-join` - Host joins session room (requires `sessionCode`)
+- `START_GAME` - Start the game session (requires `sessionCode`)
+- `START_QUESTION` - Start a specific question with timer (requires `sessionCode`, `question`, `questionIndex`)
+- `CANCEL_SESSION` - Cancel/end the session (requires `sessionCode`)
+
+**Player Events (Client → Server):**
+
+- `join-session` - Join a game session (requires `sessionCode`, `name`)
+- `SUBMIT_ANSWER` - Submit or update an answer (requires `gameId`, `questionIndex`, `answer`)
+
+**Server Events (Server → Client):**
+
 **Host Events:**
 
-- `START_GAME` - Start the game session
-- `START_QUESTION` - Start a specific question with timer
+- `host-joined` - Host successfully joined (includes `sessionCode`, `players`)
+- `session-cancelled` - Session was cancelled (includes `sessionCode`)
+- `error` - Error occurred (includes `message`)
 
 **Player Events:**
 
-- `JOIN_GAME` - Join a game session (requires `gameId`, `playerId`, `name`)
-- `SUBMIT_ANSWER` - Submit or update an answer (requires `gameId`, `questionIndex`, `answer`)
-
-**Server Events:**
-
-- `GAME_STATE` - Current game state (sent on join/reconnect)
-- `GAME_STARTED` - Game has started
-- `QUESTION_STARTED` - New question is active
-- `PLAYER_JOINED` - A player joined the game
-- `ANSWER_RECEIVED` - Answer submission result
-- `FORCE_DISCONNECT` - Player has another connection (old socket disconnected)
+- `joined-session` - Successfully joined session (includes `gameState`, `playerCount`, `playerAnswers`)
+- `join-error` - Failed to join (includes `reason`)
+- `player-joined` - Another player joined (includes `playerId`, `name`, `playerCount`)
+- `player-left` - A player left (includes `playerId`, `name`, `playerCount`)
+- `game-started` - Game has started (includes `status`, `questionIndex`)
+- `question-started` - New question is active (includes `question`, `questionIndex`, `endAt`)
+- `question-ended` - Question time expired
+- `session-cancelled` - Host cancelled the session (includes `message`)
+- `ANSWER_RECEIVED` - Answer submission result (includes `accepted`, `updated`, `reason`)
+- `force-disconnect` - Player has another connection (old socket disconnected)
 
 ## Database Schema
 
@@ -332,11 +388,19 @@ npm run lint
 - [x] Player connection management (one socket per player)
 - [x] Answer persistence across disconnections
 - [x] Time-based answer submission (changeable while active, locked after expiration)
-- [ ] Player participation UI (join games with codes)
-- [ ] Game session host view UI
-- [ ] Game session player view UI
+- [x] Player participation UI (join games with codes)
+- [x] 6-digit session codes for easy joining
+- [x] QR code generation for mobile access
+- [x] Game session host view UI
+- [x] Game session player view UI (mobile-first)
+- [x] Nickname entry with validation
+- [x] Lobby/waiting room with player count
+- [x] Active question view with countdown timer
+- [x] Answer selection with visual feedback
+- [x] Session cancellation
 - [ ] Live results and leaderboards display
-- [ ] Question timer UI (countdown display)
+- [ ] Question results view (show correct answer after timer)
 - [ ] Image support for questions
 - [ ] Presentation sharing and collaboration
 - [ ] Game history and analytics
+- [ ] Final leaderboard at end of game

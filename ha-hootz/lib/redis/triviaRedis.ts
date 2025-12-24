@@ -8,6 +8,8 @@ import {
   resultsKey,
   leaderboardKey,
   presenceKey,
+  sessionCodeKey,
+  sessionCodeToIdKey,
 } from "./keys";
 
 async function getRedis() {
@@ -76,7 +78,59 @@ export async function setQuestion(
     duration: question.duration.toString(),
   });
 
-  await redis.expire(questionKey(sessionId, index), question.duration + 10);
+  // Set expiration to match session expiration (2 hours) so questions persist for the entire game
+  await redis.expire(questionKey(sessionId, index), 60 * 60 * 2);
+}
+
+export async function getQuestion(
+  sessionId: string,
+  index: number
+): Promise<TriviaQuestion | null> {
+  const redis = await getRedis();
+  const data = await redis.hGetAll(questionKey(sessionId, index));
+  if (!Object.keys(data).length) return null;
+
+  return {
+    text: data.text,
+    A: data.A,
+    B: data.B,
+    C: data.C,
+    D: data.D,
+    correct: data.correct as "A" | "B" | "C" | "D",
+    startTime: Number(data.startTime),
+    duration: Number(data.duration),
+  };
+}
+
+export async function getAnswerDistribution(
+  sessionId: string,
+  questionIndex: number
+): Promise<{ A: number; B: number; C: number; D: number }> {
+  const redis = await getRedis();
+  const results = await redis.zRangeWithScores(
+    resultsKey(sessionId, questionIndex),
+    0,
+    -1
+  );
+
+  const distribution = { A: 0, B: 0, C: 0, D: 0 };
+  for (const result of results) {
+    const answer = result.value as "A" | "B" | "C" | "D";
+    if (answer in distribution) {
+      distribution[answer] = result.score;
+    }
+  }
+
+  return distribution;
+}
+
+export async function getAnswerCount(
+  sessionId: string,
+  questionIndex: number
+): Promise<number> {
+  const redis = await getRedis();
+  const answers = await redis.hGetAll(answersKey(sessionId, questionIndex));
+  return Object.keys(answers).length;
 }
 
 export async function submitAnswer(
@@ -130,4 +184,69 @@ export async function canSubmitAnswer(sessionId: string, playerId: string) {
   }
 
   return count <= 1;
+}
+
+/**
+ * Create a session code mapping to sessionId
+ * Returns the session code
+ */
+export async function createSessionCode(
+  sessionId: string,
+  ttl: number = 60 * 60
+): Promise<string> {
+  const redis = await getRedis();
+  let sessionCode: string;
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  // Generate unique 6-digit code
+  do {
+    sessionCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const exists = await redis.exists(sessionCodeToIdKey(sessionCode));
+    if (!exists) break;
+    attempts++;
+  } while (attempts < maxAttempts);
+
+  if (attempts >= maxAttempts) {
+    throw new Error("Failed to generate unique session code");
+  }
+
+  // Store mapping: sessionCode -> sessionId
+  await redis.set(sessionCodeToIdKey(sessionCode), sessionId, { EX: ttl });
+
+  // Store reverse mapping: sessionId -> sessionCode (for quick lookup)
+  await redis.set(sessionCodeKey(sessionId), sessionCode, { EX: ttl });
+
+  return sessionCode;
+}
+
+/**
+ * Get sessionId from session code
+ */
+export async function getSessionIdFromCode(
+  sessionCode: string
+): Promise<string | null> {
+  const redis = await getRedis();
+  return await redis.get(sessionCodeToIdKey(sessionCode));
+}
+
+/**
+ * Get session code from sessionId
+ */
+export async function getSessionCodeFromId(
+  sessionId: string
+): Promise<string | null> {
+  const redis = await getRedis();
+  return await redis.get(sessionCodeKey(sessionId));
+}
+
+/**
+ * Check if session code is valid and active
+ */
+export async function isSessionCodeValid(
+  sessionCode: string
+): Promise<boolean> {
+  const redis = await getRedis();
+  const exists = await redis.exists(sessionCodeToIdKey(sessionCode));
+  return exists === 1;
 }
