@@ -1,22 +1,18 @@
 import redisPromise from "./client";
 import { TriviaSession, TriviaQuestion } from "../types";
+import {
+  sessionKey,
+  playersKey,
+  questionKey,
+  answersKey,
+  resultsKey,
+  leaderboardKey,
+  presenceKey,
+} from "./keys";
 
 async function getRedis() {
   return await redisPromise;
 }
-
-const sessionKey = (sessionId: string) => `trivia:session:${sessionId}`;
-// const joinCodeKey = (joinCode: string) => `trivia:joinCode:${joinCode}`;
-const playersKey = (sessionId: string) => `trivia:players:${sessionId}`;
-const questionKey = (sessionId: string, index: number) =>
-  `trivia:${sessionId}:question${index}`;
-const answersKey = (sessionId: string, index: number) =>
-  `trivia:${sessionId}:answers:${index}`;
-const resultsKey = (sessionId: string, index: number) =>
-  `trivia:${sessionId}:results:${index}`;
-const leaderboardKey = (sessionId: string) => `trivia:${sessionId}:leaderboard`;
-const presenceKey = (sessionId: string, playerId: string) =>
-  `trivia:${sessionId}:presence:${playerId}`;
 
 export async function createSession(sessionId: string, session: TriviaSession) {
   const redis = await getRedis();

@@ -6,6 +6,9 @@ import { convertQuestionToTrivia } from "@/lib/questionConverter";
 import { TriviaSession } from "@/lib/types";
 import { generateId } from "@/lib/utils";
 import { ObjectId } from "mongodb";
+import { getSocketServer } from "@/lib/socket/server";
+import redisPromise from "@/lib/redis/client";
+import { gameStateKey } from "@/lib/redis/keys";
 
 // POST - Start a game session from a presentation
 export async function POST(request: NextRequest) {
@@ -47,6 +50,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure Socket.io server is initialized
+    const io = await getSocketServer();
+
     // Generate session ID
     const sessionId = generateId();
 
@@ -60,6 +66,17 @@ export async function POST(request: NextRequest) {
     };
 
     await createSession(sessionId, triviaSession);
+
+    // Initialize game state for Socket.io
+    const redis = await redisPromise;
+    const initialGameState = {
+      status: "WAITING",
+      sessionId,
+      questionIndex: 0,
+      questionCount: presentation.questions.length,
+      hostId: session.user.id,
+    };
+    await redis.set(gameStateKey(sessionId), JSON.stringify(initialGameState));
 
     // Convert and store questions in Redis
     for (let i = 0; i < presentation.questions.length; i++) {
@@ -78,10 +95,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Emit session created event to any connected clients
+    io.emit("SESSION_CREATED", {
+      sessionId,
+      hostId: session.user.id,
+      questionCount: presentation.questions.length,
+    });
+
     return NextResponse.json({
       success: true,
       sessionId,
       message: "Game session created successfully",
+      socketPath: "/api/socket",
     });
   } catch (error: any) {
     console.error("Error starting session:", error);

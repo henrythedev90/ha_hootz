@@ -20,7 +20,10 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - Start live game sessions from presentations
   - Redis-powered session management
   - Session status tracking (waiting, live, ended)
-  - Real-time game state storage (ready for Socket.io integration)
+  - Real-time game state storage with Socket.io
+  - One socket connection per player (automatic reconnection handling)
+  - Answer persistence across disconnections
+  - Time-based answer submission (can change answers while question is active, locked after expiration)
 
 - **User Authentication**
 
@@ -41,6 +44,7 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 - **Language**: TypeScript
 - **Database**: MongoDB Atlas (for persistent data)
 - **Cache/Real-time**: Redis (Upstash compatible, serverless-safe)
+- **WebSocket**: Socket.io with Redis adapter (multi-server support)
 - **Authentication**: NextAuth.js v5
 - **Styling**: Tailwind CSS v4
 - **Password Hashing**: bcryptjs
@@ -80,7 +84,7 @@ npm install
 
    - Create a Redis instance (Upstash recommended for serverless)
    - Get your Redis connection URL
-   - Redis is used for real-time game session management
+   - Redis is used for real-time game session management and Socket.io adapter
 
 5. Create a `.env.local` file in the root directory:
 
@@ -127,8 +131,11 @@ npm run dev
    - Delete presentations with confirmation modal for safety
 6. **Start Game Sessions**:
    - Click "Start Presentation" button on saved presentations
-   - Creates a Redis-backed game session ready for players to join
-   - Game session page coming soon for live gameplay
+   - Creates a Redis-backed game session with Socket.io real-time support
+   - Host can control game flow via Socket.io events
+   - Players can join and participate in real-time
+   - Answers persist across disconnections
+   - One socket connection per player (old connections auto-disconnect)
 
 ## Project Structure
 
@@ -145,6 +152,7 @@ ha-hootz/
 │   │   ├── sessions/
 │   │   │   ├── start/route.ts             # POST - Start game session
 │   │   │   └── [sessionId]/route.ts       # GET, PUT - Manage session
+│   │   ├── socket/route.ts                # Socket.io server initialization
 │   │   └── test-redis/route.ts             # Test Redis connection
 │   ├── auth/
 │   │   ├── signin/page.tsx                # Sign in page
@@ -164,7 +172,14 @@ ha-hootz/
 │   ├── mongodb.ts                          # MongoDB connection
 │   ├── redis/
 │   │   ├── client.ts                       # Redis connection (serverless-safe)
+│   │   ├── keys.ts                         # Redis key generators
 │   │   └── triviaRedis.ts                  # Redis helpers for trivia sessions
+│   ├── socket/
+│   │   ├── server.ts                        # Socket.io server initialization
+│   │   ├── initSocket.ts                   # Socket.io setup with Redis adapter
+│   │   └── handlers/
+│   │       ├── host.handlers.ts            # Host event handlers (START_GAME, START_QUESTION)
+│   │       └── player.handlers.ts          # Player event handlers (JOIN_GAME, SUBMIT_ANSWER)
 │   ├── types.ts                            # Trivia session types
 │   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
@@ -224,6 +239,27 @@ ha-hootz/
 - `POST /api/sessions/start` - Start a game session from a presentation
 - `GET /api/sessions/[sessionId]` - Get session status and details
 - `PUT /api/sessions/[sessionId]` - Update session status (waiting, live, ended)
+
+### Socket.io Events
+
+**Host Events:**
+
+- `START_GAME` - Start the game session
+- `START_QUESTION` - Start a specific question with timer
+
+**Player Events:**
+
+- `JOIN_GAME` - Join a game session (requires `gameId`, `playerId`, `name`)
+- `SUBMIT_ANSWER` - Submit or update an answer (requires `gameId`, `questionIndex`, `answer`)
+
+**Server Events:**
+
+- `GAME_STATE` - Current game state (sent on join/reconnect)
+- `GAME_STARTED` - Game has started
+- `QUESTION_STARTED` - New question is active
+- `PLAYER_JOINED` - A player joined the game
+- `ANSWER_RECEIVED` - Answer submission result
+- `FORCE_DISCONNECT` - Player has another connection (old socket disconnected)
 
 ## Database Schema
 
@@ -292,12 +328,15 @@ npm run lint
 
 - [x] Redis integration for game sessions
 - [x] Start game session functionality
-- [ ] Player participation (join games with codes)
-- [ ] Real-time game sessions (Socket.io integration)
-- [ ] Live results and leaderboards
-- [ ] Question timers
-- [ ] Game session host view
-- [ ] Game session player view
+- [x] Real-time game sessions (Socket.io integration)
+- [x] Player connection management (one socket per player)
+- [x] Answer persistence across disconnections
+- [x] Time-based answer submission (changeable while active, locked after expiration)
+- [ ] Player participation UI (join games with codes)
+- [ ] Game session host view UI
+- [ ] Game session player view UI
+- [ ] Live results and leaderboards display
+- [ ] Question timer UI (countdown display)
 - [ ] Image support for questions
 - [ ] Presentation sharing and collaboration
 - [ ] Game history and analytics
