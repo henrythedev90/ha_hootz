@@ -12,3 +12,5 @@ export const leaderboardKey = (sessionId: string) =>
   `trivia:${sessionId}:leaderboard`;
 export const presenceKey = (sessionId: string, playerId: string) =>
   `trivia:${sessionId}:presence:${playerId}`;
+export const playerSocketKey = (gameId: string, playerId: string) =>
+  `trivia:${gameId}:playerSocket:${playerId}`;

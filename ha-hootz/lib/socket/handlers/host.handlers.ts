@@ -24,22 +24,23 @@ export function registerHostHandlers(io: Server, socket: Socket) {
     }
   });
 
-  socket.on("START_QUESTION", async ({ gameId, question }) => {
+  socket.on("START_QUESTION", async ({ gameId, question, questionIndex }) => {
     try {
       const redis = await getRedis();
       const endAt = Date.now() + question.durationMs;
 
-      await redis.set(
-        gameStateKey(gameId),
-        JSON.stringify({
-          status: "QUESTION_ACTIVE",
-          question,
-          endAt,
-        })
-      );
+      const gameState = {
+        status: "QUESTION_ACTIVE",
+        question,
+        questionIndex: questionIndex ?? 0, // Default to 0 if not provided
+        endAt,
+      };
+
+      await redis.set(gameStateKey(gameId), JSON.stringify(gameState));
 
       io.to(gameId).emit("QUESTION_STARTED", {
         question,
+        questionIndex: gameState.questionIndex,
         endAt,
       });
     } catch (error) {
