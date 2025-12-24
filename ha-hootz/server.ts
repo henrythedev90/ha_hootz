@@ -1,8 +1,13 @@
+import { loadEnvConfig } from "@next/env";
 import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { Server } from "socket.io";
-import { initSocket } from "./lib/socket/initSocket";
+
+// Load environment variables FIRST, before any other imports that use process.env
+// This is critical when using a custom server (tsx server.ts)
+const projectDir = process.cwd();
+loadEnvConfig(projectDir);
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "localhost";
@@ -38,7 +43,9 @@ app.prepare().then(async () => {
   (global as any).io = io;
 
   // Initialize Socket.io handlers
+  // Use dynamic import AFTER env vars are loaded to prevent Redis client from loading too early
   try {
+    const { initSocket } = await import("./lib/socket/initSocket");
     await initSocket(io);
     console.log("✅ Socket.io initialized");
   } catch (err) {

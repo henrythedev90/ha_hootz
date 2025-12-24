@@ -1,6 +1,7 @@
 import { createClient, RedisClientType } from "redis";
 
 if (!process.env.REDIS_URL) {
+  console.error("REDIS_URL is not set", process.env.REDIS_URL);
   throw new Error("Please add your Redis URL to .env.local");
 }
 
