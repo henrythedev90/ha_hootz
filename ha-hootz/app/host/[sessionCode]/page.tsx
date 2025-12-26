@@ -483,6 +483,8 @@ export default function HostDashboard() {
           }
         : null
     );
+    // Open the modal immediately after revealing
+    setShowAnswerRevealModal(true);
   };
 
   const handleNextQuestion = () => {
@@ -783,19 +785,26 @@ export default function HostDashboard() {
 
                 <button
                   onClick={() => {
-                    if (gameState?.answerRevealed) {
+                    if (!gameState?.answerRevealed) {
+                      // Reveal answer and open modal in one click
+                      handleRevealAnswer();
+                    } else {
                       // If already revealed, just open the modal
                       setShowAnswerRevealModal(true);
-                    } else {
-                      // If not revealed, reveal it and open modal
-                      handleRevealAnswer();
                     }
                   }}
-                  disabled={!connected || isQuestionEnded}
+                  disabled={
+                    !connected ||
+                    (!gameState?.answerRevealed &&
+                      (stats.playerCount === 0 ||
+                        stats.answerCount < stats.playerCount))
+                  }
                   className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
-                  {gameState?.answerRevealed
-                    ? "View Answer Reveal"
+                  {stats.playerCount === 0
+                    ? "Reveal Answer (No Players)"
+                    : stats.answerCount < stats.playerCount
+                    ? `Reveal Answer (${stats.answerCount}/${stats.playerCount} answered)`
                     : "Reveal Answer"}
                 </button>
 
