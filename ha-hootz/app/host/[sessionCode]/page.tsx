@@ -480,6 +480,7 @@ export default function HostDashboard() {
             ...prev,
             answerRevealed: true,
             correctAnswer: prev.question?.correct,
+            status: "QUESTION_ENDED", // Mark question as ended
           }
         : null
     );

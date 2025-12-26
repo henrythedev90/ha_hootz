@@ -76,6 +76,17 @@ export default function GamePage() {
 
   // Timer countdown effect
   useEffect(() => {
+    // Set timer to 0 if answer is revealed
+    if (gameState?.answerRevealed) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setTimeRemaining(0);
+      setIsTimerExpired(true);
+      return;
+    }
+
     if (gameState?.status === "QUESTION_ACTIVE" && gameState.endAt) {
       const updateTimer = () => {
         const remaining = Math.max(
@@ -110,6 +121,7 @@ export default function GamePage() {
   }, [
     gameState?.status,
     gameState?.endAt,
+    gameState?.answerRevealed,
     selectedAnswer,
     socket,
     gameState?.sessionId,
@@ -276,6 +288,13 @@ export default function GamePage() {
         correctAnswer: "A" | "B" | "C" | "D";
       }) => {
         console.log("✅ Answer revealed:", data);
+        // Stop the timer and set it to 0 when answer is revealed
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+        setTimeRemaining(0);
+        setIsTimerExpired(true);
         // Keep the question view but mark answer as revealed
         setGameState((prev) =>
           prev
@@ -507,13 +526,17 @@ export default function GamePage() {
     );
   }
 
-  // Active Question View - Show when question is active OR when game is in progress with a question
+  // Active Question View - Show when question is active, ended, or in progress
+  // But answer buttons only show when question is ACTIVE or ENDED (not just IN_PROGRESS)
   if (
     gameState.question &&
     (gameState.status === "QUESTION_ACTIVE" ||
       gameState.status === "IN_PROGRESS" ||
       gameState.status === "QUESTION_ENDED")
   ) {
+    const isQuestionActive = gameState.status === "QUESTION_ACTIVE";
+    const showAnswerButtons =
+      isQuestionActive || gameState.status === "QUESTION_ENDED";
     const getTimerColor = () => {
       if (timeRemaining <= 5) return "text-red-600 dark:text-red-400";
       if (timeRemaining <= 10) return "text-orange-600 dark:text-orange-400";
@@ -581,17 +604,19 @@ export default function GamePage() {
           </button>
 
           <div className="max-w-md mx-auto w-full flex flex-col flex-1">
-            {/* Timer - Visually prominent */}
-            <div className="text-center mb-6">
-              <div
-                className={`text-6xl font-bold ${getTimerColor()} transition-colors`}
-              >
-                {timeRemaining}
+            {/* Timer - Only show when question is active */}
+            {isQuestionActive && (
+              <div className="text-center mb-6">
+                <div
+                  className={`text-6xl font-bold ${getTimerColor()} transition-colors`}
+                >
+                  {timeRemaining}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  seconds remaining
+                </div>
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                seconds remaining
-              </div>
-            </div>
+            )}
 
             {/* Question */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
@@ -600,26 +625,39 @@ export default function GamePage() {
               </h2>
             </div>
 
-            {/* Answer Buttons - Stacked vertically, large and touch-friendly */}
-            <div className="space-y-4 mb-4">
-              {(["A", "B", "C", "D"] as const).map((option) => (
-                <button
-                  key={option}
-                  onClick={() => handleAnswerSelect(option)}
-                  disabled={
-                    isTimerExpired || gameState.status === "QUESTION_ENDED"
-                  }
-                  className={getAnswerButtonClass(option)}
-                >
-                  <span className="font-bold mr-3">{option}:</span>
-                  {gameState.question![option]}
-                  {gameState.answerRevealed &&
-                    gameState.correctAnswer === option && (
-                      <span className="ml-auto">✓ Correct</span>
-                    )}
-                </button>
-              ))}
-            </div>
+            {/* Answer Buttons - Only show when question is active or ended */}
+            {showAnswerButtons ? (
+              <div className="space-y-4 mb-4">
+                {(["A", "B", "C", "D"] as const).map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => handleAnswerSelect(option)}
+                    disabled={
+                      isTimerExpired || gameState.status === "QUESTION_ENDED"
+                    }
+                    className={getAnswerButtonClass(option)}
+                  >
+                    <span className="font-bold mr-3">{option}:</span>
+                    {gameState.question![option]}
+                    {gameState.answerRevealed &&
+                      gameState.correctAnswer === option && (
+                        <span className="ml-auto">✓ Correct</span>
+                      )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 mb-4">
+                <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-6">
+                  <p className="text-lg text-gray-700 dark:text-gray-200 mb-2">
+                    Waiting for host to start the question...
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Answer buttons will appear when the question begins
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Status indicator */}
             {isTimerExpired && !gameState.answerRevealed && (

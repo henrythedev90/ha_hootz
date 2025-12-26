@@ -273,7 +273,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         return;
       }
 
-      // Update game state to show answer is revealed
+      // Update game state to show answer is revealed and question is ended
       const currentState = await redis.get(gameStateKey(sessionId));
       const gameState = currentState ? JSON.parse(currentState) : {};
 
@@ -281,6 +281,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         gameStateKey(sessionId),
         JSON.stringify({
           ...gameState,
+          status: "QUESTION_ENDED",
           answerRevealed: true,
           correctAnswer: question.correct,
         })
@@ -290,6 +291,11 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       io.to(sessionCode).emit("answer-revealed", {
         questionIndex,
         correctAnswer: question.correct,
+      });
+
+      // Also emit question-ended event to ensure all clients update status
+      io.to(sessionCode).emit("question-ended", {
+        questionIndex,
       });
 
       console.log(

@@ -166,8 +166,15 @@ export default function AnswerRevealModal({
           {/* Navigation Buttons */}
           <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700">
             <button
-              onClick={onPrevious}
-              disabled={!connected || !canNavigate || currentIndex === 0}
+              onClick={() => {
+                onPrevious();
+                onClose(); // Close modal when navigating
+              }}
+              disabled={
+                !connected ||
+                currentIndex === 0 ||
+                (questionCount > 0 && currentIndex >= questionCount)
+              }
               className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               ← Previous Question
@@ -179,9 +186,14 @@ export default function AnswerRevealModal({
               Close
             </button>
             <button
-              onClick={onNext}
+              onClick={() => {
+                onNext();
+                onClose(); // Close modal when navigating
+              }}
               disabled={
-                !connected || !canNavigate || currentIndex >= questionCount - 1
+                !connected ||
+                questionCount === 0 ||
+                currentIndex >= questionCount - 1
               }
               className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
