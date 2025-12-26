@@ -7,6 +7,7 @@ import SessionQRCode from "@/components/SessionQRCode";
 import Loading from "@/components/Loading";
 import CenteredLayout from "@/components/CenteredLayout";
 import PlayersListModal from "@/components/PlayersListModal";
+import AnswerRevealModal from "@/components/AnswerRevealModal";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -58,6 +59,7 @@ export default function HostDashboard() {
     "waiting" | "live" | "ended" | null
   >(null);
   const [showPlayersModal, setShowPlayersModal] = useState(false);
+  const [showAnswerRevealModal, setShowAnswerRevealModal] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -667,6 +669,18 @@ export default function HostDashboard() {
         socket={socket}
         connected={connected}
       />
+      <AnswerRevealModal
+        isOpen={showAnswerRevealModal}
+        onClose={() => setShowAnswerRevealModal(false)}
+        question={currentQuestion || null}
+        answerDistribution={stats.answerDistribution}
+        currentIndex={currentIndex}
+        questionCount={questionCount}
+        onPrevious={handlePreviousQuestion}
+        onNext={handleNextQuestion}
+        canNavigate={canNavigate}
+        connected={connected || false}
+      />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -728,16 +742,10 @@ export default function HostDashboard() {
                   </h3>
                   <div className="space-y-3">
                     {(["A", "B", "C", "D"] as const).map((option) => {
-                      const isCorrect = currentQuestion.correct === option;
-                      const isRevealed = gameState?.answerRevealed && isCorrect;
                       return (
                         <div
                           key={option}
-                          className={`p-3 rounded-lg border-2 ${
-                            isRevealed
-                              ? "bg-green-100 dark:bg-green-900/30 border-green-500 dark:border-green-500"
-                              : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                          }`}
+                          className="p-3 rounded-lg border-2 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
                         >
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-gray-700 dark:text-gray-300">
@@ -746,11 +754,6 @@ export default function HostDashboard() {
                             <span className="text-gray-900 dark:text-white">
                               {currentQuestion[option]}
                             </span>
-                            {isRevealed && (
-                              <span className="ml-auto text-green-600 dark:text-green-400 font-semibold">
-                                ✓ Correct
-                              </span>
-                            )}
                           </div>
                         </div>
                       );
@@ -779,37 +782,22 @@ export default function HostDashboard() {
                 </button>
 
                 <button
-                  onClick={handleRevealAnswer}
-                  disabled={
-                    !connected || isQuestionEnded || gameState?.answerRevealed
-                  }
+                  onClick={() => {
+                    if (gameState?.answerRevealed) {
+                      // If already revealed, just open the modal
+                      setShowAnswerRevealModal(true);
+                    } else {
+                      // If not revealed, reveal it and open modal
+                      handleRevealAnswer();
+                    }
+                  }}
+                  disabled={!connected || isQuestionEnded}
                   className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   {gameState?.answerRevealed
-                    ? "Answer Revealed"
+                    ? "View Answer Reveal"
                     : "Reveal Answer"}
                 </button>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handlePreviousQuestion}
-                    disabled={!connected || !canNavigate || currentIndex === 0}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  >
-                    ← Previous
-                  </button>
-                  <button
-                    onClick={handleNextQuestion}
-                    disabled={
-                      !connected ||
-                      !canNavigate ||
-                      currentIndex >= questionCount - 1
-                    }
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  >
-                    Next →
-                  </button>
-                </div>
 
                 {isQuestionActive && (
                   <button
@@ -842,7 +830,7 @@ export default function HostDashboard() {
               {/* Answer Stats */}
               {isQuestionActive || isQuestionEnded ? (
                 <div className="mb-6">
-                  <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg mb-4">
+                  <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
                     <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
                       {stats.answerCount}
                     </div>
@@ -850,39 +838,13 @@ export default function HostDashboard() {
                       Answers Submitted
                     </div>
                   </div>
-
-                  {/* Answer Distribution */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Answer Distribution
-                    </h4>
-                    {(["A", "B", "C", "D"] as const).map((option) => {
-                      const count = stats.answerDistribution[option];
-                      const total = Object.values(
-                        stats.answerDistribution
-                      ).reduce((a, b) => a + b, 0);
-                      const percentage =
-                        total > 0 ? Math.round((count / total) * 100) : 0;
-                      return (
-                        <div key={option} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-700 dark:text-gray-300">
-                              {option}
-                            </span>
-                            <span className="text-gray-600 dark:text-gray-400">
-                              {count} ({percentage}%)
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full transition-all"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {gameState?.answerRevealed && (
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-center">
+                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                        Click "View Answer Reveal" to see detailed results
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-gray-500 dark:text-gray-400 text-center py-8">
