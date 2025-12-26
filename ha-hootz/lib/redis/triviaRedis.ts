@@ -233,12 +233,12 @@ export async function getSessionIdFromCode(
 /**
  * Get session code from sessionId
  */
-export async function getSessionCodeFromId(
-  sessionId: string
-): Promise<string | null> {
-  const redis = await getRedis();
-  return await redis.get(sessionCodeKey(sessionId));
-}
+// export async function getSessionCodeFromId(
+//   sessionId: string
+// ): Promise<string | null> {
+//   const redis = await getRedis();
+//   return await redis.get(sessionCodeKey(sessionId));
+// }
 
 /**
  * Check if session code is valid and active

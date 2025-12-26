@@ -142,9 +142,14 @@ export default function GamePage() {
       }
     );
 
-    newSocket.on("join-error", (data: { reason: string }) => {
+    newSocket.on("join-error", (data: { reason?: string } | string) => {
       console.error("❌ Join error:", data);
-      setError(data.reason || "Failed to join session");
+      // Handle both object and string error formats
+      const errorMessage =
+        typeof data === "string"
+          ? data
+          : data?.reason || "Failed to join session";
+      setError(errorMessage);
     });
 
     newSocket.on("player-joined", (data: { playerCount?: number }) => {
