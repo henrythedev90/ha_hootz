@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Loading from "@/components/Loading";
+import CenteredLayout from "@/components/CenteredLayout";
 
 export default function JoinPage() {
   const params = useParams();
@@ -116,7 +117,7 @@ export default function JoinPage() {
 
   if (!isValidSession) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <CenteredLayout>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
             {isSessionLocked ? "Game Already Started" : "Invalid Session Code"}
@@ -129,12 +130,12 @@ export default function JoinPage() {
             Go to Home
           </button>
         </div>
-      </div>
+      </CenteredLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+    <CenteredLayout>
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 text-center">
@@ -186,6 +187,6 @@ export default function JoinPage() {
           </form>
         </div>
       </div>
-    </div>
+    </CenteredLayout>
   );
 }

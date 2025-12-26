@@ -6,6 +6,7 @@ import {
   answersKey,
   playerSocketKey,
   resultsKey,
+  leftPlayersKey,
 } from "../../redis/keys";
 import {
   getSessionIdFromCode,
@@ -59,11 +60,25 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         return;
       }
 
+      // Check if this player has explicitly left the game (cannot rejoin)
+      const leftPlayers = await redis.sMembers(leftPlayersKey(sessionId));
+      const normalizedName = name.trim().toLowerCase();
+      const hasLeft = leftPlayers.some(
+        (leftName) => leftName.toLowerCase() === normalizedName
+      );
+
+      if (hasLeft) {
+        socket.emit("join-error", {
+          reason:
+            "You have left this game and cannot rejoin with the same name.",
+        });
+        return;
+      }
+
       // Check for duplicate names in session
       // If a player with the same name exists, check if their socket is still connected
       // If not connected, allow reconnection (player refreshing page)
       const players = await redis.hGetAll(playersKey(sessionId));
-      const normalizedName = name.trim().toLowerCase();
 
       // Find if there's an existing player with the same name
       let existingPlayerId: string | null = null;
@@ -320,12 +335,17 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
   });
 
   socket.on("leave-game", async ({ sessionCode }) => {
-    // Player explicitly left the game - permanently remove them
+    // Player explicitly left the game - permanently remove them and prevent rejoin
     const socketInfo = socketData.get(socket.id);
     if (socketInfo && socketInfo.sessionCode === sessionCode) {
       const { playerId, sessionId, name } = socketInfo;
       try {
         const redis = await getRedis();
+
+        // Add player name to "left players" set to prevent rejoining
+        await redis.sAdd(leftPlayersKey(sessionId), name.trim());
+        // Set expiration on the left players set (match session expiration)
+        await redis.expire(leftPlayersKey(sessionId), 60 * 60 * 2); // 2 hours
 
         // Remove player from session permanently
         await redis.hDel(playersKey(sessionId), playerId);
@@ -334,7 +354,7 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         await redis.del(playerSocketKey(sessionId, playerId));
 
         console.log(
-          `🚪 Player ${name} (${playerId}) left session ${sessionCode} permanently`
+          `🚪 Player ${name} (${playerId}) left session ${sessionCode} permanently and cannot rejoin`
         );
 
         // Get updated player count
@@ -361,10 +381,12 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         // Clean up local data
         socketData.delete(socket.id);
 
-        // Disconnect the socket
-        socket.disconnect();
+        // Disconnect the socket immediately and forcefully
+        socket.disconnect(true); // Force disconnect
       } catch (error) {
         console.error("Error handling leave-game:", error);
+        // Still disconnect even if there's an error
+        socket.disconnect(true);
       }
     }
   });

@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import Loading from "@/components/Loading";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
+import CenteredLayout from "@/components/CenteredLayout";
 
 type GameStatus =
   | "WAITING"
@@ -354,7 +355,7 @@ export default function GamePage() {
     const isCancelled = error.includes("cancelled");
     return (
       <>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <CenteredLayout>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
             <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
               {isCancelled ? "Session Cancelled" : "Error"}
@@ -389,7 +390,7 @@ export default function GamePage() {
               </p>
             )}
           </div>
-        </div>
+        </CenteredLayout>
 
         {/* Exit Game Confirmation Modal */}
         <DeleteConfirmationModal
@@ -413,7 +414,7 @@ export default function GamePage() {
   if (gameState.status === "WAITING") {
     return (
       <>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 relative">
+        <CenteredLayout relative>
           {/* Exit Button - Fixed position top right */}
           <button
             onClick={handleExitGame}
@@ -449,7 +450,7 @@ export default function GamePage() {
               )}
             </div>
           </div>
-        </div>
+        </CenteredLayout>
 
         {/* Exit Game Confirmation Modal */}
         <DeleteConfirmationModal
@@ -515,7 +516,7 @@ export default function GamePage() {
 
     return (
       <>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col p-4 relative">
+        <CenteredLayout relative flexCol>
           {/* Exit Button - Fixed position top right */}
           <button
             onClick={handleExitGame}
@@ -598,7 +599,7 @@ export default function GamePage() {
                 </div>
               )}
           </div>
-        </div>
+        </CenteredLayout>
 
         {/* Exit Game Confirmation Modal */}
         <DeleteConfirmationModal
@@ -617,7 +618,7 @@ export default function GamePage() {
   // Fallback: No question available
   return (
     <>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 relative">
+      <CenteredLayout relative>
         {/* Exit Button - Fixed position top right */}
         <button
           onClick={handleExitGame}
@@ -652,7 +653,7 @@ export default function GamePage() {
             </p>
           </div>
         </div>
-      </div>
+      </CenteredLayout>
 
       {/* Exit Game Confirmation Modal */}
       <DeleteConfirmationModal
