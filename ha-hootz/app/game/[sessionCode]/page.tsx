@@ -116,7 +116,8 @@ export default function GamePage() {
       };
     } else {
       setTimeRemaining(0);
-      setIsTimerExpired(false);
+      // Only set timer as expired if question has explicitly ended
+      setIsTimerExpired(gameState?.status === "QUESTION_ENDED");
     }
   }, [
     gameState?.status,
@@ -159,9 +160,17 @@ export default function GamePage() {
 
     newSocket.on(
       "joined-session",
-      (data: { gameState: GameState; playerCount?: number }) => {
+      (data: {
+        gameState: GameState;
+        sessionId?: string;
+        playerCount?: number;
+      }) => {
         console.log("✅ Joined session:", data);
-        setGameState(data.gameState);
+        // Ensure sessionId is set in gameState (needed for answer submission)
+        setGameState({
+          ...data.gameState,
+          sessionId: data.sessionId || data.gameState.sessionId,
+        });
         if (data.playerCount !== undefined) {
           setPlayerCount(data.playerCount);
         }
@@ -175,6 +184,13 @@ export default function GamePage() {
           if (prevAnswer) {
             setSelectedAnswer(prevAnswer as "A" | "B" | "C" | "D");
           }
+        }
+
+        // Reset timer expired state when reconnecting to an active question
+        // This allows players to submit answers even if the timer appears expired
+        // The server will validate if the question is still active
+        if (data.gameState.status === "QUESTION_ACTIVE") {
+          setIsTimerExpired(false);
         }
       }
     );
@@ -313,11 +329,17 @@ export default function GamePage() {
 
     newSocket.on(
       "ANSWER_RECEIVED",
-      (data: { accepted: boolean; updated?: boolean }) => {
+      (data: { accepted: boolean; updated?: boolean; reason?: string }) => {
         if (data.accepted) {
           console.log(
             data.updated ? "✅ Answer updated" : "✅ Answer submitted"
           );
+        } else {
+          console.error("❌ Answer rejected:", data.reason);
+          // Show error to user if answer was rejected
+          if (data.reason) {
+            alert(`Answer not accepted: ${data.reason}`);
+          }
         }
       }
     );
@@ -365,7 +387,8 @@ export default function GamePage() {
   }, [sessionCode, playerName]);
 
   const handleAnswerSelect = (answer: "A" | "B" | "C" | "D") => {
-    if (!socket || !gameState || isTimerExpired) return;
+    if (!socket || !gameState) return;
+    // Only allow if question is active - server will validate if timer has expired
     if (gameState.status !== "QUESTION_ACTIVE") return;
 
     // Update selected answer immediately (optimistic UI)
@@ -623,7 +646,7 @@ export default function GamePage() {
                   {timeRemaining}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  seconds remaining
+                  Seconds Remaining
                 </div>
               </div>
             )}
@@ -650,7 +673,9 @@ export default function GamePage() {
                       key={option}
                       onClick={() => handleAnswerSelect(option)}
                       disabled={
-                        isTimerExpired || gameState.status === "QUESTION_ENDED"
+                        // Only disable if question has explicitly ended
+                        // Don't disable just because timer expired - server will validate
+                        gameState.status === "QUESTION_ENDED"
                       }
                       className={getAnswerButtonClass(option)}
                     >

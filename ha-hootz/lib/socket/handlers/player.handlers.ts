@@ -196,6 +196,48 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         playerCount,
       });
 
+      // If player reconnected with answers for the current question, update host stats
+      // Only update if question is active or in progress (not ended, since no new answers can be submitted)
+      if (
+        isReconnection &&
+        gameState.questionIndex !== undefined &&
+        (gameState.status === "QUESTION_ACTIVE" ||
+          gameState.status === "IN_PROGRESS")
+      ) {
+        const currentQuestionIndex = gameState.questionIndex;
+        const hasAnswerForCurrentQuestion =
+          playerAnswers[currentQuestionIndex] !== undefined;
+
+        if (hasAnswerForCurrentQuestion) {
+          try {
+            const answerCount = await getAnswerCount(
+              sessionId,
+              currentQuestionIndex
+            );
+            const answerDistribution = await getAnswerDistribution(
+              sessionId,
+              currentQuestionIndex
+            );
+
+            // Broadcast updated stats to host
+            io.to(sessionCode).emit("answer-stats-updated", {
+              questionIndex: currentQuestionIndex,
+              answerCount,
+              answerDistribution,
+            });
+            console.log(
+              `📊 Broadcasted updated stats after player ${name.trim()} reconnected: ${answerCount} answers for question ${currentQuestionIndex}`
+            );
+          } catch (error) {
+            console.error(
+              "Error broadcasting stats after reconnection:",
+              error
+            );
+            // Don't fail the join if stats broadcast fails
+          }
+        }
+      }
+
       console.log(
         `✅ Player ${name.trim()} (${playerId}) joined session ${sessionCode}${
           Object.keys(playerAnswers).length > 0

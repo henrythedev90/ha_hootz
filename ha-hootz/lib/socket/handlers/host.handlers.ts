@@ -2,7 +2,6 @@ import { Server, Socket } from "socket.io";
 import redisPromise from "../../redis/client";
 import { gameStateKey, playersKey } from "../../redis/keys";
 import {
-  //   getSessionCodeFromId,
   updateSessionStatus,
   getSessionIdFromCode,
   getQuestion,

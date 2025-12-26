@@ -333,6 +333,45 @@ export default function HostDashboard() {
             playerCount: data.playerCount ?? prev.playerCount,
           }));
         }
+
+        // Refresh stats when a player joins/reconnects (in case they have existing answers)
+        // This ensures the host sees updated answer counts after player refresh
+        // Only refresh if question is active or in progress (not ended, since no new answers can be submitted)
+        const currentState = gameStateRef.current;
+        if (
+          currentState &&
+          currentState.questionIndex !== undefined &&
+          (currentState.status === "QUESTION_ACTIVE" ||
+            currentState.status === "IN_PROGRESS")
+        ) {
+          const questionIndex = currentState.questionIndex;
+          const fetchStats = async () => {
+            try {
+              const response = await fetch(
+                `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`
+              );
+              const statsData = await response.json();
+              if (statsData.success) {
+                setStats((prev) => ({
+                  ...prev,
+                  answerCount: statsData.answerCount || 0,
+                  answerDistribution: statsData.answerDistribution || {
+                    A: 0,
+                    B: 0,
+                    C: 0,
+                    D: 0,
+                  },
+                }));
+                console.log(
+                  `📊 Refreshed stats after player join: ${statsData.answerCount} answers for question ${questionIndex}`
+                );
+              }
+            } catch (error) {
+              console.error("Error refreshing stats after player join:", error);
+            }
+          };
+          fetchStats();
+        }
       }
     );
 
