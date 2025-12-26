@@ -274,10 +274,13 @@ export default function GamePage() {
               questionIndex: data.questionIndex,
               question: data.question,
               endAt: undefined,
+              answerRevealed: false, // Reset answer revealed state
+              correctAnswer: undefined, // Reset correct answer
             } as GameState)
         );
-        setSelectedAnswer(null);
+        setSelectedAnswer(null); // Reset selected answer
         setIsTimerExpired(false);
+        setTimeRemaining(0); // Reset timer
       }
     );
 
@@ -549,9 +552,16 @@ export default function GamePage() {
       const isSelected = selectedAnswer === option;
       const isDisabled =
         isTimerExpired || gameState.status === "QUESTION_ENDED";
+      // Only show correct/incorrect styling when question has ended AND answer is revealed
       const isCorrect =
-        gameState.answerRevealed && gameState.correctAnswer === option;
-      const isIncorrect = gameState.answerRevealed && isSelected && !isCorrect;
+        gameState.status === "QUESTION_ENDED" &&
+        gameState.answerRevealed &&
+        gameState.correctAnswer === option;
+      const isIncorrect =
+        gameState.status === "QUESTION_ENDED" &&
+        gameState.answerRevealed &&
+        isSelected &&
+        !isCorrect;
 
       if (isDisabled && !gameState.answerRevealed) {
         return `${baseClass} bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`;
@@ -628,23 +638,30 @@ export default function GamePage() {
             {/* Answer Buttons - Only show when question is active or ended */}
             {showAnswerButtons ? (
               <div className="space-y-4 mb-4">
-                {(["A", "B", "C", "D"] as const).map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => handleAnswerSelect(option)}
-                    disabled={
-                      isTimerExpired || gameState.status === "QUESTION_ENDED"
-                    }
-                    className={getAnswerButtonClass(option)}
-                  >
-                    <span className="font-bold mr-3">{option}:</span>
-                    {gameState.question![option]}
-                    {gameState.answerRevealed &&
-                      gameState.correctAnswer === option && (
+                {(["A", "B", "C", "D"] as const).map((option) => {
+                  // Only show correct indicator if answer is revealed AND question is ended
+                  const showCorrectIndicator =
+                    gameState.answerRevealed &&
+                    gameState.correctAnswer === option &&
+                    gameState.status === "QUESTION_ENDED";
+
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => handleAnswerSelect(option)}
+                      disabled={
+                        isTimerExpired || gameState.status === "QUESTION_ENDED"
+                      }
+                      className={getAnswerButtonClass(option)}
+                    >
+                      <span className="font-bold mr-3">{option}:</span>
+                      {gameState.question![option]}
+                      {showCorrectIndicator && (
                         <span className="ml-auto">✓ Correct</span>
                       )}
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 mb-4">

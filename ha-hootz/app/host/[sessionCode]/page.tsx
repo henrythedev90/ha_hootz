@@ -62,6 +62,12 @@ export default function HostDashboard() {
   const [showAnswerRevealModal, setShowAnswerRevealModal] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const gameStateRef = useRef<GameState | null>(null);
+
+  // Keep gameStateRef in sync with gameState
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
 
   // Fetch questions and game state when component mounts
   useEffect(() => {
@@ -188,8 +194,16 @@ export default function HostDashboard() {
       }
     };
 
+    // Reset stats immediately when question index changes
+    setStats((prev) => ({
+      ...prev,
+      answerCount: 0,
+      answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
+    }));
+
+    // Fetch stats immediately, then set up interval
     fetchStats();
-    const interval = setInterval(fetchStats, 1000); // Update every 1 second for real-time updates
+    const interval = setInterval(fetchStats, 500); // Update every 500ms for more real-time updates
 
     return () => clearInterval(interval);
   }, [connected, sessionCode, gameState?.questionIndex]);
@@ -398,6 +412,30 @@ export default function HostDashboard() {
               }
             : null
         );
+        // Reset stats for the new question
+        setStats((prev) => ({
+          ...prev,
+          answerCount: 0,
+          answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
+        }));
+      }
+    );
+
+    newSocket.on(
+      "answer-stats-updated",
+      (data: {
+        questionIndex: number;
+        answerCount: number;
+        answerDistribution: { A: number; B: number; C: number; D: number };
+      }) => {
+        // Only update if it's for the current question (use ref to get latest state)
+        if (data.questionIndex === gameStateRef.current?.questionIndex) {
+          setStats((prev) => ({
+            ...prev,
+            answerCount: data.answerCount,
+            answerDistribution: data.answerDistribution,
+          }));
+        }
       }
     );
 

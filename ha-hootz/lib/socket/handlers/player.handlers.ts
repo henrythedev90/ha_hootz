@@ -12,6 +12,8 @@ import {
   getSessionIdFromCode,
   getSession,
   addPlayer as addPlayerToSession,
+  getAnswerCount,
+  getAnswerDistribution,
 } from "../../redis/triviaRedis";
 
 async function getRedis() {
@@ -325,6 +327,28 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         accepted: true,
         updated: isUpdate, // true if they changed their answer, false if first submission
       });
+
+      // Notify host about updated answer count (for real-time button updates)
+      try {
+        const answerCount = await getAnswerCount(gameId, questionIndex);
+        const answerDistribution = await getAnswerDistribution(
+          gameId,
+          questionIndex
+        );
+
+        // Get sessionCode from socket data
+        const socketInfo = socketData.get(socket.id);
+        if (socketInfo) {
+          io.to(socketInfo.sessionCode).emit("answer-stats-updated", {
+            questionIndex,
+            answerCount,
+            answerDistribution,
+          });
+        }
+      } catch (error) {
+        console.error("Error broadcasting answer stats:", error);
+        // Don't fail the answer submission if stats broadcast fails
+      }
     } catch (error) {
       console.error("Error submitting answer:", error);
       socket.emit("ANSWER_RECEIVED", {
