@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import Loading from "@/components/Loading";
+import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 
 type GameStatus =
   | "WAITING"
@@ -45,6 +46,7 @@ export default function GamePage() {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isTimerExpired, setIsTimerExpired] = useState(false);
   const [error, setError] = useState("");
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -328,46 +330,78 @@ export default function GamePage() {
     });
   };
 
+  const handleExitGame = () => {
+    setIsExitModalOpen(true);
+  };
+
+  const handleConfirmExit = () => {
+    // Emit leave-game event to server
+    if (socket) {
+      socket.emit("leave-game", { sessionCode });
+    }
+
+    // Disconnect socket
+    if (socket) {
+      socket.disconnect();
+    }
+    setConnected(false);
+    setError("You have left the game. You cannot rejoin with the same name.");
+    setIsExitModalOpen(false);
+  };
+
   // Show error screen if there's an error (including session cancelled)
   if (error) {
     const isCancelled = error.includes("cancelled");
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
-            {isCancelled ? "Session Cancelled" : "Error"}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
-          {isCancelled ? (
-            <div className="space-y-4">
+      <>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
+            <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
+              {isCancelled ? "Session Cancelled" : "Error"}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
+            {isCancelled ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  The host has ended this session. You can close this page.
+                </p>
+                {playerName && (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                      Hey {playerName}! Did you enjoy playing?
+                    </p>
+                    <button
+                      onClick={() => (window.location.href = "/auth/signup")}
+                      className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                    >
+                      Create Your Own Ha-Hootz Account
+                    </button>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Host your own trivia games and create engaging
+                      presentations!
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                The host has ended this session. You can close this page.
+                Please check your connection and try again.
               </p>
-              {playerName && (
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                    Hey {playerName}! Did you enjoy playing?
-                  </p>
-                  <button
-                    onClick={() => (window.location.href = "/auth/signup")}
-                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
-                  >
-                    Create Your Own Ha-Hootz Account
-                  </button>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Host your own trivia games and create engaging
-                    presentations!
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Please check your connection and try again.
-            </p>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+
+        {/* Exit Game Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={isExitModalOpen}
+          playerMode={true}
+          onClose={() => setIsExitModalOpen(false)}
+          onConfirm={handleConfirmExit}
+          title="Exit Game"
+          itemName="game"
+          description="You won't be able to rejoin with the same name if you leave now."
+        />
+      </>
     );
   }
 
@@ -378,20 +412,56 @@ export default function GamePage() {
   // Lobby / Waiting Room
   if (gameState.status === "WAITING") {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-              Waiting for the host to start the game...
-            </h2>
-            {playerCount > 0 && (
-              <p className="text-gray-600 dark:text-gray-300 text-lg">
-                {playerCount} {playerCount === 1 ? "player" : "players"} waiting
-              </p>
-            )}
+      <>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 relative">
+          {/* Exit Button - Fixed position top right */}
+          <button
+            onClick={handleExitGame}
+            className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+            title="Exit Game"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
+          <div className="w-full max-w-md">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+                Waiting for the host to start the game...
+              </h2>
+              {playerCount > 0 && (
+                <p className="text-gray-600 dark:text-gray-300 text-lg">
+                  {playerCount} {playerCount === 1 ? "player" : "players"}{" "}
+                  waiting
+                </p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Exit Game Confirmation Modal */}
+        <DeleteConfirmationModal
+          playerMode={true}
+          isOpen={isExitModalOpen}
+          onClose={() => setIsExitModalOpen(false)}
+          onConfirm={handleConfirmExit}
+          title="Exit Game"
+          itemName="game"
+          description="You won't be able to rejoin with the same name if you leave now."
+        />
+      </>
     );
   }
 
@@ -444,86 +514,156 @@ export default function GamePage() {
     };
 
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col p-4">
-        <div className="max-w-md mx-auto w-full flex flex-col flex-1">
-          {/* Timer - Visually prominent */}
-          <div className="text-center mb-6">
-            <div
-              className={`text-6xl font-bold ${getTimerColor()} transition-colors`}
+      <>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col p-4 relative">
+          {/* Exit Button - Fixed position top right */}
+          <button
+            onClick={handleExitGame}
+            className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+            title="Exit Game"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
             >
-              {timeRemaining}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              seconds remaining
-            </div>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
 
-          {/* Question */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
-              {gameState.question.text}
-            </h2>
-          </div>
-
-          {/* Answer Buttons - Stacked vertically, large and touch-friendly */}
-          <div className="space-y-4 mb-4">
-            {(["A", "B", "C", "D"] as const).map((option) => (
-              <button
-                key={option}
-                onClick={() => handleAnswerSelect(option)}
-                disabled={
-                  isTimerExpired || gameState.status === "QUESTION_ENDED"
-                }
-                className={getAnswerButtonClass(option)}
+          <div className="max-w-md mx-auto w-full flex flex-col flex-1">
+            {/* Timer - Visually prominent */}
+            <div className="text-center mb-6">
+              <div
+                className={`text-6xl font-bold ${getTimerColor()} transition-colors`}
               >
-                <span className="font-bold mr-3">{option}:</span>
-                {gameState.question![option]}
-                {gameState.answerRevealed &&
-                  gameState.correctAnswer === option && (
-                    <span className="ml-auto">✓ Correct</span>
-                  )}
-              </button>
-            ))}
-          </div>
+                {timeRemaining}
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                seconds remaining
+              </div>
+            </div>
 
-          {/* Status indicator */}
-          {isTimerExpired && !gameState.answerRevealed && (
-            <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-              Time's up! Your answer has been submitted.
+            {/* Question */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
+                {gameState.question.text}
+              </h2>
             </div>
-          )}
-          {gameState.answerRevealed && (
-            <div className="text-center text-sm text-green-600 dark:text-green-400 font-semibold">
-              The correct answer has been revealed!
+
+            {/* Answer Buttons - Stacked vertically, large and touch-friendly */}
+            <div className="space-y-4 mb-4">
+              {(["A", "B", "C", "D"] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => handleAnswerSelect(option)}
+                  disabled={
+                    isTimerExpired || gameState.status === "QUESTION_ENDED"
+                  }
+                  className={getAnswerButtonClass(option)}
+                >
+                  <span className="font-bold mr-3">{option}:</span>
+                  {gameState.question![option]}
+                  {gameState.answerRevealed &&
+                    gameState.correctAnswer === option && (
+                      <span className="ml-auto">✓ Correct</span>
+                    )}
+                </button>
+              ))}
             </div>
-          )}
-          {gameState.status === "IN_PROGRESS" &&
-            !gameState.answerRevealed &&
-            !isTimerExpired && (
+
+            {/* Status indicator */}
+            {isTimerExpired && !gameState.answerRevealed && (
               <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-                Waiting for host to start the question...
+                Time's up! Your answer has been submitted.
               </div>
             )}
+            {gameState.answerRevealed && (
+              <div className="text-center text-sm text-green-600 dark:text-green-400 font-semibold">
+                The correct answer has been revealed!
+              </div>
+            )}
+            {gameState.status === "IN_PROGRESS" &&
+              !gameState.answerRevealed &&
+              !isTimerExpired && (
+                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                  Waiting for host to start the question...
+                </div>
+              )}
+          </div>
         </div>
-      </div>
+
+        {/* Exit Game Confirmation Modal */}
+        <DeleteConfirmationModal
+          playerMode={true}
+          isOpen={isExitModalOpen}
+          onClose={() => setIsExitModalOpen(false)}
+          onConfirm={handleConfirmExit}
+          title="Exit Game"
+          itemName="game"
+          description="You won't be able to rejoin with the same name if you leave now."
+        />
+      </>
     );
   }
 
   // Fallback: No question available
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            {gameState.status === "QUESTION_ENDED"
-              ? "Question ended"
-              : "Game in progress..."}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300">
-            Waiting for next question.
-          </p>
+    <>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 relative">
+        {/* Exit Button - Fixed position top right */}
+        <button
+          onClick={handleExitGame}
+          className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+          title="Exit Game"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+
+        <div className="w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              {gameState.status === "QUESTION_ENDED"
+                ? "Question ended"
+                : "Game in progress..."}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300">
+              Waiting for next question.
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Exit Game Confirmation Modal */}
+      <DeleteConfirmationModal
+        playerMode={true}
+        isOpen={isExitModalOpen}
+        onClose={() => setIsExitModalOpen(false)}
+        onConfirm={handleConfirmExit}
+        title="Exit Game"
+        itemName="game"
+        description="You won't be able to rejoin with the same name if you leave now."
+      />
+    </>
   );
 }

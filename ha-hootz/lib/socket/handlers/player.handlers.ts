@@ -319,6 +319,56 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
     }
   });
 
+  socket.on("leave-game", async ({ sessionCode }) => {
+    // Player explicitly left the game - permanently remove them
+    const socketInfo = socketData.get(socket.id);
+    if (socketInfo && socketInfo.sessionCode === sessionCode) {
+      const { playerId, sessionId, name } = socketInfo;
+      try {
+        const redis = await getRedis();
+
+        // Remove player from session permanently
+        await redis.hDel(playersKey(sessionId), playerId);
+
+        // Remove socket mapping
+        await redis.del(playerSocketKey(sessionId, playerId));
+
+        console.log(
+          `🚪 Player ${name} (${playerId}) left session ${sessionCode} permanently`
+        );
+
+        // Get updated player count
+        const allPlayers = await redis.hGetAll(playersKey(sessionId));
+        let activePlayerCount = 0;
+        for (const [pid] of Object.entries(allPlayers)) {
+          const pidSocketId = await redis.get(playerSocketKey(sessionId, pid));
+          if (pidSocketId) {
+            const pidSocket = io.sockets.sockets.get(pidSocketId);
+            if (pidSocket && pidSocket.connected) {
+              activePlayerCount++;
+            }
+          }
+        }
+
+        // Broadcast player left event
+        io.to(sessionCode).emit("player-left", {
+          playerId,
+          name,
+          sessionCode,
+          playerCount: activePlayerCount,
+        });
+
+        // Clean up local data
+        socketData.delete(socket.id);
+
+        // Disconnect the socket
+        socket.disconnect();
+      } catch (error) {
+        console.error("Error handling leave-game:", error);
+      }
+    }
+  });
+
   socket.on("disconnect", async () => {
     // Clean up socket-to-player mapping
     // NOTE: We do NOT remove the player from the players hash on disconnect
