@@ -58,7 +58,7 @@ export default function GameWelcomeModal({
             </svg>
           </div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Welcome to the Game!
+            Your Game will be starting shortly!
           </h2>
           <p className="text-gray-600 dark:text-gray-300 text-lg">
             {playerName && (
@@ -75,9 +75,7 @@ export default function GameWelcomeModal({
         </div>
 
         <div className="mb-6 space-y-3">
-          <p className="text-gray-700 dark:text-gray-200">
-            The game session has started!
-          </p>
+          <p className="text-gray-700 dark:text-gray-200">Good luck!</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {hostName ? (
               <>
