@@ -48,9 +48,29 @@ export default function GamePage() {
   const [isTimerExpired, setIsTimerExpired] = useState(false);
   const [error, setError] = useState("");
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [hostName, setHostName] = useState<string | null>(null);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
+
+  // Fetch host name when component mounts
+  useEffect(() => {
+    const fetchHostName = async () => {
+      try {
+        const response = await fetch(`/api/sessions/${sessionCode}/host`);
+        const data = await response.json();
+        if (data.success && data.hostName) {
+          setHostName(data.hostName);
+        }
+      } catch (error) {
+        console.error("Error fetching host name:", error);
+      }
+    };
+
+    if (sessionCode) {
+      fetchHostName();
+    }
+  }, [sessionCode]);
 
   // Timer countdown effect
   useEffect(() => {
@@ -410,7 +430,7 @@ export default function GamePage() {
     return <Loading message="Connecting to game..." />;
   }
 
-  // Lobby / Waiting Room
+  // Lobby / Waiting Room - Welcome Screen
   if (gameState.status === "WAITING") {
     return (
       <>
@@ -439,14 +459,29 @@ export default function GamePage() {
 
           <div className="w-full max-w-md">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-                Waiting for the host to start the game...
-              </h2>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Welcome to Ha-Hootz!
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300 mb-6 text-lg">
+                You're all set! We're waiting for{" "}
+                {hostName ? (
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">
+                    {hostName}
+                  </span>
+                ) : (
+                  "the host"
+                )}{" "}
+                to start the presentation.
+              </p>
               {playerCount > 0 && (
-                <p className="text-gray-600 dark:text-gray-300 text-lg">
-                  {playerCount} {playerCount === 1 ? "player" : "players"}{" "}
-                  waiting
-                </p>
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
+                    Players in lobby
+                  </p>
+                  <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
+                    {playerCount} {playerCount === 1 ? "player" : "players"}
+                  </p>
+                </div>
               )}
             </div>
           </div>

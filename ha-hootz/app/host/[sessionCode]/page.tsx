@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import SessionQRCode from "@/components/SessionQRCode";
 import Loading from "@/components/Loading";
+import CenteredLayout from "@/components/CenteredLayout";
+import PlayersListModal from "@/components/PlayersListModal";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -52,6 +54,10 @@ export default function HostDashboard() {
     answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
   });
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [sessionStatus, setSessionStatus] = useState<
+    "waiting" | "live" | "ended" | null
+  >(null);
+  const [showPlayersModal, setShowPlayersModal] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -78,8 +84,21 @@ export default function HostDashboard() {
       }
     };
 
+    const fetchSessionStatus = async () => {
+      try {
+        const response = await fetch(`/api/sessions/validate/${sessionCode}`);
+        const data = await response.json();
+        if (data.sessionStatus) {
+          setSessionStatus(data.sessionStatus);
+        }
+      } catch (error) {
+        console.error("Error fetching session status:", error);
+      }
+    };
+
     if (sessionCode) {
       fetchQuestions();
+      fetchSessionStatus();
     }
   }, [sessionCode]);
 
@@ -161,8 +180,11 @@ export default function HostDashboard() {
 
   // Verify authentication and host ownership
   useEffect(() => {
+    // Wait for session to finish loading
     if (status === "loading") return;
-    if (!session) {
+
+    // Only redirect if we're certain the user is not authenticated
+    if (status === "unauthenticated" || (!session && status !== "loading")) {
       router.push("/auth/signin");
       return;
     }
@@ -207,13 +229,7 @@ export default function HostDashboard() {
     newSocket.on("connect", () => {
       console.log("✅ Host connected to server");
       setConnected(true);
-      // Pass userId from session for authentication
-      if (session?.user?.id) {
-        newSocket.emit("host-join", { sessionCode, userId: session.user.id });
-      } else {
-        console.error("No user session found");
-        router.push("/auth/signin");
-      }
+      // Emit host-join will be handled by separate effect when session is ready
     });
 
     newSocket.on(
@@ -274,30 +290,13 @@ export default function HostDashboard() {
       "game-started",
       (data: { status: string; questionIndex: number }) => {
         console.log("🎮 Game started:", data);
-        const questionIndex = data.questionIndex ?? 0;
-        // Set the question from the loaded questions array
-        // Use setQuestions callback to get current questions state
-        setQuestions((currentQuestions) => {
-          const question = currentQuestions[questionIndex];
-          setGameState((prev) => ({
-            ...prev,
-            status: "IN_PROGRESS",
-            questionIndex,
-            question: question
-              ? {
-                  text: question.text,
-                  A: question.A,
-                  B: question.B,
-                  C: question.C,
-                  D: question.D,
-                  correct: question.correct,
-                  index: question.index,
-                }
-              : prev?.question,
-            questionCount: currentQuestions.length || prev?.questionCount,
-          }));
-          return currentQuestions; // Return unchanged
-        });
+        // Show players modal after game starts
+        setShowPlayersModal(true);
+        setGameState((prev) => ({
+          ...prev,
+          status: "IN_PROGRESS",
+          questionIndex: data.questionIndex ?? 0,
+        }));
       }
     );
 
@@ -371,6 +370,17 @@ export default function HostDashboard() {
       newSocket.disconnect();
     };
   }, [sessionCode, router]);
+
+  // Emit host-join when socket is connected and session is ready
+  useEffect(() => {
+    if (!connected || !socket || status === "loading") return;
+
+    if (session?.user?.id) {
+      socket.emit("host-join", { sessionCode, userId: session.user.id });
+    } else if (status === "unauthenticated") {
+      router.push("/auth/signin");
+    }
+  }, [connected, socket, session, status, sessionCode, router]);
 
   const handleStartGame = () => {
     if (!socket) return;
@@ -479,48 +489,362 @@ export default function HostDashboard() {
     return null;
   }
 
+  // Show message if game has ended (host can still access dashboard when game is live)
+  if (sessionStatus === "ended") {
+    return (
+      <CenteredLayout>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-4">
+            Game Has Ended
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            This game has already ended.
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            We apologize, but you cannot access the host dashboard for a game
+            that has already ended.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </CenteredLayout>
+    );
+  }
+
   // Lobby view (before game starts)
   if (gameState?.status === "WAITING" || !gameState) {
     return (
+      <>
+        <PlayersListModal
+          isOpen={showPlayersModal}
+          onClose={() => setShowPlayersModal(false)}
+          sessionCode={sessionCode}
+          socket={socket}
+          connected={connected}
+        />
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                    Host Dashboard
+                  </h1>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Session: {sessionCode}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Status: {connected ? "🟢 Connected" : "🔴 Disconnected"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <SessionQRCode
+                  sessionCode={sessionCode}
+                  joinUrl={`/join/${sessionCode}`}
+                />
+
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Players ({players.length})
+                  </h3>
+                  {players.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400">
+                      No players joined yet
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {players.map((player) => (
+                        <li
+                          key={player.playerId}
+                          className="text-gray-700 dark:text-gray-300"
+                        >
+                          👤 {player.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-4">
+                <button
+                  onClick={handleStartGame}
+                  disabled={!connected || players.length === 0}
+                  className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Start Game
+                </button>
+                <button
+                  onClick={handleCancelSession}
+                  disabled={!connected}
+                  className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Cancel Session
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Live Game Session View (Desktop-First Two-Column Layout)
+  return (
+    <>
+      <PlayersListModal
+        isOpen={showPlayersModal}
+        onClose={() => setShowPlayersModal(false)}
+        sessionCode={sessionCode}
+        socket={socket}
+        connected={connected}
+      />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-            <div className="flex justify-between items-center mb-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
+            <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  Host Dashboard
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Live Game Session
                 </h1>
                 <p className="text-gray-600 dark:text-gray-300">
-                  Session: {sessionCode}
+                  Session: {sessionCode} •{" "}
+                  {connected ? "🟢 Connected" : "🔴 Disconnected"}
                 </p>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Status: {connected ? "🟢 Connected" : "🔴 Disconnected"}
+              <button
+                onClick={handleCancelSession}
+                disabled={!connected}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                Cancel Session
+              </button>
+            </div>
+          </div>
+
+          {/* Two-Column Layout: Desktop-First */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Panel: Question Control */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Question Control
+              </h2>
+
+              {/* Question Index */}
+              {currentQuestion && (
+                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                  Question {currentIndex + 1} of {questionCount}
                 </div>
+              )}
+
+              {/* Timer Display */}
+              {isQuestionActive && (
+                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                      {timeRemaining}s
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Time Remaining
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Current Question Display */}
+              {currentQuestion ? (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    {currentQuestion.text}
+                  </h3>
+                  <div className="space-y-3">
+                    {(["A", "B", "C", "D"] as const).map((option) => {
+                      const isCorrect = currentQuestion.correct === option;
+                      const isRevealed = gameState.answerRevealed && isCorrect;
+                      return (
+                        <div
+                          key={option}
+                          className={`p-3 rounded-lg border-2 ${
+                            isRevealed
+                              ? "bg-green-100 dark:bg-green-900/30 border-green-500 dark:border-green-500"
+                              : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-700 dark:text-gray-300">
+                              {option}:
+                            </span>
+                            <span className="text-gray-900 dark:text-white">
+                              {currentQuestion[option]}
+                            </span>
+                            {isRevealed && (
+                              <span className="ml-auto text-green-600 dark:text-green-400 font-semibold">
+                                ✓ Correct
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-500 dark:text-gray-400">
+                  No question loaded
+                </div>
+              )}
+
+              {/* Question Controls */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleStartQuestion}
+                  disabled={
+                    !connected ||
+                    !currentQuestion ||
+                    isQuestionActive ||
+                    gameState?.answerRevealed
+                  }
+                  className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Start Question
+                </button>
+
+                <button
+                  onClick={handleRevealAnswer}
+                  disabled={
+                    !connected || isQuestionEnded || gameState?.answerRevealed
+                  }
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  {gameState.answerRevealed
+                    ? "Answer Revealed"
+                    : "Reveal Answer"}
+                </button>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handlePreviousQuestion}
+                    disabled={!connected || !canNavigate || currentIndex === 0}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    onClick={handleNextQuestion}
+                    disabled={
+                      !connected ||
+                      !canNavigate ||
+                      currentIndex >= questionCount - 1
+                    }
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  >
+                    Next →
+                  </button>
+                </div>
+
+                {isQuestionActive && (
+                  <button
+                    onClick={handleEndQuestion}
+                    disabled={!connected}
+                    className="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  >
+                    End Question
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SessionQRCode
-                sessionCode={sessionCode}
-                joinUrl={`/join/${sessionCode}`}
-              />
+            {/* Right Panel: Live Monitoring */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Live Monitoring
+              </h2>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Players ({players.length})
-                </h3>
+              {/* Player Count */}
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                  {stats.playerCount}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Connected Players
+                </div>
+              </div>
+
+              {/* Answer Stats */}
+              {isQuestionActive || isQuestionEnded ? (
+                <div className="mb-6">
+                  <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg mb-4">
+                    <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
+                      {stats.answerCount}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Answers Submitted
+                    </div>
+                  </div>
+
+                  {/* Answer Distribution */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Answer Distribution
+                    </h4>
+                    {(["A", "B", "C", "D"] as const).map((option) => {
+                      const count = stats.answerDistribution[option];
+                      const total = Object.values(
+                        stats.answerDistribution
+                      ).reduce((a, b) => a + b, 0);
+                      const percentage =
+                        total > 0 ? Math.round((count / total) * 100) : 0;
+                      return (
+                        <div key={option} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-700 dark:text-gray-300">
+                              {option}
+                            </span>
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {count} ({percentage}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+                  Start a question to see live stats
+                </div>
+              )}
+
+              {/* Player List */}
+              <div className="mt-6">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Players
+                </h4>
                 {players.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400">
-                    No players joined yet
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    No players joined
                   </p>
                 ) : (
-                  <ul className="space-y-2">
+                  <ul className="space-y-2 max-h-48 overflow-y-auto">
                     {players.map((player) => (
                       <li
                         key={player.playerId}
-                        className="text-gray-700 dark:text-gray-300"
+                        className="text-sm text-gray-700 dark:text-gray-300"
                       >
                         👤 {player.name}
                       </li>
@@ -529,277 +853,9 @@ export default function HostDashboard() {
                 )}
               </div>
             </div>
-
-            <div className="mt-6 flex gap-4">
-              <button
-                onClick={handleStartGame}
-                disabled={!connected || players.length === 0}
-                className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                Start Game
-              </button>
-              <button
-                onClick={handleCancelSession}
-                disabled={!connected}
-                className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                Cancel Session
-              </button>
-            </div>
           </div>
         </div>
       </div>
-    );
-  }
-
-  // Live Game Session View (Desktop-First Two-Column Layout)
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Live Game Session
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300">
-                Session: {sessionCode} •{" "}
-                {connected ? "🟢 Connected" : "🔴 Disconnected"}
-              </p>
-            </div>
-            <button
-              onClick={handleCancelSession}
-              disabled={!connected}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-            >
-              Cancel Session
-            </button>
-          </div>
-        </div>
-
-        {/* Two-Column Layout: Desktop-First */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Panel: Question Control */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Question Control
-            </h2>
-
-            {/* Question Index */}
-            {currentQuestion && (
-              <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Question {currentIndex + 1} of {questionCount}
-              </div>
-            )}
-
-            {/* Timer Display */}
-            {isQuestionActive && (
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-                    {timeRemaining}s
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Time Remaining
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Current Question Display */}
-            {currentQuestion ? (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  {currentQuestion.text}
-                </h3>
-                <div className="space-y-3">
-                  {(["A", "B", "C", "D"] as const).map((option) => {
-                    const isCorrect = currentQuestion.correct === option;
-                    const isRevealed = gameState.answerRevealed && isCorrect;
-                    return (
-                      <div
-                        key={option}
-                        className={`p-3 rounded-lg border-2 ${
-                          isRevealed
-                            ? "bg-green-100 dark:bg-green-900/30 border-green-500 dark:border-green-500"
-                            : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-gray-700 dark:text-gray-300">
-                            {option}:
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {currentQuestion[option]}
-                          </span>
-                          {isRevealed && (
-                            <span className="ml-auto text-green-600 dark:text-green-400 font-semibold">
-                              ✓ Correct
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="text-gray-500 dark:text-gray-400">
-                No question loaded
-              </div>
-            )}
-
-            {/* Question Controls */}
-            <div className="space-y-3">
-              <button
-                onClick={handleStartQuestion}
-                disabled={
-                  !connected ||
-                  !currentQuestion ||
-                  isQuestionActive ||
-                  gameState?.answerRevealed
-                }
-                className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                Start Question
-              </button>
-
-              <button
-                onClick={handleRevealAnswer}
-                disabled={
-                  !connected || isQuestionEnded || gameState?.answerRevealed
-                }
-                className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {gameState.answerRevealed ? "Answer Revealed" : "Reveal Answer"}
-              </button>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={handlePreviousQuestion}
-                  disabled={!connected || !canNavigate || currentIndex === 0}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  ← Previous
-                </button>
-                <button
-                  onClick={handleNextQuestion}
-                  disabled={
-                    !connected ||
-                    !canNavigate ||
-                    currentIndex >= questionCount - 1
-                  }
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  Next →
-                </button>
-              </div>
-
-              {isQuestionActive && (
-                <button
-                  onClick={handleEndQuestion}
-                  disabled={!connected}
-                  className="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  End Question
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Right Panel: Live Monitoring */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Live Monitoring
-            </h2>
-
-            {/* Player Count */}
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                {stats.playerCount}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Connected Players
-              </div>
-            </div>
-
-            {/* Answer Stats */}
-            {isQuestionActive || isQuestionEnded ? (
-              <div className="mb-6">
-                <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg mb-4">
-                  <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
-                    {stats.answerCount}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Answers Submitted
-                  </div>
-                </div>
-
-                {/* Answer Distribution */}
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    Answer Distribution
-                  </h4>
-                  {(["A", "B", "C", "D"] as const).map((option) => {
-                    const count = stats.answerDistribution[option];
-                    const total = Object.values(
-                      stats.answerDistribution
-                    ).reduce((a, b) => a + b, 0);
-                    const percentage =
-                      total > 0 ? Math.round((count / total) * 100) : 0;
-                    return (
-                      <div key={option} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-700 dark:text-gray-300">
-                            {option}
-                          </span>
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {count} ({percentage}%)
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="text-gray-500 dark:text-gray-400 text-center py-8">
-                Start a question to see live stats
-              </div>
-            )}
-
-            {/* Player List */}
-            <div className="mt-6">
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Players
-              </h4>
-              {players.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  No players joined
-                </p>
-              ) : (
-                <ul className="space-y-2 max-h-48 overflow-y-auto">
-                  {players.map((player) => (
-                    <li
-                      key={player.playerId}
-                      className="text-sm text-gray-700 dark:text-gray-300"
-                    >
-                      👤 {player.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
