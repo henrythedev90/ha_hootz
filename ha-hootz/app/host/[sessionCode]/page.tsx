@@ -35,6 +35,7 @@ interface Stats {
   playerCount: number;
   answerCount: number;
   answerDistribution: { A: number; B: number; C: number; D: number };
+  playersWithAnswers?: string[]; // Array of playerIds who have submitted answers
 }
 
 export default function HostDashboard() {
@@ -53,6 +54,7 @@ export default function HostDashboard() {
     playerCount: 0,
     answerCount: 0,
     answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
+    playersWithAnswers: [],
   });
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [sessionStatus, setSessionStatus] = useState<
@@ -187,6 +189,7 @@ export default function HostDashboard() {
               C: 0,
               D: 0,
             },
+            playersWithAnswers: data.playersWithAnswers || [],
           });
         }
       } catch (error) {
@@ -199,6 +202,7 @@ export default function HostDashboard() {
       ...prev,
       answerCount: 0,
       answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
+      playersWithAnswers: [],
     }));
 
     // Fetch stats immediately, then set up interval
@@ -361,6 +365,7 @@ export default function HostDashboard() {
                     C: 0,
                     D: 0,
                   },
+                  playersWithAnswers: statsData.playersWithAnswers || [],
                 }));
                 console.log(
                   `📊 Refreshed stats after player join: ${statsData.answerCount} answers for question ${questionIndex}`
@@ -456,6 +461,7 @@ export default function HostDashboard() {
           ...prev,
           answerCount: 0,
           answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
+          playersWithAnswers: [],
         }));
       }
     );
@@ -466,6 +472,7 @@ export default function HostDashboard() {
         questionIndex: number;
         answerCount: number;
         answerDistribution: { A: number; B: number; C: number; D: number };
+        playersWithAnswers?: string[];
       }) => {
         // Only update if it's for the current question (use ref to get latest state)
         if (data.questionIndex === gameStateRef.current?.questionIndex) {
@@ -473,6 +480,8 @@ export default function HostDashboard() {
             ...prev,
             answerCount: data.answerCount,
             answerDistribution: data.answerDistribution,
+            playersWithAnswers:
+              data.playersWithAnswers || prev.playersWithAnswers || [],
           }));
         }
       }
@@ -950,14 +959,28 @@ export default function HostDashboard() {
                   </p>
                 ) : (
                   <ul className="space-y-2 max-h-48 overflow-y-auto">
-                    {players.map((player) => (
-                      <li
-                        key={player.playerId}
-                        className="text-sm text-gray-700 dark:text-gray-300"
-                      >
-                        👤 {player.name}
-                      </li>
-                    ))}
+                    {players.map((player) => {
+                      const hasSubmitted =
+                        stats.playersWithAnswers?.includes(player.playerId) ||
+                        false;
+                      return (
+                        <li
+                          key={player.playerId}
+                          className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                        >
+                          <span>👤</span>
+                          <span className="flex-1">{player.name}</span>
+                          {hasSubmitted && (
+                            <span
+                              className="text-yellow-500"
+                              title="Answer submitted"
+                            >
+                              💡
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>

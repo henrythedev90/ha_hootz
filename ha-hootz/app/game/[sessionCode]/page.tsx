@@ -682,7 +682,7 @@ export default function GamePage() {
                       <span className="font-bold mr-3">{option}:</span>
                       {gameState.question![option]}
                       {showCorrectIndicator && (
-                        <span className="ml-auto">✓ Correct</span>
+                        <span className="ml-auto"> ✓ Correct</span>
                       )}
                     </button>
                   );

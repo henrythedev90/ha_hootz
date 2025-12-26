@@ -7,7 +7,7 @@ import {
   getAnswerDistribution,
 } from "@/lib/redis/triviaRedis";
 import redisPromise from "@/lib/redis/client";
-import { playersKey } from "@/lib/redis/keys";
+import { playersKey, answersKey } from "@/lib/redis/keys";
 
 export async function GET(
   request: NextRequest,
@@ -43,12 +43,17 @@ export async function GET(
     // Get answer stats if questionIndex is provided
     let answerCount = 0;
     let answerDistribution = { A: 0, B: 0, C: 0, D: 0 };
+    let playersWithAnswers: string[] = [];
 
     if (questionIndex !== null) {
       const index = parseInt(questionIndex, 10);
       if (!isNaN(index)) {
         answerCount = await getAnswerCount(sessionId, index);
         answerDistribution = await getAnswerDistribution(sessionId, index);
+        
+        // Get list of playerIds who have submitted answers
+        const answers = await redis.hGetAll(answersKey(sessionId, index));
+        playersWithAnswers = Object.keys(answers);
       }
     }
 
@@ -57,6 +62,7 @@ export async function GET(
       playerCount,
       answerCount,
       answerDistribution,
+      playersWithAnswers,
     });
   } catch (error: any) {
     console.error("Error fetching stats:", error);

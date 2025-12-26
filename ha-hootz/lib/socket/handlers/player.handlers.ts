@@ -219,11 +219,18 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
               currentQuestionIndex
             );
 
+            // Get list of players who have submitted answers
+            const answers = await redis.hGetAll(
+              answersKey(sessionId, currentQuestionIndex)
+            );
+            const playersWithAnswers = Object.keys(answers);
+
             // Broadcast updated stats to host
             io.to(sessionCode).emit("answer-stats-updated", {
               questionIndex: currentQuestionIndex,
               answerCount,
               answerDistribution,
+              playersWithAnswers,
             });
             console.log(
               `📊 Broadcasted updated stats after player ${name.trim()} reconnected: ${answerCount} answers for question ${currentQuestionIndex}`
@@ -260,9 +267,9 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
   socket.on("SUBMIT_ANSWER", async ({ gameId, questionIndex, answer }) => {
     try {
       const redis = await getRedis();
-      const state = await redis.get(gameStateKey(gameId));
+    const state = await redis.get(gameStateKey(gameId));
 
-      if (!state) {
+    if (!state) {
         socket.emit("ANSWER_RECEIVED", {
           accepted: false,
           reason: "Game not found",
@@ -299,8 +306,8 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
           accepted: false,
           reason: "This is not the current active question",
         });
-        return;
-      }
+      return;
+    }
 
       // Check if question time has expired
       const now = Date.now();
@@ -378,6 +385,10 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
           questionIndex
         );
 
+        // Get list of players who have submitted answers
+        const answers = await redis.hGetAll(answersKey(gameId, questionIndex));
+        const playersWithAnswers = Object.keys(answers);
+
         // Get sessionCode from socket data
         const socketInfo = socketData.get(socket.id);
         if (socketInfo) {
@@ -385,6 +396,7 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
             questionIndex,
             answerCount,
             answerDistribution,
+            playersWithAnswers,
           });
         }
       } catch (error) {
