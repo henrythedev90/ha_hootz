@@ -271,9 +271,11 @@ export default function GamePage() {
       }
     );
 
-    newSocket.on("session-cancelled", (data: { message: string }) => {
+    newSocket.on("session-cancelled", (data: { message?: string }) => {
       console.log("❌ Session cancelled:", data);
-      setError(data.message || "The host has cancelled this session");
+      const errorMessage =
+        data.message || "The host has cancelled this session";
+      setError(errorMessage);
       setGameState((prev) =>
         prev
           ? {
@@ -282,6 +284,9 @@ export default function GamePage() {
             }
           : null
       );
+      // Disconnect the socket since session is cancelled
+      newSocket.disconnect();
+      setConnected(false);
     });
 
     newSocket.on("force-disconnect", (data: { reason: string }) => {
@@ -323,20 +328,44 @@ export default function GamePage() {
     });
   };
 
-  if (error && !connected) {
+  // Show error screen if there's an error (including session cancelled)
+  if (error) {
+    const isCancelled = error.includes("cancelled");
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
           <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
-            Error
+            {isCancelled ? "Session Cancelled" : "Error"}
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
-          <button
-            onClick={() => (window.location.href = "/")}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-          >
-            Go to Home
-          </button>
+          {isCancelled ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                The host has ended this session. You can close this page.
+              </p>
+              {playerName && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    Hey {playerName}! Did you enjoy playing?
+                  </p>
+                  <button
+                    onClick={() => (window.location.href = "/auth/signup")}
+                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                  >
+                    Create Your Own Ha-Hootz Account
+                  </button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Host your own trivia games and create engaging
+                    presentations!
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Please check your connection and try again.
+            </p>
+          )}
         </div>
       </div>
     );

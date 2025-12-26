@@ -14,18 +14,67 @@ async function getRedis() {
 }
 
 export function registerHostHandlers(io: Server, socket: Socket) {
-  // Host joins session room
-  socket.on("host-join", async ({ sessionCode }) => {
+  // Store verified host data for this socket
+  const hostData = new Map<string, { userId: string; sessionCode: string }>();
+
+  // Helper function to verify host ownership
+  async function verifyHostOwnership(
+    sessionCode: string,
+    userId: string
+  ): Promise<boolean> {
     try {
+      const sessionId = await getSessionIdFromCode(sessionCode);
+      if (!sessionId) return false;
+
+      const triviaSession = await getSession(sessionId);
+      if (!triviaSession) return false;
+
+      // Verify the user is the host of this session
+      return triviaSession.hostId === userId;
+    } catch (error) {
+      console.error("Error verifying host ownership:", error);
+      return false;
+    }
+  }
+
+  // Helper function to check if socket is authorized for a session
+  function isAuthorized(sessionCode: string): boolean {
+    const hostInfo = hostData.get(socket.id);
+    return hostInfo !== undefined && hostInfo.sessionCode === sessionCode;
+  }
+
+  // Host joins session room
+  socket.on("host-join", async ({ sessionCode, userId }) => {
+    try {
+      if (!sessionCode || !userId) {
+        socket.emit("error", {
+          message: "Session code and user ID are required",
+        });
+        return;
+      }
+
+      // Verify host ownership
+      const isAuthorized = await verifyHostOwnership(sessionCode, userId);
+      if (!isAuthorized) {
+        socket.emit("error", {
+          message: "Unauthorized: You are not the host of this session",
+        });
+        socket.disconnect();
+        return;
+      }
+
       const sessionId = await getSessionIdFromCode(sessionCode);
       if (!sessionId) {
         socket.emit("error", { message: "Session code not found" });
         return;
       }
 
+      // Store verified host data
+      hostData.set(socket.id, { userId, sessionCode });
+
       // Join the session room
       socket.join(sessionCode);
-      console.log(`👑 Host joined session ${sessionCode}`);
+      console.log(`👑 Host ${userId} joined session ${sessionCode}`);
 
       // Get current players
       const redis = await getRedis();
@@ -47,6 +96,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("START_GAME", async ({ sessionCode }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
 
       // Get sessionId from sessionCode
@@ -79,6 +134,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
     "START_QUESTION",
     async ({ sessionCode, question, questionIndex }) => {
       try {
+        // Verify host is authorized
+        if (!isAuthorized(sessionCode)) {
+          socket.emit("error", { message: "Unauthorized" });
+          return;
+        }
+
         const redis = await getRedis();
 
         // Get sessionId from sessionCode
@@ -117,6 +178,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("CANCEL_SESSION", async ({ sessionCode }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
 
       // Get sessionId from sessionCode
@@ -135,11 +202,17 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       };
       await redis.set(gameStateKey(sessionId), JSON.stringify(endedState));
 
-      // Broadcast to all players in the session
-      io.to(sessionCode).emit("session-cancelled", {
+      // Broadcast to all players in the session (using sessionCode as room name)
+      const cancelMessage = {
         sessionCode,
         message: "The host has cancelled this session",
-      });
+      };
+      io.to(sessionCode).emit("session-cancelled", cancelMessage);
+      console.log(
+        `📢 Broadcasting session-cancelled to room ${sessionCode} (${
+          io.sockets.adapter.rooms.get(sessionCode)?.size || 0
+        } sockets)`
+      );
 
       // Notify host
       socket.emit("session-cancelled", {
@@ -155,6 +228,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("REVEAL_ANSWER", async ({ sessionCode, questionIndex }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
       const sessionId = await getSessionIdFromCode(sessionCode);
       if (!sessionId) {
@@ -199,6 +278,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("NAVIGATE_QUESTION", async ({ sessionCode, questionIndex }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
       const sessionId = await getSessionIdFromCode(sessionCode);
       if (!sessionId) {
@@ -282,6 +367,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("END_QUESTION", async ({ sessionCode, questionIndex }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
       const sessionId = await getSessionIdFromCode(sessionCode);
       if (!sessionId) {
@@ -313,5 +404,11 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       console.error("Error ending question:", error);
       socket.emit("error", { message: "Failed to end question" });
     }
+  });
+
+  // Clean up host data on disconnect
+  socket.on("disconnect", () => {
+    hostData.delete(socket.id);
+    console.log(`👑 Host disconnected: ${socket.id}`);
   });
 }

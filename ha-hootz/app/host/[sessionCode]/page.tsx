@@ -159,13 +159,36 @@ export default function HostDashboard() {
     return () => clearInterval(interval);
   }, [connected, sessionCode, gameState?.questionIndex]);
 
+  // Verify authentication and host ownership
   useEffect(() => {
     if (status === "loading") return;
     if (!session) {
       router.push("/auth/signin");
       return;
     }
-  }, [session, status, router]);
+
+    // Verify user is the host of this session
+    const verifyHostOwnership = async () => {
+      try {
+        const response = await fetch(`/api/sessions/${sessionCode}/questions`);
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            // User is not authorized or not the host
+            router.push("/");
+            return;
+          }
+        }
+        // If successful, user is the host (API route verifies ownership)
+      } catch (error) {
+        console.error("Error verifying host ownership:", error);
+        router.push("/");
+      }
+    };
+
+    if (session && sessionCode) {
+      verifyHostOwnership();
+    }
+  }, [session, status, router, sessionCode]);
 
   useEffect(() => {
     if (!sessionCode) return;
@@ -184,7 +207,13 @@ export default function HostDashboard() {
     newSocket.on("connect", () => {
       console.log("✅ Host connected to server");
       setConnected(true);
-      newSocket.emit("host-join", { sessionCode });
+      // Pass userId from session for authentication
+      if (session?.user?.id) {
+        newSocket.emit("host-join", { sessionCode, userId: session.user.id });
+      } else {
+        console.error("No user session found");
+        router.push("/auth/signin");
+      }
     });
 
     newSocket.on(
