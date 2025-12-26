@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 import Loading from "@/components/Loading";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import CenteredLayout from "@/components/CenteredLayout";
+import GameWelcomeModal from "@/components/GameWelcomeModal";
 
 type GameStatus =
   | "WAITING"
@@ -49,6 +50,7 @@ export default function GamePage() {
   const [error, setError] = useState("");
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
   const [hostName, setHostName] = useState<string | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -203,6 +205,8 @@ export default function GamePage() {
         );
         setSelectedAnswer(null);
         setIsTimerExpired(false);
+        // Show welcome modal when game starts
+        setShowWelcomeModal(true);
       }
     );
 
@@ -226,6 +230,8 @@ export default function GamePage() {
         );
         setSelectedAnswer(null);
         setIsTimerExpired(false);
+        // Close welcome modal when question starts
+        setShowWelcomeModal(false);
       }
     );
 
@@ -650,7 +656,8 @@ export default function GamePage() {
     );
   }
 
-  // Fallback: No question available
+  // Fallback: Game in progress but no question active yet
+  // Show welcome modal and waiting screen
   return (
     <>
       <CenteredLayout relative>
@@ -684,11 +691,22 @@ export default function GamePage() {
                 : "Game in progress..."}
             </h2>
             <p className="text-gray-600 dark:text-gray-300">
-              Waiting for next question.
+              {gameState.status === "QUESTION_ENDED"
+                ? "Waiting for next question."
+                : "Waiting for the host to start the first question."}
             </p>
           </div>
         </div>
       </CenteredLayout>
+
+      {/* Game Welcome Modal - Shows when game starts but before first question */}
+      <GameWelcomeModal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        playerName={playerName}
+        hostName={hostName}
+        sessionCode={sessionCode}
+      />
 
       {/* Exit Game Confirmation Modal */}
       <DeleteConfirmationModal
