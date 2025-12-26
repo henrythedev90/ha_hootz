@@ -6,7 +6,6 @@ import {
 } from "@/lib/redis/triviaRedis";
 import redisPromise from "@/lib/redis/client";
 import { playersKey, playerSocketKey } from "@/lib/redis/keys";
-import { Server } from "socket.io";
 
 export async function GET(
   request: NextRequest,
