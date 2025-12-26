@@ -84,9 +84,34 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         name,
       }));
 
+      // Get current game state from Redis
+      const stateStr = await redis.get(gameStateKey(sessionId));
+      let gameState = stateStr ? JSON.parse(stateStr) : { status: "WAITING" };
+
+      // If there's an active question, fetch the question details
+      if (
+        gameState.status === "QUESTION_ACTIVE" &&
+        gameState.questionIndex !== undefined
+      ) {
+        const question = await getQuestion(sessionId, gameState.questionIndex);
+        if (question) {
+          gameState.question = question;
+        }
+      } else if (
+        gameState.status === "IN_PROGRESS" &&
+        gameState.questionIndex !== undefined
+      ) {
+        // If game is in progress but no active question, fetch the current question
+        const question = await getQuestion(sessionId, gameState.questionIndex);
+        if (question) {
+          gameState.question = question;
+        }
+      }
+
       socket.emit("host-joined", {
         sessionCode,
         players: playersList,
+        gameState,
       });
     } catch (error) {
       console.error("Error in host-join:", error);

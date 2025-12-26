@@ -61,7 +61,7 @@ export default function HostDashboard() {
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch questions when component mounts
+  // Fetch questions and game state when component mounts
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
@@ -69,18 +69,12 @@ export default function HostDashboard() {
         const data = await response.json();
         if (data.success && data.questions) {
           setQuestions(data.questions);
-          // Initialize game state if not set
-          if (!gameState && data.questions.length > 0) {
-            setGameState({
-              status: "WAITING",
-              questionIndex: 0,
-              questionCount: data.questionCount,
-              question: data.questions[0],
-            });
-          }
+          return data.questions;
         }
+        return [];
       } catch (error) {
         console.error("Error fetching questions:", error);
+        return [];
       }
     };
 
@@ -96,8 +90,28 @@ export default function HostDashboard() {
       }
     };
 
+    const fetchGameState = async (questionCount: number) => {
+      try {
+        const response = await fetch(`/api/sessions/${sessionCode}/game-state`);
+        const data = await response.json();
+        if (data.success && data.gameState) {
+          console.log("🔄 Restored game state on mount:", data.gameState);
+          setGameState({
+            ...data.gameState,
+            questionCount: questionCount || data.gameState.questionCount,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching game state:", error);
+      }
+    };
+
     if (sessionCode) {
-      fetchQuestions();
+      fetchQuestions().then(async (questionsData) => {
+        // Fetch game state after questions are loaded
+        const questionCount = questionsData?.length || 0;
+        await fetchGameState(questionCount);
+      });
       fetchSessionStatus();
     }
   }, [sessionCode]);
@@ -237,10 +251,49 @@ export default function HostDashboard() {
       (data: {
         sessionCode: string;
         players: Array<{ playerId: string; name: string }>;
+        gameState?: GameState;
       }) => {
         console.log("👑 Host joined session:", data);
         setPlayers(data.players || []);
         setStats((prev) => ({ ...prev, playerCount: data.players.length }));
+
+        // Restore game state if it exists (for reconnections)
+        if (data.gameState) {
+          console.log("🔄 Restoring game state:", data.gameState);
+          setGameState(data.gameState);
+
+          // If there's a question in the state, make sure it's loaded
+          if (data.gameState.question) {
+            // Question is already in gameState, no need to fetch
+          } else if (data.gameState.questionIndex !== undefined) {
+            // Fetch the question if we have an index but no question
+            const fetchQuestion = async () => {
+              try {
+                const response = await fetch(
+                  `/api/sessions/${sessionCode}/questions`
+                );
+                const questionsData = await response.json();
+                if (questionsData.success && questionsData.questions) {
+                  const questionIndex = data.gameState!.questionIndex ?? 0;
+                  const question = questionsData.questions[questionIndex];
+                  if (question) {
+                    setGameState((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            question,
+                          }
+                        : null
+                    );
+                  }
+                }
+              } catch (error) {
+                console.error("Error fetching question on reconnect:", error);
+              }
+            };
+            fetchQuestion();
+          }
+        }
       }
     );
 
@@ -515,8 +568,15 @@ export default function HostDashboard() {
     );
   }
 
+  // If gameState is null but session is loaded and socket is connected,
+  // wait briefly for socket to restore state (this happens on refresh)
+  if (!gameState && connected && socket) {
+    return <Loading message="Restoring game state..." />;
+  }
+
   // Lobby view (before game starts)
-  if (gameState?.status === "WAITING" || !gameState) {
+  // Only show lobby if game state is explicitly WAITING
+  if (gameState?.status === "WAITING") {
     return (
       <>
         <PlayersListModal
@@ -669,7 +729,7 @@ export default function HostDashboard() {
                   <div className="space-y-3">
                     {(["A", "B", "C", "D"] as const).map((option) => {
                       const isCorrect = currentQuestion.correct === option;
-                      const isRevealed = gameState.answerRevealed && isCorrect;
+                      const isRevealed = gameState?.answerRevealed && isCorrect;
                       return (
                         <div
                           key={option}
@@ -725,7 +785,7 @@ export default function HostDashboard() {
                   }
                   className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
-                  {gameState.answerRevealed
+                  {gameState?.answerRevealed
                     ? "Answer Revealed"
                     : "Reveal Answer"}
                 </button>
