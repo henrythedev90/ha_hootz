@@ -449,27 +449,74 @@ export default function HostDashboard() {
 
     newSocket.on(
       "question-navigated",
-      (data: { questionIndex: number; question: Question }) => {
+      async (data: { questionIndex: number; question: Question }) => {
         console.log("📄 Question navigated:", data);
+
+        // Check if this question has been answered before (previous question)
+        let hasAnswers = false;
+        try {
+          const response = await fetch(
+            `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
+          );
+          const statsData = await response.json();
+          if (statsData.success) {
+            hasAnswers =
+              (statsData.answerCount || 0) > 0 ||
+              (statsData.playersWithAnswers?.length || 0) > 0;
+          }
+        } catch (error) {
+          console.error("Error checking if question has answers:", error);
+        }
+
         setGameState((prev) =>
           prev
             ? {
                 ...prev,
                 questionIndex: data.questionIndex,
                 question: data.question,
-                status: "IN_PROGRESS",
-                answerRevealed: false,
+                status: hasAnswers ? "QUESTION_ENDED" : "IN_PROGRESS",
+                answerRevealed: hasAnswers, // If question has answers, it's been answered
                 endAt: undefined,
               }
             : null
         );
-        // Reset stats for the new question
-        setStats((prev) => ({
-          ...prev,
-          answerCount: 0,
-          answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
-          playersWithAnswers: [],
-        }));
+
+        // Fetch stats for the navigated question
+        if (hasAnswers) {
+          try {
+            const response = await fetch(
+              `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
+            );
+            const statsData = await response.json();
+            if (statsData.success) {
+              setStats({
+                playerCount: statsData.playerCount,
+                answerCount: statsData.answerCount || 0,
+                answerDistribution: statsData.answerDistribution || {
+                  A: 0,
+                  B: 0,
+                  C: 0,
+                  D: 0,
+                },
+                playersWithAnswers: statsData.playersWithAnswers || [],
+                playerScores: statsData.playerScores || {},
+              });
+            }
+          } catch (error) {
+            console.error(
+              "Error fetching stats for navigated question:",
+              error
+            );
+          }
+        } else {
+          // Reset stats for the new question
+          setStats((prev) => ({
+            ...prev,
+            answerCount: 0,
+            answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
+            playersWithAnswers: [],
+          }));
+        }
         // Close the answer reveal modal when navigating to a new question
         setShowAnswerRevealModal(false);
       }
@@ -914,9 +961,17 @@ export default function HostDashboard() {
                     !connected ||
                     !currentQuestion ||
                     isQuestionActive ||
-                    gameState?.answerRevealed
+                    gameState?.answerRevealed ||
+                    stats.answerCount > 0 ||
+                    (stats.playersWithAnswers?.length || 0) > 0
                   }
                   className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  title={
+                    stats.answerCount > 0 ||
+                    (stats.playersWithAnswers?.length || 0) > 0
+                      ? "This question has already been answered"
+                      : undefined
+                  }
                 >
                   Start Question
                 </button>

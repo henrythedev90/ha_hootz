@@ -321,25 +321,53 @@ export default function GamePage() {
 
     newSocket.on(
       "question-navigated",
-      (data: {
+      async (data: {
         questionIndex: number;
         question: { text: string; A: string; B: string; C: string; D: string };
+        answerRevealed?: boolean;
+        correctAnswer?: "A" | "B" | "C" | "D";
+        isReviewMode?: boolean;
       }) => {
         console.log("📄 Question navigated:", data);
+        const isReviewMode = data.isReviewMode || false;
+
+        // If in review mode, fetch the player's previous answer for this question
+        if (isReviewMode && playerId) {
+          try {
+            const response = await fetch(
+              `/api/sessions/${sessionCode}/player-answer?questionIndex=${data.questionIndex}&playerId=${playerId}`
+            );
+            const answerData = await response.json();
+            if (
+              answerData.success &&
+              answerData.answer &&
+              answerData.answer !== "NO_ANSWER"
+            ) {
+              setSelectedAnswer(answerData.answer as "A" | "B" | "C" | "D");
+            } else {
+              setSelectedAnswer(null);
+            }
+          } catch (error) {
+            console.error("Error fetching previous answer:", error);
+            setSelectedAnswer(null);
+          }
+        } else {
+          setSelectedAnswer(null);
+        }
+
         setGameState(
           (prev) =>
             ({
               ...prev,
-              status: "IN_PROGRESS",
+              status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
               questionIndex: data.questionIndex,
               question: data.question,
               endAt: undefined,
-              answerRevealed: false, // Reset answer revealed state
-              correctAnswer: undefined, // Reset correct answer
+              answerRevealed: data.answerRevealed || false,
+              correctAnswer: data.correctAnswer,
             } as GameState)
         );
-        setSelectedAnswer(null); // Reset selected answer
-        setIsTimerExpired(false);
+        setIsTimerExpired(isReviewMode); // Timer is expired in review mode
         setTimeRemaining(0); // Reset timer
       }
     );
@@ -449,7 +477,9 @@ export default function GamePage() {
   const handleAnswerSelect = (answer: "A" | "B" | "C" | "D") => {
     if (!socket || !gameState) return;
     // Only allow if question is active - server will validate if timer has expired
-    if (gameState.status !== "QUESTION_ACTIVE") return;
+    // Don't allow answer changes in review mode (when answer is already revealed)
+    if (gameState.status !== "QUESTION_ACTIVE" || gameState.answerRevealed)
+      return;
 
     // Update selected answer immediately (optimistic UI)
     setSelectedAnswer(answer);
@@ -838,9 +868,9 @@ export default function GamePage() {
                       key={option}
                       onClick={() => handleAnswerSelect(option)}
                       disabled={
-                        // Only disable if question has explicitly ended
-                        // Don't disable just because timer expired - server will validate
-                        gameState.status === "QUESTION_ENDED"
+                        // Disable if question has ended OR if answer is revealed (review mode)
+                        gameState.status === "QUESTION_ENDED" ||
+                        gameState.answerRevealed
                       }
                       className={getAnswerButtonClass(option)}
                     >

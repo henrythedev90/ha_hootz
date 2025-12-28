@@ -321,6 +321,16 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         return;
       }
 
+      // Check if question is in review mode (navigated to a previous question)
+      // If answer is already revealed, this is review mode - don't allow new submissions
+      if (gameState.answerRevealed && gameState.status === "QUESTION_ENDED") {
+        socket.emit("ANSWER_RECEIVED", {
+          accepted: false,
+          reason: "This question is in review mode. Answers cannot be changed.",
+        });
+        return;
+      }
+
       // Check if question time has expired
       const now = Date.now();
       const endAt = gameState.endAt;
