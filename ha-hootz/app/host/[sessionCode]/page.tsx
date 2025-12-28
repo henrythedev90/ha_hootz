@@ -728,14 +728,24 @@ export default function HostDashboard() {
                       No players joined yet
                     </p>
                   ) : (
-                    <ul className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto text-center">
+                    <ul
+                      className={`grid gap-2 max-h-64 overflow-y-auto pt-[50px] ${
+                        players.length > 6 ? "grid-cols-2" : "grid-cols-1"
+                      }`}
+                    >
                       {players.map((player) => (
                         <li
                           key={player.playerId}
-                          className="w-full px-[50px] text-gray-700 dark:text-gray-300 flex items-center"
+                          className={`w-full text-gray-700 dark:text-gray-300 flex items-center ${
+                            players.length > 6
+                              ? "justify-center px-2"
+                              : "justify-center px-[50px]"
+                          }`}
                         >
-                          <span className="w-6 shrink-0">👤</span>
-                          <span className="ml-2 flex-1 text-center">
+                          <span className="w-6 shrink-0 flex items-center justify-center">
+                            👤
+                          </span>
+                          <span className="ml-2 text-center truncate min-w-0 flex-1">
                             {player.name}
                           </span>
                         </li>
@@ -745,7 +755,7 @@ export default function HostDashboard() {
                 </div>
               </div>
 
-              <div className="mt-6 flex gap-4">
+              <div className="mt-6 flex justify-center gap-4">
                 <button
                   onClick={handleStartGame}
                   disabled={!connected || players.length === 0}
