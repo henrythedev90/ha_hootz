@@ -14,6 +14,7 @@ import {
   addPlayer as addPlayerToSession,
   getAnswerCount,
   getAnswerDistribution,
+  storeAnswerTimestamp,
 } from "../../redis/triviaRedis";
 
 async function getRedis() {
@@ -112,6 +113,14 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         }
 
         // Socket is not active or doesn't exist - allow reconnection with same playerId
+        // BUT check if session has ended - if so, reject reconnection
+        if (session.status === "ended") {
+          socket.emit("join-error", {
+            reason:
+              "This game session has ended. The host has closed the game.",
+          });
+          return;
+        }
         playerId = existingPlayerId;
         isReconnection = true;
         console.log(
@@ -121,7 +130,10 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         // New player - check if session is locked/live (prevent new joins)
         if (session.status === "live" || session.status === "ended") {
           socket.emit("join-error", {
-            reason: "Game has already started. New players cannot join.",
+            reason:
+              session.status === "ended"
+                ? "This game session has ended. The host has closed the game."
+                : "Game has already started. New players cannot join.",
           });
           return;
         }
@@ -267,9 +279,9 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
   socket.on("SUBMIT_ANSWER", async ({ gameId, questionIndex, answer }) => {
     try {
       const redis = await getRedis();
-    const state = await redis.get(gameStateKey(gameId));
+      const state = await redis.get(gameStateKey(gameId));
 
-    if (!state) {
+      if (!state) {
         socket.emit("ANSWER_RECEIVED", {
           accepted: false,
           reason: "Game not found",
@@ -306,8 +318,8 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
           accepted: false,
           reason: "This is not the current active question",
         });
-      return;
-    }
+        return;
+      }
 
       // Check if question time has expired
       const now = Date.now();
@@ -356,6 +368,60 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
 
       // Store the new answer
       await redis.hSet(answersKey(gameId, questionIndex), playerId, answer);
+
+      // Store submission timestamp for time-based bonus calculation
+      // Always update timestamp on each submission (even if answer changed)
+      const submissionTime = Date.now();
+      const submissionDate = new Date(submissionTime);
+
+      // Calculate question start time and timing info
+      // Note: endAt is already declared above at line 315
+      const questionDuration = 30000; // Default 30 seconds (should match host's durationMs)
+      const questionStartTime = endAt ? endAt - questionDuration : null;
+      const timeSinceStart = questionStartTime
+        ? submissionTime - questionStartTime
+        : null;
+      const secondsSinceStart = timeSinceStart
+        ? Math.floor(timeSinceStart / 1000)
+        : null;
+      const timeRemaining = endAt ? Math.max(0, endAt - submissionTime) : null;
+      const timeRemainingSeconds = timeRemaining
+        ? Math.floor(timeRemaining / 1000)
+        : null;
+
+      console.log("📝 PLAYER ANSWER SUBMISSION:", {
+        playerId,
+        playerName: socketInfo.name,
+        questionIndex,
+        answer,
+        isUpdate: isUpdate ? "Updated answer" : "First submission",
+        previousAnswer: previousAnswer || "None",
+        submissionTime,
+        submissionTimeFormatted: submissionDate.toISOString(),
+        submissionTimeReadable: submissionDate.toLocaleTimeString(),
+        questionStartTime: questionStartTime
+          ? new Date(questionStartTime).toISOString()
+          : "Unknown",
+        questionEndTime: endAt ? new Date(endAt).toISOString() : "Unknown",
+        questionDuration: `${questionDuration / 1000} seconds`,
+        timeSinceStart: timeSinceStart
+          ? `${secondsSinceStart} seconds (${timeSinceStart}ms)`
+          : "Unknown",
+        timeRemaining: timeRemaining
+          ? `${timeRemainingSeconds} seconds (${timeRemaining}ms)`
+          : "Unknown",
+        timeRatio:
+          timeSinceStart && questionDuration
+            ? (timeSinceStart / questionDuration).toFixed(3)
+            : "Unknown",
+      });
+
+      await storeAnswerTimestamp(
+        gameId,
+        questionIndex,
+        playerId,
+        submissionTime
+      );
 
       // Update results distribution for answer statistics
       // If player changed their answer, decrement old answer and increment new one

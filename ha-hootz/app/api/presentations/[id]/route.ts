@@ -66,7 +66,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, description, questions } = body;
+    const { title, description, questions, scoringConfig } = body;
 
     const presentationsCollection = await getPresentationsCollection();
 
@@ -97,6 +97,7 @@ export async function PUT(
     if (title !== undefined) update.title = title;
     if (description !== undefined) update.description = description;
     if (questions !== undefined) update.questions = questions;
+    if (scoringConfig !== undefined) update.scoringConfig = scoringConfig;
 
     await presentationsCollection.updateOne(
       { _id: new ObjectId(id) },

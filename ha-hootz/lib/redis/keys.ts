@@ -20,3 +20,9 @@ export const sessionCodeToIdKey = (sessionCode: string) =>
   `trivia:codeToId:${sessionCode}`;
 export const leftPlayersKey = (sessionId: string) =>
   `trivia:leftPlayers:${sessionId}`;
+export const answerTimestampsKey = (sessionId: string, questionIndex: number) =>
+  `trivia:${sessionId}:answerTimestamps:${questionIndex}`;
+export const playerStreaksKey = (sessionId: string) =>
+  `trivia:${sessionId}:playerStreaks`;
+export const questionScoresKey = (sessionId: string, questionIndex: number) =>
+  `trivia:${sessionId}:scores:${questionIndex}`;

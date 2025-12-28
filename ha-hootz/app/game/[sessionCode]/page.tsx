@@ -7,6 +7,8 @@ import Loading from "@/components/Loading";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import CenteredLayout from "@/components/CenteredLayout";
 import GameWelcomeModal from "@/components/GameWelcomeModal";
+import WinnerDisplay from "@/components/WinnerDisplay";
+import ThankYouModal from "@/components/ThankYouModal";
 
 type GameStatus =
   | "WAITING"
@@ -51,26 +53,46 @@ export default function GamePage() {
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
   const [hostName, setHostName] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [showWinnerDisplay, setShowWinnerDisplay] = useState(false);
+  const [showThankYouModal, setShowThankYouModal] = useState(false);
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<
+    Array<{ playerId: string; name: string; score: number }>
+  >([]);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  // Fetch host name when component mounts
+  // Check session status and fetch host name when component mounts
   useEffect(() => {
-    const fetchHostName = async () => {
+    const checkSessionStatus = async () => {
       try {
-        const response = await fetch(`/api/sessions/${sessionCode}/host`);
-        const data = await response.json();
-        if (data.success && data.hostName) {
-          setHostName(data.hostName);
+        // Check if session has ended
+        const validateResponse = await fetch(
+          `/api/sessions/validate/${sessionCode}`
+        );
+        const validateData = await validateResponse.json();
+
+        if (validateData.sessionStatus === "ended") {
+          console.log("❌ Session has ended, showing ended message");
+          setSessionEnded(true);
+          return;
+        }
+
+        // Fetch host name
+        const hostResponse = await fetch(`/api/sessions/${sessionCode}/host`);
+        const hostData = await hostResponse.json();
+        if (hostData.success && hostData.hostName) {
+          setHostName(hostData.hostName);
         }
       } catch (error) {
-        console.error("Error fetching host name:", error);
+        console.error("Error checking session status:", error);
       }
     };
 
     if (sessionCode) {
-      fetchHostName();
+      checkSessionStatus();
     }
   }, [sessionCode]);
 
@@ -136,6 +158,12 @@ export default function GamePage() {
       return;
     }
 
+    // Don't connect if session has ended
+    if (sessionEnded) {
+      console.log("❌ Session has ended, not connecting socket");
+      return;
+    }
+
     // Initialize Socket.io connection
     const newSocket = io("/", {
       path: "/api/socket",
@@ -163,9 +191,14 @@ export default function GamePage() {
       (data: {
         gameState: GameState;
         sessionId?: string;
+        playerId?: string;
         playerCount?: number;
       }) => {
         console.log("✅ Joined session:", data);
+        // Store playerId
+        if (data.playerId) {
+          setPlayerId(data.playerId);
+        }
         // Ensure sessionId is set in gameState (needed for answer submission)
         setGameState({
           ...data.gameState,
@@ -202,7 +235,18 @@ export default function GamePage() {
         typeof data === "string"
           ? data
           : data?.reason || "Failed to join session";
-      setError(errorMessage);
+
+      // Check if session has ended
+      if (
+        errorMessage.includes("ended") ||
+        errorMessage.includes("cancelled")
+      ) {
+        setSessionEnded(true);
+        newSocket.disconnect();
+        setConnected(false);
+      } else {
+        setError(errorMessage);
+      }
     });
 
     newSocket.on("player-joined", (data: { playerCount?: number }) => {
@@ -345,10 +389,10 @@ export default function GamePage() {
     );
 
     newSocket.on("session-cancelled", (data: { message?: string }) => {
-      console.log("❌ Session cancelled:", data);
-      const errorMessage =
-        data.message || "The host has cancelled this session";
-      setError(errorMessage);
+      console.log("❌ Player: Session cancelled event received:", data);
+      // Show thank you modal instead of error screen
+      console.log("🎉 Player: Showing thank you modal");
+      setShowThankYouModal(true);
       setGameState((prev) =>
         prev
           ? {
@@ -358,6 +402,7 @@ export default function GamePage() {
           : null
       );
       // Disconnect the socket since session is cancelled
+      console.log("🔌 Player: Disconnecting socket after session cancellation");
       newSocket.disconnect();
       setConnected(false);
     });
@@ -378,13 +423,28 @@ export default function GamePage() {
       setError("Failed to connect to server");
     });
 
+    newSocket.on(
+      "winner-revealed",
+      (data: {
+        leaderboard: Array<{ playerId: string; name: string; score: number }>;
+      }) => {
+        console.log("🏆 Player: Winner revealed event received:", data);
+        console.log(
+          "🏆 Player: Setting leaderboard and showing winner display"
+        );
+        setLeaderboard(data.leaderboard);
+        setShowWinnerDisplay(true);
+        console.log("🏆 Player: showWinnerDisplay set to true");
+      }
+    );
+
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
       newSocket.disconnect();
     };
-  }, [sessionCode, playerName]);
+  }, [sessionCode, playerName, sessionEnded]);
 
   const handleAnswerSelect = (answer: "A" | "B" | "C" | "D") => {
     if (!socket || !gameState) return;
@@ -417,22 +477,61 @@ export default function GamePage() {
       socket.disconnect();
     }
     setConnected(false);
-    setError("You have left the game. You cannot rejoin with the same name.");
+    setError(
+      "GOODBYE: You have left the game. You cannot rejoin with the same name."
+    );
     setIsExitModalOpen(false);
   };
 
-  // Show error screen if there's an error (including session cancelled)
+  // Show error screen if there's an error (including session cancelled or player exit)
   if (error) {
     const isCancelled = error.includes("cancelled");
+    const isGoodbye = error.includes("GOODBYE:");
+    const displayMessage = isGoodbye ? error.replace("GOODBYE: ", "") : error;
     return (
       <>
         <CenteredLayout>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
-            <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
-              {isCancelled ? "Session Cancelled" : "Error"}
+            <h1 className="text-2xl font-bold mb-4">
+              {isGoodbye ? (
+                <span className="text-blue-600 dark:text-blue-400">
+                  Goodbye!
+                </span>
+              ) : isCancelled ? (
+                <span className="text-red-600 dark:text-red-400">
+                  Session Cancelled
+                </span>
+              ) : (
+                <span className="text-red-600 dark:text-red-400">Error</span>
+              )}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
-            {isCancelled ? (
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              {displayMessage}
+            </p>
+            {isGoodbye ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Thanks for playing! You can close this page.
+                </p>
+                {playerName && (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                      Hey {playerName}! Did you enjoy playing?
+                    </p>
+                    <button
+                      onClick={() => (window.location.href = "/auth/signup")}
+                      className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                    >
+                      Create Your Own Ha-Hootz Account
+                    </button>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Host your own trivia games and create engaging
+                      presentations!
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : isCancelled ? (
               <div className="space-y-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   The host has ended this session. You can close this page.
@@ -473,12 +572,51 @@ export default function GamePage() {
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
         />
+
+        {/* Winner Display - Full screen overlay */}
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
+
+        {/* Thank You Modal - Shows when host ends the game */}
+        <ThankYouModal
+          isOpen={showThankYouModal}
+          hostName={hostName}
+          playerName={playerName}
+          onClose={() => setShowThankYouModal(false)}
+        />
       </>
     );
   }
 
   if (!connected || !gameState) {
-    return <Loading message="Connecting to game..." />;
+    return (
+      <>
+        <Loading message="Connecting to game..." />
+        {/* Winner Display - Full screen overlay */}
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
+
+        {/* Thank You Modal - Shows when host ends the game */}
+        <ThankYouModal
+          isOpen={showThankYouModal}
+          hostName={hostName}
+          playerName={playerName}
+          onClose={() => setShowThankYouModal(false)}
+        />
+      </>
+    );
   }
 
   // Lobby / Waiting Room - Welcome Screen
@@ -547,6 +685,24 @@ export default function GamePage() {
           title="Exit Game"
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
+        />
+
+        {/* Winner Display - Full screen overlay */}
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
+
+        {/* Thank You Modal - Shows when host ends the game */}
+        <ThankYouModal
+          isOpen={showThankYouModal}
+          hostName={hostName}
+          playerName={playerName}
+          onClose={() => setShowThankYouModal(false)}
         />
       </>
     );
@@ -651,6 +807,15 @@ export default function GamePage() {
               </div>
             )}
 
+            {/* Player Name Title */}
+            {playerName && (
+              <div className="text-center mb-4">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {playerName}
+                </h1>
+              </div>
+            )}
+
             {/* Question */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
@@ -732,6 +897,24 @@ export default function GamePage() {
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
         />
+
+        {/* Winner Display - Full screen overlay */}
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
+
+        {/* Thank You Modal - Shows when host ends the game */}
+        <ThankYouModal
+          isOpen={showThankYouModal}
+          hostName={hostName}
+          playerName={playerName}
+          onClose={() => setShowThankYouModal(false)}
+        />
       </>
     );
   }
@@ -797,6 +980,31 @@ export default function GamePage() {
         title="Exit Game"
         itemName="game"
         description="You won't be able to rejoin with the same name if you leave now."
+      />
+
+      {/* Winner Display - Full screen overlay */}
+      {console.log("🎯 Game Page - WinnerDisplay render check:", {
+        showWinnerDisplay,
+        playerName,
+        playerId,
+        leaderboardLength: leaderboard.length,
+        willRender: !!(playerName && playerId),
+      })}
+      {playerName && playerId && (
+        <WinnerDisplay
+          isOpen={showWinnerDisplay}
+          playerName={playerName}
+          playerId={playerId}
+          leaderboard={leaderboard}
+        />
+      )}
+
+      {/* Thank You Modal - Shows when host ends the game */}
+      <ThankYouModal
+        isOpen={showThankYouModal}
+        hostName={hostName}
+        playerName={playerName}
+        onClose={() => setShowThankYouModal(false)}
       />
     </>
   );

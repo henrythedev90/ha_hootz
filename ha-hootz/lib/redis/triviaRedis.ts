@@ -10,7 +10,11 @@ import {
   presenceKey,
   sessionCodeKey,
   sessionCodeToIdKey,
+  answerTimestampsKey,
+  playerStreaksKey,
+  questionScoresKey,
 } from "./keys";
+import { ScoringConfig } from "../../types";
 
 async function getRedis() {
   return await redisPromise;
@@ -243,4 +247,316 @@ export async function isSessionCodeValid(
   const redis = await getRedis();
   const exists = await redis.exists(sessionCodeToIdKey(sessionCode));
   return exists === 1;
+}
+
+/**
+ * Store answer submission timestamp for time-based bonus calculation
+ */
+export async function storeAnswerTimestamp(
+  sessionId: string,
+  questionIndex: number,
+  playerId: string,
+  timestamp: number
+) {
+  const redis = await getRedis();
+  await redis.hSet(
+    answerTimestampsKey(sessionId, questionIndex),
+    playerId,
+    timestamp.toString()
+  );
+}
+
+/**
+ * Get answer submission timestamp for a player
+ */
+export async function getAnswerTimestamp(
+  sessionId: string,
+  questionIndex: number,
+  playerId: string
+): Promise<number | null> {
+  const redis = await getRedis();
+  const timestamp = await redis.hGet(
+    answerTimestampsKey(sessionId, questionIndex),
+    playerId
+  );
+  return timestamp ? Number(timestamp) : null;
+}
+
+/**
+ * Get current streak for a player
+ */
+export async function getPlayerStreak(
+  sessionId: string,
+  playerId: string
+): Promise<number> {
+  const redis = await getRedis();
+  const streak = await redis.hGet(playerStreaksKey(sessionId), playerId);
+  return streak ? Number(streak) : 0;
+}
+
+/**
+ * Update player streak (increment on correct, reset on incorrect)
+ */
+export async function updatePlayerStreak(
+  sessionId: string,
+  playerId: string,
+  isCorrect: boolean
+): Promise<number> {
+  const redis = await getRedis();
+  if (isCorrect) {
+    const currentStreak = await getPlayerStreak(sessionId, playerId);
+    const newStreak = currentStreak + 1;
+    await redis.hSet(
+      playerStreaksKey(sessionId),
+      playerId,
+      newStreak.toString()
+    );
+    console.log(
+      `🔥 Player ${playerId} streak updated: ${currentStreak} → ${newStreak}`
+    );
+    return newStreak;
+  } else {
+    // Reset streak on incorrect or unanswered
+    await redis.hSet(playerStreaksKey(sessionId), playerId, "0");
+    console.log(`🔥 Player ${playerId} streak reset to 0`);
+    return 0;
+  }
+}
+
+/**
+ * Calculate time bonus based on remaining time
+ * Formula: maxTimeBonus * (timeRemaining / totalDuration)
+ */
+function calculateTimeBonus(
+  submissionTime: number,
+  questionStartTime: number,
+  questionDuration: number,
+  maxTimeBonus: number
+): number {
+  console.log("⏱️ Calculating time bonus:", {
+    submissionTime,
+    questionStartTime,
+    questionDuration,
+    maxTimeBonus,
+  });
+
+  // questionDuration is in milliseconds, so we need to use it as-is
+  const timeRemaining = questionStartTime + questionDuration - submissionTime;
+  console.log("⏱️ Time remaining (ms):", timeRemaining);
+
+  if (timeRemaining <= 0) {
+    console.log("⏱️ No time bonus - time expired");
+    return 0;
+  }
+
+  const timeRatio = Math.max(0, Math.min(1, timeRemaining / questionDuration));
+  const bonus = Math.round(maxTimeBonus * timeRatio);
+  console.log("⏱️ Time bonus calculated:", { timeRatio, bonus });
+  return bonus;
+}
+
+/**
+ * Calculate streak bonus based on current streak and thresholds
+ */
+function calculateStreakBonus(
+  streak: number,
+  thresholds: number[],
+  bonusValues: number[]
+): number {
+  console.log("🔥 Calculating streak bonus:", {
+    streak,
+    thresholds,
+    bonusValues,
+  });
+
+  if (thresholds.length !== bonusValues.length) {
+    console.error(
+      "🔥 Streak bonus error: thresholds and values length mismatch"
+    );
+    return 0;
+  }
+
+  // Find the highest threshold the player has reached
+  let bonus = 0;
+  for (let i = thresholds.length - 1; i >= 0; i--) {
+    if (streak >= thresholds[i]) {
+      bonus = bonusValues[i];
+      console.log(
+        `🔥 Streak bonus awarded: ${bonus} points for streak of ${streak} (threshold: ${thresholds[i]})`
+      );
+      break;
+    }
+  }
+
+  if (bonus === 0) {
+    console.log(
+      `🔥 No streak bonus - current streak ${streak} doesn't meet any threshold`
+    );
+  }
+
+  return bonus;
+}
+
+/**
+ * Calculate score for a player's answer
+ */
+export async function calculatePlayerScore(
+  sessionId: string,
+  questionIndex: number,
+  playerId: string,
+  playerAnswer: string,
+  correctAnswer: "A" | "B" | "C" | "D",
+  questionStartTime: number,
+  questionDuration: number,
+  scoringConfig: ScoringConfig
+): Promise<number> {
+  console.log(
+    `💰 Calculating score for player ${playerId}, question ${questionIndex}:`,
+    {
+      playerAnswer,
+      correctAnswer,
+      questionStartTime,
+      questionDuration,
+      scoringConfig: {
+        basePoints: scoringConfig.basePoints,
+        timeBonusEnabled: scoringConfig.timeBonusEnabled,
+        maxTimeBonus: scoringConfig.maxTimeBonus,
+        streakBonusEnabled: scoringConfig.streakBonusEnabled,
+        streakThresholds: scoringConfig.streakThresholds,
+        streakBonusValues: scoringConfig.streakBonusValues,
+      },
+    }
+  );
+
+  const isCorrect = playerAnswer === correctAnswer;
+  const isUnanswered = playerAnswer === "NO_ANSWER";
+
+  // Incorrect or unanswered = 0 points
+  if (!isCorrect || isUnanswered) {
+    console.log(`💰 Player ${playerId}: Incorrect or unanswered - 0 points`);
+    // Update streak (reset on incorrect/unanswered)
+    await updatePlayerStreak(sessionId, playerId, false);
+    return 0;
+  }
+
+  // Correct answer - calculate base score
+  let totalScore = scoringConfig.basePoints;
+  console.log(`💰 Player ${playerId}: Base score = ${totalScore}`);
+
+  // Add time bonus if enabled
+  if (scoringConfig.timeBonusEnabled) {
+    const submissionTime = await getAnswerTimestamp(
+      sessionId,
+      questionIndex,
+      playerId
+    );
+
+    console.log(
+      `💰 Player ${playerId}: Submission time = ${submissionTime}, Start time = ${questionStartTime}`
+    );
+
+    if (submissionTime) {
+      const timeBonus = calculateTimeBonus(
+        submissionTime,
+        questionStartTime,
+        questionDuration,
+        scoringConfig.maxTimeBonus
+      );
+      totalScore += timeBonus;
+      console.log(
+        `💰 Player ${playerId}: Time bonus = ${timeBonus}, Total = ${totalScore}`
+      );
+    } else {
+      console.warn(
+        `💰 Player ${playerId}: No submission timestamp found - skipping time bonus`
+      );
+    }
+  } else {
+    console.log(`💰 Player ${playerId}: Time bonus disabled`);
+  }
+
+  // Update streak and add streak bonus if enabled
+  if (scoringConfig.streakBonusEnabled) {
+    const newStreak = await updatePlayerStreak(sessionId, playerId, true);
+    console.log(`💰 Player ${playerId}: New streak = ${newStreak}`);
+    const streakBonus = calculateStreakBonus(
+      newStreak,
+      scoringConfig.streakThresholds,
+      scoringConfig.streakBonusValues
+    );
+    totalScore += streakBonus;
+    console.log(
+      `💰 Player ${playerId}: Streak bonus = ${streakBonus}, Total = ${totalScore}`
+    );
+  } else {
+    // Still update streak even if bonus is disabled (for tracking)
+    const newStreak = await updatePlayerStreak(sessionId, playerId, true);
+    console.log(
+      `💰 Player ${playerId}: Streak updated to ${newStreak} (bonus disabled)`
+    );
+  }
+
+  console.log(`💰 Player ${playerId}: Final score = ${totalScore}`);
+  return totalScore;
+}
+
+/**
+ * Calculate and store scores for all players after a question ends
+ */
+export async function calculateQuestionScores(
+  sessionId: string,
+  questionIndex: number,
+  correctAnswer: "A" | "B" | "C" | "D",
+  questionStartTime: number,
+  questionDuration: number,
+  scoringConfig: ScoringConfig
+): Promise<Map<string, number>> {
+  const redis = await getRedis();
+  const scores = new Map<string, number>();
+
+  // Get all players
+  const allPlayers = await redis.hGetAll(playersKey(sessionId));
+  const playerIds = Object.keys(allPlayers);
+
+  // Get all answers
+  const allAnswers = await redis.hGetAll(answersKey(sessionId, questionIndex));
+
+  // Calculate score for each player
+  for (const playerId of playerIds) {
+    const playerAnswer = allAnswers[playerId] || "NO_ANSWER";
+    const score = await calculatePlayerScore(
+      sessionId,
+      questionIndex,
+      playerId,
+      playerAnswer,
+      correctAnswer,
+      questionStartTime,
+      questionDuration,
+      scoringConfig
+    );
+
+    scores.set(playerId, score);
+
+    // Store individual question score
+    await redis.hSet(
+      questionScoresKey(sessionId, questionIndex),
+      playerId,
+      score.toString()
+    );
+
+    // Update leaderboard (total score)
+    await redis.zIncrBy(leaderboardKey(sessionId), score, playerId);
+  }
+
+  return scores;
+}
+
+import { getDefaultScoringConfig as getDefaultScoringConfigUtil } from "../utils";
+
+/**
+ * Get default scoring configuration
+ * Re-exported from utils for server-side use
+ */
+export function getDefaultScoringConfig(): ScoringConfig {
+  return getDefaultScoringConfigUtil();
 }

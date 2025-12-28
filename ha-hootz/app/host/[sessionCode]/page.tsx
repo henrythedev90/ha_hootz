@@ -8,6 +8,7 @@ import Loading from "@/components/Loading";
 import CenteredLayout from "@/components/CenteredLayout";
 import PlayersListModal from "@/components/PlayersListModal";
 import AnswerRevealModal from "@/components/AnswerRevealModal";
+import Modal from "@/components/Modal";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -36,6 +37,7 @@ interface Stats {
   answerCount: number;
   answerDistribution: { A: number; B: number; C: number; D: number };
   playersWithAnswers?: string[]; // Array of playerIds who have submitted answers
+  playerScores?: Record<string, number>; // playerId -> total score
 }
 
 export default function HostDashboard() {
@@ -55,6 +57,7 @@ export default function HostDashboard() {
     answerCount: 0,
     answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
     playersWithAnswers: [],
+    playerScores: {},
   });
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [sessionStatus, setSessionStatus] = useState<
@@ -62,6 +65,7 @@ export default function HostDashboard() {
   >(null);
   const [showPlayersModal, setShowPlayersModal] = useState(false);
   const [showAnswerRevealModal, setShowAnswerRevealModal] = useState(false);
+  const [showEndGameModal, setShowEndGameModal] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const gameStateRef = useRef<GameState | null>(null);
@@ -190,6 +194,7 @@ export default function HostDashboard() {
               D: 0,
             },
             playersWithAnswers: data.playersWithAnswers || [],
+            playerScores: data.playerScores || {},
           });
         }
       } catch (error) {
@@ -366,6 +371,8 @@ export default function HostDashboard() {
                     D: 0,
                   },
                   playersWithAnswers: statsData.playersWithAnswers || [],
+                  playerScores:
+                    statsData.playerScores || prev.playerScores || {},
                 }));
                 console.log(
                   `📊 Refreshed stats after player join: ${statsData.answerCount} answers for question ${questionIndex}`
@@ -484,6 +491,7 @@ export default function HostDashboard() {
             answerDistribution: data.answerDistribution,
             playersWithAnswers:
               data.playersWithAnswers || prev.playersWithAnswers || [],
+            // Preserve playerScores - they're updated via stats API, not socket events
           }));
         }
       }
@@ -712,21 +720,24 @@ export default function HostDashboard() {
                 />
 
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <h3 className="text-lg text-center font-semibold text-gray-900 dark:text-white mb-4">
                     Players ({players.length})
                   </h3>
                   {players.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-gray-500 dark:text-gray-400 text-center">
                       No players joined yet
                     </p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto text-center">
                       {players.map((player) => (
                         <li
                           key={player.playerId}
-                          className="text-gray-700 dark:text-gray-300"
+                          className="w-full px-[50px] text-gray-700 dark:text-gray-300 flex items-center"
                         >
-                          👤 {player.name}
+                          <span className="w-6 shrink-0">👤</span>
+                          <span className="ml-2 flex-1 text-center">
+                            {player.name}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -778,6 +789,27 @@ export default function HostDashboard() {
         onNext={handleNextQuestion}
         canNavigate={canNavigate}
         connected={connected || false}
+        players={players}
+        playerScores={stats.playerScores}
+        onRevealWinner={(leaderboard) => {
+          // Emit winner-revealed event to all players
+          console.log("🏆 Host: Revealing winner, leaderboard:", leaderboard);
+          if (socket) {
+            socket.emit("REVEAL_WINNER", {
+              sessionCode,
+              leaderboard,
+            });
+            console.log("🏆 Host: REVEAL_WINNER event emitted to server");
+          } else {
+            console.error(
+              "❌ Host: Socket not connected, cannot reveal winner"
+            );
+          }
+        }}
+        onEndGame={() => {
+          // Show end game confirmation modal
+          setShowEndGameModal(true);
+        }}
       />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-7xl mx-auto">
@@ -968,28 +1000,37 @@ export default function HostDashboard() {
                   </p>
                 ) : (
                   <ul className="space-y-2 max-h-48 overflow-y-auto">
-                    {players.map((player) => {
-                      const hasSubmitted =
-                        stats.playersWithAnswers?.includes(player.playerId) ||
-                        false;
-                      return (
-                        <li
-                          key={player.playerId}
-                          className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2"
-                        >
-                          <span>👤</span>
-                          <span className="flex-1">{player.name}</span>
-                          {hasSubmitted && (
-                            <span
-                              className="text-yellow-500"
-                              title="Answer submitted"
-                            >
-                              💡
+                    {players
+                      .map((player) => ({
+                        ...player,
+                        score: stats.playerScores?.[player.playerId] || 0,
+                      }))
+                      .sort((a, b) => b.score - a.score) // Sort by score descending
+                      .map((player) => {
+                        const hasSubmitted =
+                          stats.playersWithAnswers?.includes(player.playerId) ||
+                          false;
+                        return (
+                          <li
+                            key={player.playerId}
+                            className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                          >
+                            <span>👤</span>
+                            <span className="flex-1">{player.name}</span>
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">
+                              {player.score} pts
                             </span>
-                          )}
-                        </li>
-                      );
-                    })}
+                            {hasSubmitted && (
+                              <span
+                                className="text-yellow-500"
+                                title="Answer submitted"
+                              >
+                                💡
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
                   </ul>
                 )}
               </div>
@@ -997,6 +1038,52 @@ export default function HostDashboard() {
           </div>
         </div>
       </div>
+
+      {/* End Game Confirmation Modal */}
+      <Modal
+        isOpen={showEndGameModal}
+        onClose={() => setShowEndGameModal(false)}
+        title="End Game"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700 dark:text-gray-300">
+            Are you sure you want to end the game? All players will be
+            disconnected.
+          </p>
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              onClick={() => setShowEndGameModal(false)}
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                console.log(
+                  "🛑 Host: End Game button clicked, emitting CANCEL_SESSION"
+                );
+                if (socket) {
+                  socket.emit("CANCEL_SESSION", { sessionCode });
+                  console.log(
+                    "✅ Host: CANCEL_SESSION event emitted for session",
+                    sessionCode
+                  );
+                } else {
+                  console.error(
+                    "❌ Host: Socket not connected, cannot cancel session"
+                  );
+                }
+                setShowEndGameModal(false);
+                setShowAnswerRevealModal(false);
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+            >
+              End Game
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

@@ -6,6 +6,9 @@ import {
   getSessionIdFromCode,
   getQuestion,
   getSession,
+  calculateQuestionScores,
+  getDefaultScoringConfig,
+  setQuestion,
 } from "../../redis/triviaRedis";
 
 async function getRedis() {
@@ -138,7 +141,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       // Update session status to "live" (locked)
       await updateSessionStatus(sessionId, "live");
 
+      // Get current game state to preserve scoringConfig
+      const currentState = await redis.get(gameStateKey(sessionId));
+      const existingState = currentState ? JSON.parse(currentState) : {};
+
       const state = {
+        ...existingState, // Preserve existing properties like scoringConfig
         status: "IN_PROGRESS",
         questionIndex: 0,
       };
@@ -173,9 +181,35 @@ export function registerHostHandlers(io: Server, socket: Socket) {
           return;
         }
 
-        const endAt = Date.now() + question.durationMs;
+        const startTime = Date.now();
+        const endAt = startTime + question.durationMs;
+
+        console.log("⏰ Question started:", {
+          sessionId,
+          questionIndex: questionIndex ?? 0,
+          startTime,
+          duration: question.durationMs,
+          endAt,
+        });
+
+        // Update question in Redis with actual start time
+        await setQuestion(sessionId, questionIndex ?? 0, {
+          text: question.text,
+          A: question.A,
+          B: question.B,
+          C: question.C,
+          D: question.D,
+          correct: question.correct,
+          startTime: startTime,
+          duration: question.durationMs,
+        });
+
+        // Get current game state to preserve scoringConfig
+        const currentState = await redis.get(gameStateKey(sessionId));
+        const existingState = currentState ? JSON.parse(currentState) : {};
 
         const gameState = {
+          ...existingState, // Preserve existing properties like scoringConfig
           status: "QUESTION_ACTIVE",
           question,
           questionIndex: questionIndex ?? 0, // Default to 0 if not provided
@@ -294,10 +328,40 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         }
       }
 
-      // Update game state to show answer is revealed and question is ended
+      // Get game state to access scoring config
       const currentState = await redis.get(gameStateKey(sessionId));
       const gameState = currentState ? JSON.parse(currentState) : {};
+      const scoringConfig =
+        gameState.scoringConfig || getDefaultScoringConfig();
 
+      console.log("📊 Scoring config retrieved:", {
+        hasConfig: !!gameState.scoringConfig,
+        config: scoringConfig,
+      });
+      console.log("📊 Question details:", {
+        correctAnswer: question.correct,
+        startTime: question.startTime,
+        duration: question.duration,
+      });
+
+      // Calculate and store scores for all players
+      const scores = await calculateQuestionScores(
+        sessionId,
+        questionIndex,
+        question.correct,
+        question.startTime,
+        question.duration,
+        scoringConfig
+      );
+
+      console.log(
+        `💰 Scores calculated for question ${questionIndex}:`,
+        Array.from(scores.entries())
+          .map(([playerId, score]) => `${playerId}: ${score}`)
+          .join(", ")
+      );
+
+      // Update game state to show answer is revealed and question is ended
       await redis.set(
         gameStateKey(sessionId),
         JSON.stringify({
@@ -378,8 +442,9 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         return;
       }
 
-      // Update game state
+      // Update game state (preserve scoringConfig and other properties)
       const newState = {
+        ...gameState, // Preserve existing properties like scoringConfig
         status: "IN_PROGRESS",
         questionIndex,
         questionCount: session.questionCount,
@@ -454,10 +519,49 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         }
       }
 
-      // Update game state to mark question as ended
+      // Get game state to access scoring config and question
       const currentState = await redis.get(gameStateKey(sessionId));
       const gameState = currentState ? JSON.parse(currentState) : {};
+      const scoringConfig =
+        gameState.scoringConfig || getDefaultScoringConfig();
 
+      console.log("📊 END_QUESTION - Scoring config retrieved:", {
+        hasConfig: !!gameState.scoringConfig,
+        config: scoringConfig,
+      });
+
+      // Get question to calculate scores
+      const question = await getQuestion(sessionId, questionIndex);
+      if (question) {
+        console.log("📊 END_QUESTION - Question details:", {
+          correctAnswer: question.correct,
+          startTime: question.startTime,
+          duration: question.duration,
+        });
+
+        // Calculate and store scores for all players
+        const scores = await calculateQuestionScores(
+          sessionId,
+          questionIndex,
+          question.correct,
+          question.startTime,
+          question.duration,
+          scoringConfig
+        );
+
+        console.log(
+          `💰 Scores calculated for question ${questionIndex}:`,
+          Array.from(scores.entries())
+            .map(([playerId, score]) => `${playerId}: ${score}`)
+            .join(", ")
+        );
+      } else {
+        console.warn(
+          `⚠️ Question ${questionIndex} not found for scoring calculation`
+        );
+      }
+
+      // Update game state to mark question as ended
       await redis.set(
         gameStateKey(sessionId),
         JSON.stringify({
@@ -477,6 +581,28 @@ export function registerHostHandlers(io: Server, socket: Socket) {
     } catch (error) {
       console.error("Error ending question:", error);
       socket.emit("error", { message: "Failed to end question" });
+    }
+  });
+
+  socket.on("REVEAL_WINNER", async ({ sessionCode, leaderboard }) => {
+    try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
+      // Broadcast winner-revealed event to all players
+      io.to(sessionCode).emit("winner-revealed", {
+        leaderboard,
+      });
+
+      console.log(
+        `🏆 Winner revealed for session ${sessionCode} to all players`
+      );
+    } catch (error) {
+      console.error("Error revealing winner:", error);
+      socket.emit("error", { message: "Failed to reveal winner" });
     }
   });
 

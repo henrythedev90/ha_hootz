@@ -13,6 +13,11 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - Edit and delete questions
   - Save presentations with success modal
   - Delete presentations with confirmation modal
+  - **Scoring Configuration**:
+    - Configure base points per question
+    - Enable/disable time-based bonuses with max bonus value
+    - Enable/disable streak bonuses with customizable thresholds and values
+    - Interactive tooltips and modals explaining scoring mechanics
   - Start game sessions from saved presentations
 
 - **Game Sessions**
@@ -31,10 +36,24 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - **Players List Modal**: Shows all joined players with countdown before starting first question
   - **Player Exit Control**: Players who leave cannot rejoin with the same name
   - **Answer Reveal Modal**: Dedicated modal showing correct answer and distribution when host reveals
+    - Automatically opens when question ends
+    - Shows leaderboard with player scores
+    - "Reveal Winner" button on last question
+    - "End Game" button after winner is revealed
   - **Real-Time Answer Tracking**: Lightbulb (💡) indicator shows which players have submitted answers
   - **Smart Answer Reveal**: Button only enabled when all connected players have submitted
   - **Timer Control**: Timer automatically stops (set to 0) when answer is revealed
   - **Question Navigation**: Navigate between questions with automatic state reset
+  - **Comprehensive Scoring System**:
+    - Configurable base points per question
+    - Time-based bonuses (awarded for fast answers)
+    - Streak bonuses (awarded for consecutive correct answers)
+    - Configurable thresholds and bonus values
+    - Score reveal timing options
+  - **Leaderboard Display**: Real-time player scores sorted by rank on host dashboard
+  - **Winner Display**: Full-screen winner announcement for players at game end
+  - **End Game Functionality**: Host can end game with confirmation modal, all players see thank you message
+  - **Session Ended Detection**: Players who refresh after game ends see appropriate message instead of game screen
 
 - **Player Experience (Mobile-First)**
 
@@ -50,9 +69,13 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
     - Answer reveal with correct answer highlighting
     - Timer stops (set to 0) when answer is revealed
   - **Exit Game**: Players can leave the game with confirmation modal (prevents rejoining with same name)
+  - **Winner Display**: Full-screen animated winner announcement showing player rank and full leaderboard
+  - **Thank You Modal**: Appears when host ends game, thanking players and encouraging account creation
+  - **Session Ended Handling**: Detects when session has ended and shows appropriate message instead of game screen
   - **Mobile-Optimized**: Single-column layout, no scrolling during questions, thumb-friendly tap targets
   - **Real-Time Updates**: Instant response to game-started, question-started, and question-ended events
   - **Resilient**: Handles refreshes and reconnects with answer restoration (can still submit after refresh if question is active)
+  - **Automatic Answer Marking**: Players who don't answer when question ends are marked as "NO_ANSWER"
 
 - **User Authentication**
 
@@ -66,8 +89,11 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - Desktop-first two-column layout (question control on left, live monitoring on right)
   - Real-time player count and answer submission tracking
   - Live answer distribution visualization
+  - **Leaderboard Display**: Shows all players with their scores, sorted by rank
   - Question navigation (previous/next) with automatic state reset
-  - Answer reveal modal with distribution charts
+  - Answer reveal modal with distribution charts and leaderboard
+  - **Reveal Winner**: Button on last question to announce winner to all players
+  - **End Game**: Confirmation modal to end game session, disconnects all players
   - Session status checks (prevents access to ended sessions)
   - Real-time stats updates via Socket.io events
   - Visual indicators (💡) showing which players have submitted answers
@@ -235,6 +261,8 @@ ha-hootz/
 │   ├── PlayersListModal.tsx               # Modal showing joined players with countdown
 │   ├── GameWelcomeModal.tsx               # Welcome modal for players when game starts
 │   ├── AnswerRevealModal.tsx              # Modal showing correct answer and distribution
+│   ├── WinnerDisplay.tsx                   # Full-screen winner announcement for players
+│   ├── ThankYouModal.tsx                  # Thank you modal when host ends game
 │   ├── CenteredLayout.tsx                 # Reusable centered layout component
 │   └── Providers.tsx                      # Session provider wrapper
 ├── lib/
@@ -269,7 +297,9 @@ ha-hootz/
 - **`DeleteConfirmationModal.tsx`**: Specialized modal for delete confirmations with customizable messages (supports player mode)
 - **`PlayersListModal.tsx`**: Modal showing joined players with countdown timer before starting game
 - **`GameWelcomeModal.tsx`**: Welcome modal for players when game session starts
-- **`AnswerRevealModal.tsx`**: Modal displaying correct answer, answer distribution, and navigation controls
+- **`AnswerRevealModal.tsx`**: Modal displaying correct answer, answer distribution, leaderboard, and navigation controls
+- **`WinnerDisplay.tsx`**: Full-screen winner announcement component showing player rank and full leaderboard
+- **`ThankYouModal.tsx`**: Thank you modal displayed to players when host ends game, encourages account creation
 - **`Loading.tsx`**: Loading component with custom animation, supports full-screen or inline modes
 
 ### Layout Components
@@ -345,9 +375,17 @@ ha-hootz/
 - `START_GAME` - Start the game session (requires `sessionCode`)
 - `START_QUESTION` - Start a specific question with timer (requires `sessionCode`, `question`, `questionIndex`)
 - `REVEAL_ANSWER` - Reveal the correct answer (requires `sessionCode`, `questionIndex`)
+  - Automatically marks unanswered players as "NO_ANSWER"
+  - Calculates and stores scores based on scoring configuration
 - `NAVIGATE_QUESTION` - Navigate to a different question (requires `sessionCode`, `questionIndex`)
 - `END_QUESTION` - End the current question early (requires `sessionCode`, `questionIndex`)
+  - Automatically marks unanswered players as "NO_ANSWER"
+  - Calculates and stores scores based on scoring configuration
+- `REVEAL_WINNER` - Reveal winner to all players (requires `sessionCode`, `leaderboard`)
 - `CANCEL_SESSION` - Cancel/end the session (requires `sessionCode`)
+  - Updates session status to "ended"
+  - Disconnects all player sockets
+  - Broadcasts session-cancelled event to all players
 
 **Player Events (Client → Server):**
 
@@ -366,8 +404,8 @@ ha-hootz/
 - `question-navigated` - Question navigation occurred (includes `questionIndex`, `question`)
 - `player-joined` - Player joined session (includes `playerId`, `name`, `playerCount`)
 - `player-left` - Player left session (includes `playerId`, `playerCount`)
-- `answer-stats-updated` - Answer statistics updated (includes `questionIndex`, `answerCount`, `answerDistribution`, `playersWithAnswers`)
-- `session-cancelled` - Session was cancelled (includes `sessionCode`)
+- `answer-stats-updated` - Answer statistics updated (includes `questionIndex`, `answerCount`, `answerDistribution`, `playersWithAnswers`, `playerScores`)
+- `session-cancelled` - Session was cancelled (includes `sessionCode`, `message`)
 - `error` - Error occurred (includes `message`)
 
 **Player Events:**
@@ -381,6 +419,7 @@ ha-hootz/
 - `question-ended` - Question time expired (includes `questionIndex`)
 - `question-navigated` - Question navigation occurred (includes `questionIndex`, `question`)
 - `answer-revealed` - Correct answer revealed (includes `questionIndex`, `correctAnswer`)
+- `winner-revealed` - Winner announced (includes `leaderboard` with player scores)
 - `session-cancelled` - Host cancelled the session (includes `message`)
 - `ANSWER_RECEIVED` - Answer submission result (includes `accepted`, `updated`, `reason`)
 - `force-disconnect` - Player has another connection (old socket disconnected)
@@ -409,6 +448,15 @@ ha-hootz/
   title: string,
   description?: string,
   questions: Question[],
+  scoringConfig?: {
+    basePoints: number,
+    timeBonusEnabled: boolean,
+    maxTimeBonus: number,
+    streakBonusEnabled: boolean,
+    streakThresholds: number[],
+    streakBonusValues: number[],
+    revealScores: "after-question" | "after-game" | "never"
+  },
   createdAt: string,
   updatedAt: string
 }
@@ -480,8 +528,16 @@ npm run lint
 - [x] Answer buttons only visible when question is active
 - [x] Stats refresh on player reconnection
 - [x] Host dashboard access control (prevents access to ended sessions)
-- [ ] Live results and leaderboards display
+- [x] Comprehensive scoring system with base points, time bonuses, and streak bonuses
+- [x] Real-time leaderboard display on host dashboard
+- [x] Winner display for players at game end
+- [x] Thank you modal when host ends game
+- [x] Session ended detection for players who refresh
+- [x] Automatic marking of unanswered questions as "NO_ANSWER"
+- [x] Answer reveal modal automatically opens when question ends
+- [x] Reveal winner functionality on last question
+- [x] End game functionality with confirmation modal
+- [x] Scoring configuration UI with tooltips and explanations
 - [ ] Image support for questions
 - [ ] Presentation sharing and collaboration
 - [ ] Game history and analytics
-- [ ] Final leaderboard at end of game

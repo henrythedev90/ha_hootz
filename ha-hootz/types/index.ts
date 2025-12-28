@@ -13,6 +13,23 @@ export interface Question {
   options: AnswerOption[];
 }
 
+export interface ScoringConfig {
+  // Base scoring
+  basePoints: number; // Default: 100
+
+  // Time-based bonus
+  timeBonusEnabled: boolean;
+  maxTimeBonus: number; // Maximum bonus points (default: 50)
+
+  // Streak bonus
+  streakBonusEnabled: boolean;
+  streakThresholds: number[]; // e.g., [3, 5, 7] for bonuses at 3, 5, 7+ consecutive correct
+  streakBonusValues: number[]; // Bonus points for each threshold (e.g., [10, 25, 50])
+
+  // Score reveal timing
+  revealScores: "immediate" | "after-question" | "after-game"; // When to show scores to players
+}
+
 export interface Presentation {
   id: string;
   userId: string;
@@ -21,6 +38,7 @@ export interface Presentation {
   createdAt: string;
   updatedAt: string;
   questions: Question[];
+  scoringConfig?: ScoringConfig; // Optional, defaults applied if not set
 }
 
 export interface User {
