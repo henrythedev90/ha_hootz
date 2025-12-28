@@ -720,21 +720,24 @@ export default function HostDashboard() {
                 />
 
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <h3 className="text-lg text-center font-semibold text-gray-900 dark:text-white mb-4">
                     Players ({players.length})
                   </h3>
                   {players.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-gray-500 dark:text-gray-400 text-center">
                       No players joined yet
                     </p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto text-center">
                       {players.map((player) => (
                         <li
                           key={player.playerId}
-                          className="text-gray-700 dark:text-gray-300"
+                          className="w-full px-[50px] text-gray-700 dark:text-gray-300 flex items-center"
                         >
-                          👤 {player.name}
+                          <span className="w-6 shrink-0">👤</span>
+                          <span className="ml-2 flex-1 text-center">
+                            {player.name}
+                          </span>
                         </li>
                       ))}
                     </ul>
