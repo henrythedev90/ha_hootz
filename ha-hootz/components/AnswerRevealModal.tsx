@@ -53,8 +53,12 @@ export default function AnswerRevealModal({
   playerScores = {},
 }: AnswerRevealModalProps) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [winnerRevealed, setWinnerRevealed] = useState(false);
 
   if (!isOpen || !question) return null;
+
+  // Check if we're on the last question
+  const isLastQuestion = questionCount > 0 && currentIndex >= questionCount - 1;
 
   // Prepare leaderboard data
   const leaderboard = players
@@ -64,6 +68,14 @@ export default function AnswerRevealModal({
     }))
     .sort((a, b) => b.score - a.score);
 
+  // Get the winner (player with highest score)
+  const winner = leaderboard.length > 0 ? leaderboard[0] : null;
+  // Check if there's a tie (multiple players with the same highest score)
+  const isTie =
+    leaderboard.length > 1 &&
+    leaderboard[0].score > 0 &&
+    leaderboard[0].score === leaderboard[1].score;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -72,7 +84,11 @@ export default function AnswerRevealModal({
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {showLeaderboard ? "Leaderboard" : "Answer Revealed"}
+                {showLeaderboard
+                  ? winnerRevealed
+                    ? "🏆 Winner!"
+                    : "Leaderboard"
+                  : "Answer Revealed"}
               </h2>
               {!showLeaderboard && (
                 <p className="text-gray-600 dark:text-gray-300">
@@ -104,6 +120,35 @@ export default function AnswerRevealModal({
           {showLeaderboard ? (
             /* Leaderboard View */
             <div className="mb-6">
+              {winnerRevealed && winner && (
+                <div className="mb-8 text-center">
+                  <div className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-600 dark:from-yellow-500 dark:via-yellow-600 dark:to-yellow-700 rounded-lg p-8 shadow-lg border-4 border-yellow-300 dark:border-yellow-500">
+                    <div className="text-6xl mb-4">🏆</div>
+                    {isTie ? (
+                      <>
+                        <h3 className="text-3xl font-bold text-white mb-2">
+                          It's a Tie!
+                        </h3>
+                        <p className="text-xl text-yellow-100 mb-4">
+                          Multiple winners with {winner.score} points!
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-3xl font-bold text-white mb-2">
+                          Congratulations!
+                        </h3>
+                        <p className="text-2xl text-yellow-100 mb-2">
+                          {winner.name}
+                        </p>
+                        <p className="text-xl text-yellow-100">
+                          Wins with {winner.score} points!
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="space-y-3">
                 {leaderboard.length === 0 ? (
                   <p className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -113,11 +158,14 @@ export default function AnswerRevealModal({
                   leaderboard.map((player, index) => {
                     const rank = index + 1;
                     const isTopThree = rank <= 3;
+                    const isWinner = winnerRevealed && rank === 1 && !isTie;
                     return (
                       <div
                         key={player.playerId}
-                        className={`p-4 rounded-lg border-2 ${
-                          isTopThree
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          isWinner
+                            ? "bg-yellow-200 dark:bg-yellow-800 border-yellow-500 dark:border-yellow-400 shadow-lg scale-105"
+                            : isTopThree
                             ? rank === 1
                               ? "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-500 dark:border-yellow-500"
                               : rank === 2
@@ -129,7 +177,9 @@ export default function AnswerRevealModal({
                         <div className="flex items-center gap-4">
                           <div
                             className={`text-2xl font-bold ${
-                              isTopThree
+                              isWinner
+                                ? "text-yellow-700 dark:text-yellow-300"
+                                : isTopThree
                                 ? rank === 1
                                   ? "text-yellow-600 dark:text-yellow-400"
                                   : rank === 2
@@ -138,12 +188,29 @@ export default function AnswerRevealModal({
                                 : "text-gray-500 dark:text-gray-400"
                             }`}
                           >
-                            #{rank}
+                            {isWinner ? "👑" : `#${rank}`}
                           </div>
-                          <span className="flex-1 text-lg font-semibold text-gray-900 dark:text-white">
+                          <span
+                            className={`flex-1 text-lg font-semibold ${
+                              isWinner
+                                ? "text-yellow-900 dark:text-yellow-100"
+                                : "text-gray-900 dark:text-white"
+                            }`}
+                          >
                             {player.name}
+                            {isWinner && (
+                              <span className="ml-2 text-yellow-600 dark:text-yellow-400">
+                                - Winner!
+                              </span>
+                            )}
                           </span>
-                          <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                          <span
+                            className={`text-xl font-bold ${
+                              isWinner
+                                ? "text-yellow-700 dark:text-yellow-300"
+                                : "text-blue-600 dark:text-blue-400"
+                            }`}
+                          >
                             {player.score} pts
                           </span>
                         </div>
@@ -268,10 +335,15 @@ export default function AnswerRevealModal({
                   ← Previous Question
                 </button>
                 <button
-                  onClick={() => setShowLeaderboard(true)}
+                  onClick={() => {
+                    setShowLeaderboard(true);
+                    if (isLastQuestion) {
+                      setWinnerRevealed(true);
+                    }
+                  }}
                   className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
                 >
-                  View Leaderboard
+                  {isLastQuestion ? "🏆 Reveal Winner" : "View Leaderboard"}
                 </button>
                 <button
                   onClick={() => {
