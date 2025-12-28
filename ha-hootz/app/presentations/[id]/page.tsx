@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Presentation, Question, ScoringConfig } from "@/types";
@@ -34,18 +34,7 @@ export default function PresentationEditor() {
   );
   const [showStreakBonusInfo, setShowStreakBonusInfo] = useState(false);
 
-  useEffect(() => {
-    if (status === "loading") return;
-
-    if (!session) {
-      router.push("/auth/signin");
-      return;
-    }
-
-    loadPresentation();
-  }, [id, isNew, session, status, router]);
-
-  const loadPresentation = async () => {
+  const loadPresentation = useCallback(async () => {
     try {
       setLoading(true);
       if (isNew) {
@@ -83,7 +72,18 @@ export default function PresentationEditor() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, isNew, session, router]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session) {
+      router.push("/auth/signin");
+      return;
+    }
+
+    loadPresentation();
+  }, [status, session, loadPresentation]);
 
   const handleSave = async () => {
     if (!presentation) return;

@@ -8,6 +8,7 @@ import Loading from "@/components/Loading";
 import CenteredLayout from "@/components/CenteredLayout";
 import PlayersListModal from "@/components/PlayersListModal";
 import AnswerRevealModal from "@/components/AnswerRevealModal";
+import Modal from "@/components/Modal";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -64,6 +65,7 @@ export default function HostDashboard() {
   >(null);
   const [showPlayersModal, setShowPlayersModal] = useState(false);
   const [showAnswerRevealModal, setShowAnswerRevealModal] = useState(false);
+  const [showEndGameModal, setShowEndGameModal] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const gameStateRef = useRef<GameState | null>(null);
@@ -801,6 +803,10 @@ export default function HostDashboard() {
             );
           }
         }}
+        onEndGame={() => {
+          // Show end game confirmation modal
+          setShowEndGameModal(true);
+        }}
       />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-7xl mx-auto">
@@ -1029,6 +1035,41 @@ export default function HostDashboard() {
           </div>
         </div>
       </div>
+
+      {/* End Game Confirmation Modal */}
+      <Modal
+        isOpen={showEndGameModal}
+        onClose={() => setShowEndGameModal(false)}
+        title="End Game"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700 dark:text-gray-300">
+            Are you sure you want to end the game? All players will be
+            disconnected.
+          </p>
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              onClick={() => setShowEndGameModal(false)}
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (socket) {
+                  socket.emit("CANCEL_SESSION", { sessionCode });
+                }
+                setShowEndGameModal(false);
+                setShowAnswerRevealModal(false);
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+            >
+              End Game
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

@@ -443,22 +443,61 @@ export default function GamePage() {
       socket.disconnect();
     }
     setConnected(false);
-    setError("You have left the game. You cannot rejoin with the same name.");
+    setError(
+      "GOODBYE: You have left the game. You cannot rejoin with the same name."
+    );
     setIsExitModalOpen(false);
   };
 
-  // Show error screen if there's an error (including session cancelled)
+  // Show error screen if there's an error (including session cancelled or player exit)
   if (error) {
     const isCancelled = error.includes("cancelled");
+    const isGoodbye = error.includes("GOODBYE:");
+    const displayMessage = isGoodbye ? error.replace("GOODBYE: ", "") : error;
     return (
       <>
         <CenteredLayout>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
-            <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
-              {isCancelled ? "Session Cancelled" : "Error"}
+            <h1 className="text-2xl font-bold mb-4">
+              {isGoodbye ? (
+                <span className="text-blue-600 dark:text-blue-400">
+                  Goodbye!
+                </span>
+              ) : isCancelled ? (
+                <span className="text-red-600 dark:text-red-400">
+                  Session Cancelled
+                </span>
+              ) : (
+                <span className="text-red-600 dark:text-red-400">Error</span>
+              )}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
-            {isCancelled ? (
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              {displayMessage}
+            </p>
+            {isGoodbye ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Thanks for playing! You can close this page.
+                </p>
+                {playerName && (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                      Hey {playerName}! Did you enjoy playing?
+                    </p>
+                    <button
+                      onClick={() => (window.location.href = "/auth/signup")}
+                      className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                    >
+                      Create Your Own Ha-Hootz Account
+                    </button>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Host your own trivia games and create engaging
+                      presentations!
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : isCancelled ? (
               <div className="space-y-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   The host has ended this session. You can close this page.

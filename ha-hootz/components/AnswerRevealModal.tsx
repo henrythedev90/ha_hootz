@@ -39,6 +39,7 @@ interface AnswerRevealModalProps {
   onRevealWinner?: (
     leaderboard: Array<{ playerId: string; name: string; score: number }>
   ) => void;
+  onEndGame?: () => void;
 }
 
 export default function AnswerRevealModal({
@@ -55,6 +56,7 @@ export default function AnswerRevealModal({
   players = [],
   playerScores = {},
   onRevealWinner,
+  onEndGame,
 }: AnswerRevealModalProps) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [winnerRevealed, setWinnerRevealed] = useState(false);
@@ -316,12 +318,29 @@ export default function AnswerRevealModal({
           {/* Navigation Buttons */}
           <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700">
             {showLeaderboard ? (
-              <button
-                onClick={() => setShowLeaderboard(false)}
-                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-              >
-                ← Back to Answer
-              </button>
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setShowLeaderboard(false)}
+                  disabled={winnerRevealed}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ← Back to Answer
+                </button>
+                {winnerRevealed && (
+                  <button
+                    onClick={() => {
+                      if (onEndGame) {
+                        onEndGame();
+                      } else {
+                        onClose();
+                      }
+                    }}
+                    className="ml-auto px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                  >
+                    End Game
+                  </button>
+                )}
+              </div>
             ) : (
               <>
                 <button
