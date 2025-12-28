@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import redisPromise from "../../redis/client";
-import { gameStateKey, playersKey } from "../../redis/keys";
+import { gameStateKey, playersKey, answersKey } from "../../redis/keys";
 import {
   updateSessionStatus,
   getSessionIdFromCode,
@@ -272,6 +272,28 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         return;
       }
 
+      // Mark unanswered questions as wrong (NO_ANSWER)
+      const allPlayers = await redis.hGetAll(playersKey(sessionId));
+      const playerIds = Object.keys(allPlayers);
+      const submittedAnswers = await redis.hGetAll(
+        answersKey(sessionId, questionIndex)
+      );
+      const playersWhoAnswered = Object.keys(submittedAnswers);
+
+      // For players who didn't answer, mark as NO_ANSWER
+      for (const playerId of playerIds) {
+        if (!playersWhoAnswered.includes(playerId)) {
+          await redis.hSet(
+            answersKey(sessionId, questionIndex),
+            playerId,
+            "NO_ANSWER"
+          );
+          console.log(
+            `❌ Marked player ${playerId} as NO_ANSWER for question ${questionIndex}`
+          );
+        }
+      }
+
       // Update game state to show answer is revealed and question is ended
       const currentState = await redis.get(gameStateKey(sessionId));
       const gameState = currentState ? JSON.parse(currentState) : {};
@@ -408,6 +430,28 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       if (!sessionId) {
         socket.emit("error", { message: "Session code not found" });
         return;
+      }
+
+      // Mark unanswered questions as wrong (NO_ANSWER)
+      const allPlayers = await redis.hGetAll(playersKey(sessionId));
+      const playerIds = Object.keys(allPlayers);
+      const submittedAnswers = await redis.hGetAll(
+        answersKey(sessionId, questionIndex)
+      );
+      const playersWhoAnswered = Object.keys(submittedAnswers);
+
+      // For players who didn't answer, mark as NO_ANSWER
+      for (const playerId of playerIds) {
+        if (!playersWhoAnswered.includes(playerId)) {
+          await redis.hSet(
+            answersKey(sessionId, questionIndex),
+            playerId,
+            "NO_ANSWER"
+          );
+          console.log(
+            `❌ Marked player ${playerId} as NO_ANSWER for question ${questionIndex}`
+          );
+        }
       }
 
       // Update game state to mark question as ended

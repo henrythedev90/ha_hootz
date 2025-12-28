@@ -463,6 +463,8 @@ export default function HostDashboard() {
           answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
           playersWithAnswers: [],
         }));
+        // Close the answer reveal modal when navigating to a new question
+        setShowAnswerRevealModal(false);
       }
     );
 
@@ -624,6 +626,13 @@ export default function HostDashboard() {
   const isQuestionActive = gameState?.status === "QUESTION_ACTIVE";
   const isQuestionEnded = gameState?.status === "QUESTION_ENDED";
   const canNavigate = !isQuestionActive && gameState?.status !== "WAITING";
+
+  // Automatically open AnswerRevealModal when question ends
+  useEffect(() => {
+    if (isQuestionEnded && currentQuestion) {
+      setShowAnswerRevealModal(true);
+    }
+  }, [isQuestionEnded, currentQuestion]);
 
   if (status === "loading") {
     return <Loading />;
