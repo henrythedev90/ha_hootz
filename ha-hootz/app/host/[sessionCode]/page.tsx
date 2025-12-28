@@ -1057,8 +1057,19 @@ export default function HostDashboard() {
             </button>
             <button
               onClick={() => {
+                console.log(
+                  "🛑 Host: End Game button clicked, emitting CANCEL_SESSION"
+                );
                 if (socket) {
                   socket.emit("CANCEL_SESSION", { sessionCode });
+                  console.log(
+                    "✅ Host: CANCEL_SESSION event emitted for session",
+                    sessionCode
+                  );
+                } else {
+                  console.error(
+                    "❌ Host: Socket not connected, cannot cancel session"
+                  );
                 }
                 setShowEndGameModal(false);
                 setShowAnswerRevealModal(false);

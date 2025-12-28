@@ -113,6 +113,14 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         }
 
         // Socket is not active or doesn't exist - allow reconnection with same playerId
+        // BUT check if session has ended - if so, reject reconnection
+        if (session.status === "ended") {
+          socket.emit("join-error", {
+            reason:
+              "This game session has ended. The host has closed the game.",
+          });
+          return;
+        }
         playerId = existingPlayerId;
         isReconnection = true;
         console.log(
@@ -122,7 +130,10 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         // New player - check if session is locked/live (prevent new joins)
         if (session.status === "live" || session.status === "ended") {
           socket.emit("join-error", {
-            reason: "Game has already started. New players cannot join.",
+            reason:
+              session.status === "ended"
+                ? "This game session has ended. The host has closed the game."
+                : "Game has already started. New players cannot join.",
           });
           return;
         }
