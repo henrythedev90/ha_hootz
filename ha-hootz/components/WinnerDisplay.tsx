@@ -60,12 +60,12 @@ export default function WinnerDisplay({
   });
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-90 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black bg-opacity-90 p-4 overflow-y-auto">
       <div className="w-full max-w-4xl">
         {/* Winner Announcement Banner */}
         {isWinner && (
           <div className="mb-8 text-center animate-pulse">
-            <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 dark:from-yellow-500 dark:via-yellow-600 dark:to-yellow-700 rounded-2xl p-12 shadow-2xl border-4 border-yellow-300 dark:border-yellow-500 transform scale-105">
+            <div className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-600 dark:from-yellow-500 dark:via-yellow-600 dark:to-yellow-700 rounded-2xl p-12 shadow-2xl border-4 border-yellow-300 dark:border-yellow-500 transform scale-105">
               <div className="text-8xl mb-6 animate-bounce">🏆</div>
               <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-lg">
                 {isTie ? "It's a Tie!" : "Congratulations!"}
@@ -89,12 +89,12 @@ export default function WinnerDisplay({
             <div
               className={`inline-flex items-center justify-center w-32 h-32 rounded-full text-6xl font-bold mb-4 ${
                 isWinner
-                  ? "bg-gradient-to-br from-yellow-400 to-yellow-600 text-yellow-900 shadow-lg scale-110 animate-pulse"
+                  ? "bg-linear-to-br from-yellow-400 to-yellow-600 text-yellow-900 shadow-lg scale-110 animate-pulse"
                   : isSecond
-                  ? "bg-gradient-to-br from-gray-300 to-gray-500 text-gray-800 shadow-lg"
+                  ? "bg-linear-to-br from-gray-300 to-gray-500 text-gray-800 shadow-lg"
                   : isThird
-                  ? "bg-gradient-to-br from-orange-400 to-orange-600 text-orange-900 shadow-lg"
-                  : "bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-lg"
+                  ? "bg-linear-to-br from-orange-400 to-orange-600 text-orange-900 shadow-lg"
+                  : "bg-linear-to-br from-blue-400 to-blue-600 text-white shadow-lg"
               }`}
             >
               {isWinner ? "👑" : `#${playerRank}`}

@@ -32,6 +32,7 @@ export default function PresentationEditor() {
   const [scoringConfig, setScoringConfig] = useState<ScoringConfig>(
     getDefaultScoringConfig()
   );
+  const [showStreakBonusInfo, setShowStreakBonusInfo] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -420,10 +421,33 @@ export default function PresentationEditor() {
               {/* Streak Bonus */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Streak Bonus
-                    </label>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Streak Bonus
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowStreakBonusInfo(true)}
+                        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                        title="Learn how Streak Bonus works"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Award bonus points for consecutive correct answers
                     </p>
@@ -515,35 +539,6 @@ export default function PresentationEditor() {
                   </div>
                 )}
               </div>
-
-              {/* Score Reveal Timing */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  When to Reveal Scores to Players
-                </label>
-                <select
-                  value={scoringConfig.revealScores}
-                  onChange={(e) =>
-                    setScoringConfig({
-                      ...scoringConfig,
-                      revealScores: e.target.value as
-                        | "immediate"
-                        | "after-question"
-                        | "after-game",
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                >
-                  <option value="immediate">
-                    Immediately (after each answer)
-                  </option>
-                  <option value="after-question">After Each Question</option>
-                  <option value="after-game">After Game Ends</option>
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Controls when players see their scores
-                </p>
-              </div>
             </div>
           )}
         </div>
@@ -602,6 +597,103 @@ export default function PresentationEditor() {
             >
               Continue Editing
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Streak Bonus Info Modal */}
+      <Modal
+        isOpen={showStreakBonusInfo}
+        onClose={() => setShowStreakBonusInfo(false)}
+        title="How Streak Bonus Works"
+      >
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              What is Streak Bonus?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 text-sm">
+              Streak Bonus rewards players for answering multiple questions
+              correctly in a row. The more consecutive correct answers, the
+              bigger the bonus!
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              How to Set It Up
+            </h3>
+            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+              <div>
+                <p className="font-medium mb-1">1. Streak Thresholds:</p>
+                <p>
+                  Enter the number of consecutive correct answers needed to
+                  trigger each bonus level.
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Example:{" "}
+                  <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                    3, 5, 7
+                  </code>{" "}
+                  means bonuses at 3, 5, and 7+ consecutive correct answers
+                </p>
+              </div>
+              <div>
+                <p className="font-medium mb-1">2. Bonus Values:</p>
+                <p>
+                  Enter the bonus points awarded for each threshold. Must match
+                  the number of thresholds.
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Example:{" "}
+                  <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                    10, 25, 50
+                  </code>{" "}
+                  means 10 points at 3 correct, 25 at 5 correct, 50 at 7+
+                  correct
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+              Example Scenario:
+            </h4>
+            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+              <li>
+                Thresholds:{" "}
+                <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">
+                  3, 5, 7
+                </code>
+              </li>
+              <li>
+                Bonus Values:{" "}
+                <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">
+                  10, 25, 50
+                </code>
+              </li>
+              <li>
+                Player answers 3 questions correctly → Gets 10 bonus points
+              </li>
+              <li>
+                Player answers 5 questions correctly → Gets 25 bonus points
+              </li>
+              <li>
+                Player answers 7+ questions correctly → Gets 50 bonus points
+              </li>
+              <li className="mt-2 font-medium">
+                If player gets one wrong, streak resets to 0
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <strong>Tip:</strong> Make sure the number of bonus values matches
+              the number of thresholds. For example, if you have 3 thresholds,
+              you need 3 bonus values.
+            </p>
           </div>
         </div>
       </Modal>
