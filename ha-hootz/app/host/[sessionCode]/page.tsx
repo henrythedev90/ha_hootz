@@ -36,6 +36,7 @@ interface Stats {
   answerCount: number;
   answerDistribution: { A: number; B: number; C: number; D: number };
   playersWithAnswers?: string[]; // Array of playerIds who have submitted answers
+  playerScores?: Record<string, number>; // playerId -> total score
 }
 
 export default function HostDashboard() {
@@ -55,6 +56,7 @@ export default function HostDashboard() {
     answerCount: 0,
     answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
     playersWithAnswers: [],
+    playerScores: {},
   });
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [sessionStatus, setSessionStatus] = useState<
@@ -190,6 +192,7 @@ export default function HostDashboard() {
               D: 0,
             },
             playersWithAnswers: data.playersWithAnswers || [],
+            playerScores: data.playerScores || {},
           });
         }
       } catch (error) {
@@ -366,6 +369,8 @@ export default function HostDashboard() {
                     D: 0,
                   },
                   playersWithAnswers: statsData.playersWithAnswers || [],
+                  playerScores:
+                    statsData.playerScores || prev.playerScores || {},
                 }));
                 console.log(
                   `📊 Refreshed stats after player join: ${statsData.answerCount} answers for question ${questionIndex}`
@@ -484,6 +489,7 @@ export default function HostDashboard() {
             answerDistribution: data.answerDistribution,
             playersWithAnswers:
               data.playersWithAnswers || prev.playersWithAnswers || [],
+            // Preserve playerScores - they're updated via stats API, not socket events
           }));
         }
       }
@@ -968,28 +974,37 @@ export default function HostDashboard() {
                   </p>
                 ) : (
                   <ul className="space-y-2 max-h-48 overflow-y-auto">
-                    {players.map((player) => {
-                      const hasSubmitted =
-                        stats.playersWithAnswers?.includes(player.playerId) ||
-                        false;
-                      return (
-                        <li
-                          key={player.playerId}
-                          className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2"
-                        >
-                          <span>👤</span>
-                          <span className="flex-1">{player.name}</span>
-                          {hasSubmitted && (
-                            <span
-                              className="text-yellow-500"
-                              title="Answer submitted"
-                            >
-                              💡
+                    {players
+                      .map((player) => ({
+                        ...player,
+                        score: stats.playerScores?.[player.playerId] || 0,
+                      }))
+                      .sort((a, b) => b.score - a.score) // Sort by score descending
+                      .map((player) => {
+                        const hasSubmitted =
+                          stats.playersWithAnswers?.includes(player.playerId) ||
+                          false;
+                        return (
+                          <li
+                            key={player.playerId}
+                            className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                          >
+                            <span>👤</span>
+                            <span className="flex-1">{player.name}</span>
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">
+                              {player.score} pts
                             </span>
-                          )}
-                        </li>
-                      );
-                    })}
+                            {hasSubmitted && (
+                              <span
+                                className="text-yellow-500"
+                                title="Answer submitted"
+                              >
+                                💡
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
                   </ul>
                 )}
               </div>

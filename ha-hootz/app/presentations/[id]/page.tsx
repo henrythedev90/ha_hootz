@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Presentation, Question } from "@/types";
+import { Presentation, Question, ScoringConfig } from "@/types";
 import { getPresentationById, savePresentation } from "@/lib/storage";
-import { generateId } from "@/lib/utils";
+import { generateId, getDefaultScoringConfig } from "@/lib/utils";
 import QuestionList from "@/components/QuestionList";
 import Modal from "@/components/Modal";
 import Loading from "@/components/Loading";
@@ -28,6 +28,10 @@ export default function PresentationEditor() {
     null
   );
   const [starting, setStarting] = useState(false);
+  const [showScoringConfig, setShowScoringConfig] = useState(false);
+  const [scoringConfig, setScoringConfig] = useState<ScoringConfig>(
+    getDefaultScoringConfig()
+  );
 
   useEffect(() => {
     if (status === "loading") return;
@@ -52,15 +56,18 @@ export default function PresentationEditor() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           questions: [],
+          scoringConfig: getDefaultScoringConfig(),
         });
         setTitle("");
         setDescription("");
+        setScoringConfig(getDefaultScoringConfig());
       } else {
         const loaded = await getPresentationById(id);
         if (loaded) {
           setPresentation(loaded);
           setTitle(loaded.title);
           setDescription(loaded.description || "");
+          setScoringConfig(loaded.scoringConfig || getDefaultScoringConfig());
         } else {
           router.push("/");
         }
@@ -90,6 +97,7 @@ export default function PresentationEditor() {
         ...presentation,
         title: title.trim(),
         description: description.trim(),
+        scoringConfig: scoringConfig,
         updatedAt: new Date().toISOString(),
       };
 
@@ -318,6 +326,226 @@ export default function PresentationEditor() {
           >
             {saving ? "Saving..." : "Save Presentation"}
           </button>
+        </div>
+
+        {/* Scoring Configuration */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+          <button
+            onClick={() => setShowScoringConfig(!showScoringConfig)}
+            className="w-full flex justify-between items-center text-left"
+          >
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Scoring Configuration
+            </h2>
+            <span className="text-gray-500 dark:text-gray-400">
+              {showScoringConfig ? "▼" : "▶"}
+            </span>
+          </button>
+
+          {showScoringConfig && (
+            <div className="mt-6 space-y-6">
+              {/* Base Points */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Base Points per Correct Answer
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={scoringConfig.basePoints}
+                  onChange={(e) =>
+                    setScoringConfig({
+                      ...scoringConfig,
+                      basePoints: parseInt(e.target.value) || 100,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Points awarded for each correct answer
+                </p>
+              </div>
+
+              {/* Time-Based Bonus */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Time-Based Bonus
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Award bonus points based on how quickly players answer
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={scoringConfig.timeBonusEnabled}
+                      onChange={(e) =>
+                        setScoringConfig({
+                          ...scoringConfig,
+                          timeBonusEnabled: e.target.checked,
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                {scoringConfig.timeBonusEnabled && (
+                  <div className="ml-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Maximum Time Bonus Points
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={scoringConfig.maxTimeBonus}
+                      onChange={(e) =>
+                        setScoringConfig({
+                          ...scoringConfig,
+                          maxTimeBonus: parseInt(e.target.value) || 50,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Maximum bonus points for answering immediately (bonus
+                      decreases as time passes)
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Streak Bonus */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Streak Bonus
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Award bonus points for consecutive correct answers
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={scoringConfig.streakBonusEnabled}
+                      onChange={(e) =>
+                        setScoringConfig({
+                          ...scoringConfig,
+                          streakBonusEnabled: e.target.checked,
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                {scoringConfig.streakBonusEnabled && (
+                  <div className="ml-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Streak Thresholds (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={scoringConfig.streakThresholds.join(", ")}
+                        onChange={(e) => {
+                          const thresholds = e.target.value
+                            .split(",")
+                            .map((s) => parseInt(s.trim()))
+                            .filter((n) => !isNaN(n) && n > 0);
+                          if (thresholds.length > 0) {
+                            setScoringConfig({
+                              ...scoringConfig,
+                              streakThresholds: thresholds,
+                              // Adjust bonus values array length if needed
+                              streakBonusValues:
+                                thresholds.length ===
+                                scoringConfig.streakBonusValues.length
+                                  ? scoringConfig.streakBonusValues
+                                  : thresholds.map(
+                                      (_, i) =>
+                                        scoringConfig.streakBonusValues[i] || 10
+                                    ),
+                            });
+                          }
+                        }}
+                        placeholder="3, 5, 7"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Number of consecutive correct answers required (e.g., 3,
+                        5, 7)
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Bonus Values (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={scoringConfig.streakBonusValues.join(", ")}
+                        onChange={(e) => {
+                          const values = e.target.value
+                            .split(",")
+                            .map((s) => parseInt(s.trim()))
+                            .filter((n) => !isNaN(n) && n >= 0);
+                          if (
+                            values.length > 0 &&
+                            values.length ===
+                              scoringConfig.streakThresholds.length
+                          ) {
+                            setScoringConfig({
+                              ...scoringConfig,
+                              streakBonusValues: values,
+                            });
+                          }
+                        }}
+                        placeholder="10, 25, 50"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Bonus points for each threshold (must match number of
+                        thresholds)
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Score Reveal Timing */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  When to Reveal Scores to Players
+                </label>
+                <select
+                  value={scoringConfig.revealScores}
+                  onChange={(e) =>
+                    setScoringConfig({
+                      ...scoringConfig,
+                      revealScores: e.target.value as
+                        | "immediate"
+                        | "after-question"
+                        | "after-game",
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                  <option value="immediate">
+                    Immediately (after each answer)
+                  </option>
+                  <option value="after-question">After Each Question</option>
+                  <option value="after-game">After Game Ends</option>
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Controls when players see their scores
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <QuestionList

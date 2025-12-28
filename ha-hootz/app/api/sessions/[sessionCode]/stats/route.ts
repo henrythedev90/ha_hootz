@@ -5,6 +5,7 @@ import {
   getSession as getTriviaSession,
   getAnswerCount,
   getAnswerDistribution,
+  getLeaderboard,
 } from "@/lib/redis/triviaRedis";
 import redisPromise from "@/lib/redis/client";
 import { playersKey, answersKey } from "@/lib/redis/keys";
@@ -50,12 +51,19 @@ export async function GET(
       if (!isNaN(index)) {
         answerCount = await getAnswerCount(sessionId, index);
         answerDistribution = await getAnswerDistribution(sessionId, index);
-        
+
         // Get list of playerIds who have submitted answers
         const answers = await redis.hGetAll(answersKey(sessionId, index));
         playersWithAnswers = Object.keys(answers);
       }
     }
+
+    // Get leaderboard scores
+    const leaderboard = await getLeaderboard(sessionId, 100); // Get top 100 players
+    const playerScores: Record<string, number> = {};
+    leaderboard.forEach((entry) => {
+      playerScores[entry.value] = entry.score;
+    });
 
     return NextResponse.json({
       success: true,
@@ -63,6 +71,7 @@ export async function GET(
       answerCount,
       answerDistribution,
       playersWithAnswers,
+      playerScores,
     });
   } catch (error: any) {
     console.error("Error fetching stats:", error);
