@@ -584,6 +584,28 @@ export function registerHostHandlers(io: Server, socket: Socket) {
     }
   });
 
+  socket.on("REVEAL_WINNER", async ({ sessionCode, leaderboard }) => {
+    try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
+      // Broadcast winner-revealed event to all players
+      io.to(sessionCode).emit("winner-revealed", {
+        leaderboard,
+      });
+
+      console.log(
+        `🏆 Winner revealed for session ${sessionCode} to all players`
+      );
+    } catch (error) {
+      console.error("Error revealing winner:", error);
+      socket.emit("error", { message: "Failed to reveal winner" });
+    }
+  });
+
   // Clean up host data on disconnect
   socket.on("disconnect", () => {
     hostData.delete(socket.id);

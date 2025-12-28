@@ -7,6 +7,7 @@ import Loading from "@/components/Loading";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import CenteredLayout from "@/components/CenteredLayout";
 import GameWelcomeModal from "@/components/GameWelcomeModal";
+import WinnerDisplay from "@/components/WinnerDisplay";
 
 type GameStatus =
   | "WAITING"
@@ -51,6 +52,11 @@ export default function GamePage() {
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
   const [hostName, setHostName] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [showWinnerDisplay, setShowWinnerDisplay] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<
+    Array<{ playerId: string; name: string; score: number }>
+  >([]);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -163,9 +169,14 @@ export default function GamePage() {
       (data: {
         gameState: GameState;
         sessionId?: string;
+        playerId?: string;
         playerCount?: number;
       }) => {
         console.log("✅ Joined session:", data);
+        // Store playerId
+        if (data.playerId) {
+          setPlayerId(data.playerId);
+        }
         // Ensure sessionId is set in gameState (needed for answer submission)
         setGameState({
           ...data.gameState,
@@ -377,6 +388,17 @@ export default function GamePage() {
       console.error("Connection error:", error);
       setError("Failed to connect to server");
     });
+
+    newSocket.on(
+      "winner-revealed",
+      (data: {
+        leaderboard: Array<{ playerId: string; name: string; score: number }>;
+      }) => {
+        console.log("🏆 Winner revealed:", data);
+        setLeaderboard(data.leaderboard);
+        setShowWinnerDisplay(true);
+      }
+    );
 
     return () => {
       if (timerIntervalRef.current) {
@@ -807,6 +829,16 @@ export default function GamePage() {
         itemName="game"
         description="You won't be able to rejoin with the same name if you leave now."
       />
+
+      {/* Winner Display - Full screen overlay */}
+      {playerName && playerId && (
+        <WinnerDisplay
+          isOpen={showWinnerDisplay}
+          playerName={playerName}
+          playerId={playerId}
+          leaderboard={leaderboard}
+        />
+      )}
     </>
   );
 }

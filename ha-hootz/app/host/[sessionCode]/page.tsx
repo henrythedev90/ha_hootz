@@ -786,6 +786,15 @@ export default function HostDashboard() {
         connected={connected || false}
         players={players}
         playerScores={stats.playerScores}
+        onRevealWinner={(leaderboard) => {
+          // Emit winner-revealed event to all players
+          if (socket) {
+            socket.emit("REVEAL_WINNER", {
+              sessionCode,
+              leaderboard,
+            });
+          }
+        }}
       />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-7xl mx-auto">

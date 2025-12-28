@@ -36,6 +36,9 @@ interface AnswerRevealModalProps {
   connected: boolean;
   players?: Player[];
   playerScores?: Record<string, number>;
+  onRevealWinner?: (
+    leaderboard: Array<{ playerId: string; name: string; score: number }>
+  ) => void;
 }
 
 export default function AnswerRevealModal({
@@ -51,6 +54,7 @@ export default function AnswerRevealModal({
   connected,
   players = [],
   playerScores = {},
+  onRevealWinner,
 }: AnswerRevealModalProps) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [winnerRevealed, setWinnerRevealed] = useState(false);
@@ -339,6 +343,10 @@ export default function AnswerRevealModal({
                     setShowLeaderboard(true);
                     if (isLastQuestion) {
                       setWinnerRevealed(true);
+                      // Emit winner-revealed event to all players
+                      if (onRevealWinner) {
+                        onRevealWinner(leaderboard);
+                      }
                     }
                   }}
                   className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
