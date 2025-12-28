@@ -11,7 +11,6 @@ import {
 import {
   getSessionIdFromCode,
   getSession,
-  addPlayer as addPlayerToSession,
   getAnswerCount,
   getAnswerDistribution,
   storeAnswerTimestamp,
