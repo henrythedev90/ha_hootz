@@ -18,3 +18,5 @@ export const sessionCodeKey = (sessionCode: string) =>
   `trivia:sessionCode:${sessionCode}`;
 export const sessionCodeToIdKey = (sessionCode: string) =>
   `trivia:codeToId:${sessionCode}`;
+export const leftPlayersKey = (sessionId: string) =>
+  `trivia:leftPlayers:${sessionId}`;

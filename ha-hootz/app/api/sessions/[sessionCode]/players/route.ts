@@ -3,11 +3,9 @@ import { getSession } from "@/lib/auth";
 import {
   getSessionIdFromCode,
   getSession as getTriviaSession,
-  getAnswerCount,
-  getAnswerDistribution,
 } from "@/lib/redis/triviaRedis";
 import redisPromise from "@/lib/redis/client";
-import { playersKey, answersKey } from "@/lib/redis/keys";
+import { playersKey, playerSocketKey } from "@/lib/redis/keys";
 
 export async function GET(
   request: NextRequest,
@@ -20,9 +18,6 @@ export async function GET(
     }
 
     const { sessionCode } = await params;
-    const searchParams = request.nextUrl.searchParams;
-    const questionIndex = searchParams.get("questionIndex");
-
     const sessionId = await getSessionIdFromCode(sessionCode);
     if (!sessionId) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -36,36 +31,33 @@ export async function GET(
 
     const redis = await redisPromise;
 
-    // Get player count
-    const players = await redis.hGetAll(playersKey(sessionId));
-    const playerCount = Object.keys(players).length;
+    // Get all players (playerId -> name mapping)
+    const playersHash = await redis.hGetAll(playersKey(sessionId));
 
-    // Get answer stats if questionIndex is provided
-    let answerCount = 0;
-    let answerDistribution = { A: 0, B: 0, C: 0, D: 0 };
-    let playersWithAnswers: string[] = [];
+    // Convert to array and filter only active players (those with active sockets)
+    const players: Array<{ playerId: string; name: string }> = [];
 
-    if (questionIndex !== null) {
-      const index = parseInt(questionIndex, 10);
-      if (!isNaN(index)) {
-        answerCount = await getAnswerCount(sessionId, index);
-        answerDistribution = await getAnswerDistribution(sessionId, index);
-        
-        // Get list of playerIds who have submitted answers
-        const answers = await redis.hGetAll(answersKey(sessionId, index));
-        playersWithAnswers = Object.keys(answers);
+    // Get Socket.io instance to check active connections
+    const { getSocketServer } = await import("@/lib/socket/server");
+    const io = getSocketServer();
+
+    for (const [playerId, name] of Object.entries(playersHash)) {
+      const socketId = await redis.get(playerSocketKey(sessionId, playerId));
+      if (socketId) {
+        const socket = io.sockets.sockets.get(socketId);
+        if (socket && socket.connected) {
+          players.push({ playerId, name });
+        }
       }
     }
 
     return NextResponse.json({
       success: true,
-      playerCount,
-      answerCount,
-      answerDistribution,
-      playersWithAnswers,
+      players,
+      playerCount: players.length,
     });
   } catch (error: any) {
-    console.error("Error fetching stats:", error);
+    console.error("Error fetching players:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },
       { status: 500 }

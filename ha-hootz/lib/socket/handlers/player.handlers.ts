@@ -6,11 +6,14 @@ import {
   answersKey,
   playerSocketKey,
   resultsKey,
+  leftPlayersKey,
 } from "../../redis/keys";
 import {
   getSessionIdFromCode,
   getSession,
   addPlayer as addPlayerToSession,
+  getAnswerCount,
+  getAnswerDistribution,
 } from "../../redis/triviaRedis";
 
 async function getRedis() {
@@ -26,6 +29,7 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
 
   // New join-session event using session code
   socket.on("join-session", async ({ sessionCode, name }) => {
+    console.log(`🔵 Join request: sessionCode=${sessionCode}, name=${name}`);
     try {
       if (!sessionCode || !name || !name.trim()) {
         socket.emit("join-error", {
@@ -58,51 +62,71 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         return;
       }
 
-      // Check if session is locked/live (prevent new joins)
-      if (session.status === "live") {
+      // Check if this player has explicitly left the game (cannot rejoin)
+      const leftPlayers = await redis.sMembers(leftPlayersKey(sessionId));
+      const normalizedName = name.trim().toLowerCase();
+      const hasLeft = leftPlayers.some(
+        (leftName) => leftName.toLowerCase() === normalizedName
+      );
+
+      if (hasLeft) {
         socket.emit("join-error", {
-          reason: "Game has already started. New players cannot join.",
+          reason:
+            "You have left this game and cannot rejoin with the same name.",
         });
         return;
       }
 
       // Check for duplicate names in session
+      // If a player with the same name exists, check if their socket is still connected
+      // If not connected, allow reconnection (player refreshing page)
       const players = await redis.hGetAll(playersKey(sessionId));
-      const normalizedName = name.trim().toLowerCase();
-      const isDuplicate = Object.values(players).some(
-        (playerName) => playerName.toLowerCase() === normalizedName
-      );
 
-      if (isDuplicate) {
-        socket.emit("join-error", {
-          reason: "This name is already taken in this session",
-        });
-        return;
+      // Find if there's an existing player with the same name
+      let existingPlayerId: string | null = null;
+      for (const [playerId, playerName] of Object.entries(players)) {
+        if (playerName.toLowerCase() === normalizedName) {
+          existingPlayerId = playerId;
+          break;
+        }
       }
 
-      // Generate unique playerId
-      const playerId = `${Date.now()}-${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
+      let playerId: string;
+      let isReconnection = false;
 
-      // Check if this player already has a socket connected (by name)
-      // We'll use name as the identifier for one-socket-per-player
-      const existingSocketId = await redis.get(
-        playerSocketKey(sessionId, playerId)
-      );
+      if (existingPlayerId) {
+        // Player with this name exists - check if their socket is still connected
+        const existingSocketId = await redis.get(
+          playerSocketKey(sessionId, existingPlayerId)
+        );
 
-      if (existingSocketId && existingSocketId !== socket.id) {
-        // Player already connected with a different socket
-        const oldSocket = io.sockets.sockets.get(existingSocketId);
-        if (oldSocket) {
-          oldSocket.emit("force-disconnect", {
-            reason: "Another connection detected for this player",
-          });
-          oldSocket.disconnect(true);
-          console.log(
-            `🔌 Disconnected old socket ${existingSocketId} for player ${name}`
-          );
+        if (existingSocketId) {
+          const oldSocket = io.sockets.sockets.get(existingSocketId);
+          if (oldSocket && oldSocket.connected) {
+            // Socket is still active - this is a true duplicate
+            socket.emit("join-error", {
+              reason: "This name is already taken in this session",
+            });
+            return;
+          }
         }
+
+        // Socket is not active or doesn't exist - allow reconnection with same playerId
+        playerId = existingPlayerId;
+        isReconnection = true;
+        console.log(
+          `🔄 Player ${name} reconnecting with existing playerId ${playerId}`
+        );
+      } else {
+        // New player - check if session is locked/live (prevent new joins)
+        if (session.status === "live" || session.status === "ended") {
+          socket.emit("join-error", {
+            reason: "Game has already started. New players cannot join.",
+          });
+          return;
+        }
+        // New player - generate unique playerId
+        playerId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       }
 
       // Store player info in Redis (using playerId as key, name as value)
@@ -136,9 +160,20 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         }
       }
 
-      // Get player count
+      // Get player count (only count players with active sockets)
       const allPlayers = await redis.hGetAll(playersKey(sessionId));
-      const playerCount = Object.keys(allPlayers).length;
+      let activePlayerCount = 0;
+      for (const [pid] of Object.entries(allPlayers)) {
+        const pidSocketId = await redis.get(playerSocketKey(sessionId, pid));
+        if (pidSocketId) {
+          const pidSocket = io.sockets.sockets.get(pidSocketId);
+          if (pidSocket && pidSocket.connected) {
+            activePlayerCount++;
+          }
+        }
+      }
+      // Add 1 for the current player who just joined
+      const playerCount = activePlayerCount;
 
       // Emit success to the joining player
       socket.emit("joined-session", {
@@ -161,6 +196,55 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         playerCount,
       });
 
+      // If player reconnected with answers for the current question, update host stats
+      // Only update if question is active or in progress (not ended, since no new answers can be submitted)
+      if (
+        isReconnection &&
+        gameState.questionIndex !== undefined &&
+        (gameState.status === "QUESTION_ACTIVE" ||
+          gameState.status === "IN_PROGRESS")
+      ) {
+        const currentQuestionIndex = gameState.questionIndex;
+        const hasAnswerForCurrentQuestion =
+          playerAnswers[currentQuestionIndex] !== undefined;
+
+        if (hasAnswerForCurrentQuestion) {
+          try {
+            const answerCount = await getAnswerCount(
+              sessionId,
+              currentQuestionIndex
+            );
+            const answerDistribution = await getAnswerDistribution(
+              sessionId,
+              currentQuestionIndex
+            );
+
+            // Get list of players who have submitted answers
+            const answers = await redis.hGetAll(
+              answersKey(sessionId, currentQuestionIndex)
+            );
+            const playersWithAnswers = Object.keys(answers);
+
+            // Broadcast updated stats to host
+            io.to(sessionCode).emit("answer-stats-updated", {
+              questionIndex: currentQuestionIndex,
+              answerCount,
+              answerDistribution,
+              playersWithAnswers,
+            });
+            console.log(
+              `📊 Broadcasted updated stats after player ${name.trim()} reconnected: ${answerCount} answers for question ${currentQuestionIndex}`
+            );
+          } catch (error) {
+            console.error(
+              "Error broadcasting stats after reconnection:",
+              error
+            );
+            // Don't fail the join if stats broadcast fails
+          }
+        }
+      }
+
       console.log(
         `✅ Player ${name.trim()} (${playerId}) joined session ${sessionCode}${
           Object.keys(playerAnswers).length > 0
@@ -172,16 +256,20 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
       );
     } catch (error) {
       console.error("Error joining session:", error);
-      socket.emit("join-error", { reason: "Failed to join session" });
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to join session";
+      socket.emit("join-error", {
+        reason: errorMessage || "Failed to join session",
+      });
     }
   });
 
   socket.on("SUBMIT_ANSWER", async ({ gameId, questionIndex, answer }) => {
     try {
       const redis = await getRedis();
-      const state = await redis.get(gameStateKey(gameId));
+    const state = await redis.get(gameStateKey(gameId));
 
-      if (!state) {
+    if (!state) {
         socket.emit("ANSWER_RECEIVED", {
           accepted: false,
           reason: "Game not found",
@@ -218,8 +306,8 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
           accepted: false,
           reason: "This is not the current active question",
         });
-        return;
-      }
+      return;
+    }
 
       // Check if question time has expired
       const now = Date.now();
@@ -288,6 +376,33 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         accepted: true,
         updated: isUpdate, // true if they changed their answer, false if first submission
       });
+
+      // Notify host about updated answer count (for real-time button updates)
+      try {
+        const answerCount = await getAnswerCount(gameId, questionIndex);
+        const answerDistribution = await getAnswerDistribution(
+          gameId,
+          questionIndex
+        );
+
+        // Get list of players who have submitted answers
+        const answers = await redis.hGetAll(answersKey(gameId, questionIndex));
+        const playersWithAnswers = Object.keys(answers);
+
+        // Get sessionCode from socket data
+        const socketInfo = socketData.get(socket.id);
+        if (socketInfo) {
+          io.to(socketInfo.sessionCode).emit("answer-stats-updated", {
+            questionIndex,
+            answerCount,
+            answerDistribution,
+            playersWithAnswers,
+          });
+        }
+      } catch (error) {
+        console.error("Error broadcasting answer stats:", error);
+        // Don't fail the answer submission if stats broadcast fails
+      }
     } catch (error) {
       console.error("Error submitting answer:", error);
       socket.emit("ANSWER_RECEIVED", {
@@ -297,8 +412,68 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
     }
   });
 
+  socket.on("leave-game", async ({ sessionCode }) => {
+    // Player explicitly left the game - permanently remove them and prevent rejoin
+    const socketInfo = socketData.get(socket.id);
+    if (socketInfo && socketInfo.sessionCode === sessionCode) {
+      const { playerId, sessionId, name } = socketInfo;
+      try {
+        const redis = await getRedis();
+
+        // Add player name to "left players" set to prevent rejoining
+        await redis.sAdd(leftPlayersKey(sessionId), name.trim());
+        // Set expiration on the left players set (match session expiration)
+        await redis.expire(leftPlayersKey(sessionId), 60 * 60 * 2); // 2 hours
+
+        // Remove player from session permanently
+        await redis.hDel(playersKey(sessionId), playerId);
+
+        // Remove socket mapping
+        await redis.del(playerSocketKey(sessionId, playerId));
+
+        console.log(
+          `🚪 Player ${name} (${playerId}) left session ${sessionCode} permanently and cannot rejoin`
+        );
+
+        // Get updated player count
+        const allPlayers = await redis.hGetAll(playersKey(sessionId));
+        let activePlayerCount = 0;
+        for (const [pid] of Object.entries(allPlayers)) {
+          const pidSocketId = await redis.get(playerSocketKey(sessionId, pid));
+          if (pidSocketId) {
+            const pidSocket = io.sockets.sockets.get(pidSocketId);
+            if (pidSocket && pidSocket.connected) {
+              activePlayerCount++;
+            }
+          }
+        }
+
+        // Broadcast player left event
+        io.to(sessionCode).emit("player-left", {
+          playerId,
+          name,
+          sessionCode,
+          playerCount: activePlayerCount,
+        });
+
+        // Clean up local data
+        socketData.delete(socket.id);
+
+        // Disconnect the socket immediately and forcefully
+        socket.disconnect(true); // Force disconnect
+      } catch (error) {
+        console.error("Error handling leave-game:", error);
+        // Still disconnect even if there's an error
+        socket.disconnect(true);
+      }
+    }
+  });
+
   socket.on("disconnect", async () => {
     // Clean up socket-to-player mapping
+    // NOTE: We do NOT remove the player from the players hash on disconnect
+    // This allows players to reconnect (e.g., on page refresh) with the same playerId
+    // The player will only be removed if they explicitly leave or the session ends
     const socketInfo = socketData.get(socket.id);
     if (socketInfo) {
       const { playerId, sessionId, sessionCode, name } = socketInfo;
@@ -311,22 +486,31 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         // Only delete if this is still the active socket
         if (storedSocketId === socket.id) {
           await redis.del(playerSocketKey(sessionId, playerId));
-          // Remove player from session
-          await redis.hDel(playersKey(sessionId), playerId);
           console.log(
             `🧹 Cleaned up socket mapping for player ${name} (${playerId}) in session ${sessionCode}`
           );
 
-          // Get updated player count
-          const remainingPlayers = await redis.hGetAll(playersKey(sessionId));
-          const playerCount = Object.keys(remainingPlayers).length;
+          // Count only players with active sockets (for accurate player count)
+          const allPlayers = await redis.hGetAll(playersKey(sessionId));
+          let activePlayerCount = 0;
+          for (const [pid] of Object.entries(allPlayers)) {
+            const pidSocketId = await redis.get(
+              playerSocketKey(sessionId, pid)
+            );
+            if (pidSocketId) {
+              const pidSocket = io.sockets.sockets.get(pidSocketId);
+              if (pidSocket && pidSocket.connected) {
+                activePlayerCount++;
+              }
+            }
+          }
 
-          // Broadcast player left event
+          // Broadcast player left event with accurate count
           io.to(sessionCode).emit("player-left", {
             playerId,
             name,
             sessionCode,
-            playerCount,
+            playerCount: activePlayerCount,
           });
         }
       } catch (error) {

@@ -114,7 +114,6 @@ export async function POST(request: NextRequest) {
       sessionId,
       sessionCode,
       message: "Game session created successfully",
-      socketPath: "/api/socket",
       joinUrl: `/join/${sessionCode}`,
     });
   } catch (error: any) {

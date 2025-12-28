@@ -1,8 +1,7 @@
 import { Server, Socket } from "socket.io";
 import redisPromise from "../../redis/client";
-import { gameStateKey, playersKey } from "../../redis/keys";
+import { gameStateKey, playersKey, answersKey } from "../../redis/keys";
 import {
-  getSessionCodeFromId,
   updateSessionStatus,
   getSessionIdFromCode,
   getQuestion,
@@ -14,18 +13,67 @@ async function getRedis() {
 }
 
 export function registerHostHandlers(io: Server, socket: Socket) {
-  // Host joins session room
-  socket.on("host-join", async ({ sessionCode }) => {
+  // Store verified host data for this socket
+  const hostData = new Map<string, { userId: string; sessionCode: string }>();
+
+  // Helper function to verify host ownership
+  async function verifyHostOwnership(
+    sessionCode: string,
+    userId: string
+  ): Promise<boolean> {
     try {
+      const sessionId = await getSessionIdFromCode(sessionCode);
+      if (!sessionId) return false;
+
+      const triviaSession = await getSession(sessionId);
+      if (!triviaSession) return false;
+
+      // Verify the user is the host of this session
+      return triviaSession.hostId === userId;
+    } catch (error) {
+      console.error("Error verifying host ownership:", error);
+      return false;
+    }
+  }
+
+  // Helper function to check if socket is authorized for a session
+  function isAuthorized(sessionCode: string): boolean {
+    const hostInfo = hostData.get(socket.id);
+    return hostInfo !== undefined && hostInfo.sessionCode === sessionCode;
+  }
+
+  // Host joins session room
+  socket.on("host-join", async ({ sessionCode, userId }) => {
+    try {
+      if (!sessionCode || !userId) {
+        socket.emit("error", {
+          message: "Session code and user ID are required",
+        });
+        return;
+      }
+
+      // Verify host ownership
+      const isAuthorized = await verifyHostOwnership(sessionCode, userId);
+      if (!isAuthorized) {
+        socket.emit("error", {
+          message: "Unauthorized: You are not the host of this session",
+        });
+        socket.disconnect();
+        return;
+      }
+
       const sessionId = await getSessionIdFromCode(sessionCode);
       if (!sessionId) {
         socket.emit("error", { message: "Session code not found" });
         return;
       }
 
+      // Store verified host data
+      hostData.set(socket.id, { userId, sessionCode });
+
       // Join the session room
       socket.join(sessionCode);
-      console.log(`👑 Host joined session ${sessionCode}`);
+      console.log(`👑 Host ${userId} joined session ${sessionCode}`);
 
       // Get current players
       const redis = await getRedis();
@@ -35,9 +83,34 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         name,
       }));
 
+      // Get current game state from Redis
+      const stateStr = await redis.get(gameStateKey(sessionId));
+      let gameState = stateStr ? JSON.parse(stateStr) : { status: "WAITING" };
+
+      // If there's an active question, fetch the question details
+      if (
+        gameState.status === "QUESTION_ACTIVE" &&
+        gameState.questionIndex !== undefined
+      ) {
+        const question = await getQuestion(sessionId, gameState.questionIndex);
+        if (question) {
+          gameState.question = question;
+        }
+      } else if (
+        gameState.status === "IN_PROGRESS" &&
+        gameState.questionIndex !== undefined
+      ) {
+        // If game is in progress but no active question, fetch the current question
+        const question = await getQuestion(sessionId, gameState.questionIndex);
+        if (question) {
+          gameState.question = question;
+        }
+      }
+
       socket.emit("host-joined", {
         sessionCode,
         players: playersList,
+        gameState,
       });
     } catch (error) {
       console.error("Error in host-join:", error);
@@ -47,6 +120,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("START_GAME", async ({ sessionCode }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
 
       // Get sessionId from sessionCode
@@ -79,6 +158,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
     "START_QUESTION",
     async ({ sessionCode, question, questionIndex }) => {
       try {
+        // Verify host is authorized
+        if (!isAuthorized(sessionCode)) {
+          socket.emit("error", { message: "Unauthorized" });
+          return;
+        }
+
         const redis = await getRedis();
 
         // Get sessionId from sessionCode
@@ -117,6 +202,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("CANCEL_SESSION", async ({ sessionCode }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
 
       // Get sessionId from sessionCode
@@ -135,11 +226,17 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       };
       await redis.set(gameStateKey(sessionId), JSON.stringify(endedState));
 
-      // Broadcast to all players in the session
-      io.to(sessionCode).emit("session-cancelled", {
+      // Broadcast to all players in the session (using sessionCode as room name)
+      const cancelMessage = {
         sessionCode,
         message: "The host has cancelled this session",
-      });
+      };
+      io.to(sessionCode).emit("session-cancelled", cancelMessage);
+      console.log(
+        `📢 Broadcasting session-cancelled to room ${sessionCode} (${
+          io.sockets.adapter.rooms.get(sessionCode)?.size || 0
+        } sockets)`
+      );
 
       // Notify host
       socket.emit("session-cancelled", {
@@ -155,6 +252,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("REVEAL_ANSWER", async ({ sessionCode, questionIndex }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
       const sessionId = await getSessionIdFromCode(sessionCode);
       if (!sessionId) {
@@ -169,7 +272,29 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         return;
       }
 
-      // Update game state to show answer is revealed
+      // Mark unanswered questions as wrong (NO_ANSWER)
+      const allPlayers = await redis.hGetAll(playersKey(sessionId));
+      const playerIds = Object.keys(allPlayers);
+      const submittedAnswers = await redis.hGetAll(
+        answersKey(sessionId, questionIndex)
+      );
+      const playersWhoAnswered = Object.keys(submittedAnswers);
+
+      // For players who didn't answer, mark as NO_ANSWER
+      for (const playerId of playerIds) {
+        if (!playersWhoAnswered.includes(playerId)) {
+          await redis.hSet(
+            answersKey(sessionId, questionIndex),
+            playerId,
+            "NO_ANSWER"
+          );
+          console.log(
+            `❌ Marked player ${playerId} as NO_ANSWER for question ${questionIndex}`
+          );
+        }
+      }
+
+      // Update game state to show answer is revealed and question is ended
       const currentState = await redis.get(gameStateKey(sessionId));
       const gameState = currentState ? JSON.parse(currentState) : {};
 
@@ -177,6 +302,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         gameStateKey(sessionId),
         JSON.stringify({
           ...gameState,
+          status: "QUESTION_ENDED",
           answerRevealed: true,
           correctAnswer: question.correct,
         })
@@ -186,6 +312,11 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       io.to(sessionCode).emit("answer-revealed", {
         questionIndex,
         correctAnswer: question.correct,
+      });
+
+      // Also emit question-ended event to ensure all clients update status
+      io.to(sessionCode).emit("question-ended", {
+        questionIndex,
       });
 
       console.log(
@@ -199,6 +330,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("NAVIGATE_QUESTION", async ({ sessionCode, questionIndex }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
       const sessionId = await getSessionIdFromCode(sessionCode);
       if (!sessionId) {
@@ -282,11 +419,39 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
   socket.on("END_QUESTION", async ({ sessionCode, questionIndex }) => {
     try {
+      // Verify host is authorized
+      if (!isAuthorized(sessionCode)) {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
       const redis = await getRedis();
       const sessionId = await getSessionIdFromCode(sessionCode);
       if (!sessionId) {
         socket.emit("error", { message: "Session code not found" });
         return;
+      }
+
+      // Mark unanswered questions as wrong (NO_ANSWER)
+      const allPlayers = await redis.hGetAll(playersKey(sessionId));
+      const playerIds = Object.keys(allPlayers);
+      const submittedAnswers = await redis.hGetAll(
+        answersKey(sessionId, questionIndex)
+      );
+      const playersWhoAnswered = Object.keys(submittedAnswers);
+
+      // For players who didn't answer, mark as NO_ANSWER
+      for (const playerId of playerIds) {
+        if (!playersWhoAnswered.includes(playerId)) {
+          await redis.hSet(
+            answersKey(sessionId, questionIndex),
+            playerId,
+            "NO_ANSWER"
+          );
+          console.log(
+            `❌ Marked player ${playerId} as NO_ANSWER for question ${questionIndex}`
+          );
+        }
       }
 
       // Update game state to mark question as ended
@@ -313,5 +478,11 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       console.error("Error ending question:", error);
       socket.emit("error", { message: "Failed to end question" });
     }
+  });
+
+  // Clean up host data on disconnect
+  socket.on("disconnect", () => {
+    hostData.delete(socket.id);
+    console.log(`👑 Host disconnected: ${socket.id}`);
   });
 }

@@ -27,19 +27,32 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - Answer persistence across disconnections
   - Time-based answer submission (can change answers while question is active, locked after expiration)
   - Session cancellation by host
+  - **Host Dashboard Persistence**: Host stays in session on page refresh, game state automatically restored
+  - **Players List Modal**: Shows all joined players with countdown before starting first question
+  - **Player Exit Control**: Players who leave cannot rejoin with the same name
+  - **Answer Reveal Modal**: Dedicated modal showing correct answer and distribution when host reveals
+  - **Real-Time Answer Tracking**: Lightbulb (💡) indicator shows which players have submitted answers
+  - **Smart Answer Reveal**: Button only enabled when all connected players have submitted
+  - **Timer Control**: Timer automatically stops (set to 0) when answer is revealed
+  - **Question Navigation**: Navigate between questions with automatic state reset
 
 - **Player Experience (Mobile-First)**
 
   - **Nickname Entry**: Full-screen form for entering player nickname with validation
-  - **Lobby/Waiting Room**: Shows waiting message and live player count
+  - **Lobby/Waiting Room**: Shows welcome message with host name and live player count
+  - **Game Welcome Modal**: Displays when game session starts, welcoming player to the active game
   - **Active Question View**:
     - Prominent countdown timer with visual urgency indicators
     - Large, touch-friendly answer buttons stacked vertically
+    - Answer buttons only appear when host starts the question
     - Real-time answer selection and updates
     - Automatic answer submission when timer expires
+    - Answer reveal with correct answer highlighting
+    - Timer stops (set to 0) when answer is revealed
+  - **Exit Game**: Players can leave the game with confirmation modal (prevents rejoining with same name)
   - **Mobile-Optimized**: Single-column layout, no scrolling during questions, thumb-friendly tap targets
   - **Real-Time Updates**: Instant response to game-started, question-started, and question-ended events
-  - **Resilient**: Handles refreshes and reconnects with answer restoration
+  - **Resilient**: Handles refreshes and reconnects with answer restoration (can still submit after refresh if question is active)
 
 - **User Authentication**
 
@@ -48,11 +61,24 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - User profiles with MongoDB Atlas storage
   - Session management with NextAuth.js
 
+- **Host Dashboard Features**
+
+  - Desktop-first two-column layout (question control on left, live monitoring on right)
+  - Real-time player count and answer submission tracking
+  - Live answer distribution visualization
+  - Question navigation (previous/next) with automatic state reset
+  - Answer reveal modal with distribution charts
+  - Session status checks (prevents access to ended sessions)
+  - Real-time stats updates via Socket.io events
+  - Visual indicators (💡) showing which players have submitted answers
+
 - **User Experience**
   - Custom loading animations
-  - Reusable modal components
+  - Reusable modal components (Modal, DeleteConfirmationModal, PlayersListModal, GameWelcomeModal, AnswerRevealModal)
+  - Reusable layout components (CenteredLayout)
   - Responsive design with dark mode support
   - Intuitive UI with modern styling
+  - Accurate countdown timers using timestamp-based calculations
 
 ## Tech Stack
 
@@ -181,10 +207,13 @@ ha-hootz/
 │   │   │   ├── start/route.ts             # POST - Start game session
 │   │   │   ├── by-id/[sessionId]/route.ts # GET, PUT - Manage session by ID
 │   │   │   ├── validate/[sessionCode]/route.ts # GET - Validate session code
-│   │   │   └── [sessionCode]/check-name/route.ts # POST - Check nickname availability
-│   │   ├── qr/[sessionCode]/route.ts      # GET - Generate QR code for session
-│   │   ├── socket/route.ts                # Socket.io server status
-│   │   └── test-redis/route.ts             # Test Redis connection
+│   │   │   ├── [sessionCode]/
+│   │   │   │   ├── check-name/route.ts     # POST - Check nickname availability
+│   │   │   │   ├── game-state/route.ts     # GET - Get current game state
+│   │   │   │   ├── host/route.ts           # GET - Get host name for session
+│   │   │   │   ├── players/route.ts        # GET - Get active players list
+│   │   │   │   └── stats/route.ts          # GET - Get game statistics
+│   │   └── qr/[sessionCode]/route.ts      # GET - Generate QR code for session
 │   ├── auth/
 │   │   ├── signin/page.tsx                # Sign in page
 │   │   └── signup/page.tsx                # Sign up page
@@ -203,6 +232,10 @@ ha-hootz/
 │   ├── DeleteConfirmationModal.tsx        # Delete confirmation modal
 │   ├── Loading.tsx                        # Loading component with animation
 │   ├── SessionQRCode.tsx                  # QR code display component
+│   ├── PlayersListModal.tsx               # Modal showing joined players with countdown
+│   ├── GameWelcomeModal.tsx               # Welcome modal for players when game starts
+│   ├── AnswerRevealModal.tsx              # Modal showing correct answer and distribution
+│   ├── CenteredLayout.tsx                 # Reusable centered layout component
 │   └── Providers.tsx                      # Session provider wrapper
 ├── lib/
 │   ├── auth.ts                            # Session helper
@@ -221,7 +254,7 @@ ha-hootz/
 │   ├── types.ts                            # Trivia session types
 │   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
-│   └── utils.ts                            # Utility functions (generateId, generateSessionCode, formatDate)
+│   └── utils.ts                            # Utility functions (generateId, formatDate)
 ├── server.ts                               # Custom Next.js server with Socket.io integration
 └── types/
     ├── index.ts                            # TypeScript types
@@ -233,8 +266,15 @@ ha-hootz/
 ### Modal Components
 
 - **`Modal.tsx`**: Base reusable modal component with customizable size, title, and content
-- **`DeleteConfirmationModal.tsx`**: Specialized modal for delete confirmations with customizable messages
+- **`DeleteConfirmationModal.tsx`**: Specialized modal for delete confirmations with customizable messages (supports player mode)
+- **`PlayersListModal.tsx`**: Modal showing joined players with countdown timer before starting game
+- **`GameWelcomeModal.tsx`**: Welcome modal for players when game session starts
+- **`AnswerRevealModal.tsx`**: Modal displaying correct answer, answer distribution, and navigation controls
 - **`Loading.tsx`**: Loading component with custom animation, supports full-screen or inline modes
+
+### Layout Components
+
+- **`CenteredLayout.tsx`**: Reusable centered layout component with dark mode support, customizable flex direction and positioning
 
 ### Usage Examples
 
@@ -256,6 +296,17 @@ ha-hootz/
 
 // Loading State
 <Loading message="Loading presentations..." />
+
+// Centered Layout
+<CenteredLayout>
+  <div>Centered content</div>
+</CenteredLayout>
+
+// Centered Layout with relative positioning
+<CenteredLayout relative>
+  <button className="absolute top-4 right-4">Exit</button>
+  <div>Content with positioned elements</div>
+</CenteredLayout>
 ```
 
 ## API Routes
@@ -280,27 +331,42 @@ ha-hootz/
 - `PUT /api/sessions/by-id/[sessionId]` - Update session status (waiting, live, ended)
 - `GET /api/sessions/validate/[sessionCode]` - Validate a 6-digit session code
 - `POST /api/sessions/[sessionCode]/check-name` - Check if a player nickname is available
+- `GET /api/sessions/[sessionCode]/game-state` - Get current game state (for host reconnection)
+- `GET /api/sessions/[sessionCode]/host` - Get host name for a session
+- `GET /api/sessions/[sessionCode]/players` - Get list of active players in session
+- `GET /api/sessions/[sessionCode]/stats` - Get game statistics (player count, answer count, distribution, players with answers)
 - `GET /api/qr/[sessionCode]` - Generate QR code for session join URL
 
 ### Socket.io Events
 
 **Host Events (Client → Server):**
 
-- `host-join` - Host joins session room (requires `sessionCode`)
+- `host-join` - Host joins session room (requires `sessionCode`, `userId`)
 - `START_GAME` - Start the game session (requires `sessionCode`)
 - `START_QUESTION` - Start a specific question with timer (requires `sessionCode`, `question`, `questionIndex`)
+- `REVEAL_ANSWER` - Reveal the correct answer (requires `sessionCode`, `questionIndex`)
+- `NAVIGATE_QUESTION` - Navigate to a different question (requires `sessionCode`, `questionIndex`)
+- `END_QUESTION` - End the current question early (requires `sessionCode`, `questionIndex`)
 - `CANCEL_SESSION` - Cancel/end the session (requires `sessionCode`)
 
 **Player Events (Client → Server):**
 
 - `join-session` - Join a game session (requires `sessionCode`, `name`)
 - `SUBMIT_ANSWER` - Submit or update an answer (requires `gameId`, `questionIndex`, `answer`)
+- `leave-game` - Player explicitly leaves the game (requires `sessionCode`)
 
 **Server Events (Server → Client):**
 
 **Host Events:**
 
-- `host-joined` - Host successfully joined (includes `sessionCode`, `players`)
+- `host-joined` - Host successfully joined (includes `sessionCode`, `players`, `gameState` for reconnection)
+- `game-started` - Game has started (includes `status`, `questionIndex`)
+- `question-started` - Question is active (includes `question`, `questionIndex`, `endAt`)
+- `question-ended` - Question time expired (includes `questionIndex`)
+- `question-navigated` - Question navigation occurred (includes `questionIndex`, `question`)
+- `player-joined` - Player joined session (includes `playerId`, `name`, `playerCount`)
+- `player-left` - Player left session (includes `playerId`, `playerCount`)
+- `answer-stats-updated` - Answer statistics updated (includes `questionIndex`, `answerCount`, `answerDistribution`, `playersWithAnswers`)
 - `session-cancelled` - Session was cancelled (includes `sessionCode`)
 - `error` - Error occurred (includes `message`)
 
@@ -312,7 +378,9 @@ ha-hootz/
 - `player-left` - A player left (includes `playerId`, `name`, `playerCount`)
 - `game-started` - Game has started (includes `status`, `questionIndex`)
 - `question-started` - New question is active (includes `question`, `questionIndex`, `endAt`)
-- `question-ended` - Question time expired
+- `question-ended` - Question time expired (includes `questionIndex`)
+- `question-navigated` - Question navigation occurred (includes `questionIndex`, `question`)
+- `answer-revealed` - Correct answer revealed (includes `questionIndex`, `correctAnswer`)
 - `session-cancelled` - Host cancelled the session (includes `message`)
 - `ANSWER_RECEIVED` - Answer submission result (includes `accepted`, `updated`, `reason`)
 - `force-disconnect` - Player has another connection (old socket disconnected)
@@ -398,8 +466,21 @@ npm run lint
 - [x] Active question view with countdown timer
 - [x] Answer selection with visual feedback
 - [x] Session cancellation
+- [x] Host dashboard refresh persistence (game state restoration)
+- [x] Players list modal with countdown before game start
+- [x] Game welcome modal for players
+- [x] Player exit functionality with rejoin prevention
+- [x] Host name display in player welcome message
+- [x] Answer reveal functionality with dedicated modal
+- [x] Question navigation (next/previous) with state reset
+- [x] Reusable layout components
+- [x] Real-time answer submission tracking with visual indicators (💡)
+- [x] Answer reveal button enabled only when all players have submitted
+- [x] Timer stops when answer is revealed
+- [x] Answer buttons only visible when question is active
+- [x] Stats refresh on player reconnection
+- [x] Host dashboard access control (prevents access to ended sessions)
 - [ ] Live results and leaderboards display
-- [ ] Question results view (show correct answer after timer)
 - [ ] Image support for questions
 - [ ] Presentation sharing and collaboration
 - [ ] Game history and analytics

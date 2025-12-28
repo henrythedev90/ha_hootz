@@ -10,6 +10,7 @@ interface DeleteConfirmationModalProps {
   itemName: string;
   description?: string;
   deleting?: boolean;
+  playerMode?: boolean;
 }
 
 export default function DeleteConfirmationModal({
@@ -20,16 +21,20 @@ export default function DeleteConfirmationModal({
   itemName,
   description = "This action cannot be undone. All data will be permanently deleted.",
   deleting = false,
+  playerMode = false,
 }: DeleteConfirmationModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <div>
         <p className="text-gray-600 dark:text-gray-300 mb-2">
-          Are you sure you want to delete this {itemName}?
+          Are you sure you want to {playerMode ? "leave" : "delete"} this{" "}
+          {itemName}?
         </p>
-        <p className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          "{title}"
-        </p>
+        {playerMode ? null : (
+          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            "{title}"
+          </p>
+        )}
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
           {description}
         </p>
@@ -53,4 +58,3 @@ export default function DeleteConfirmationModal({
     </Modal>
   );
 }
-
