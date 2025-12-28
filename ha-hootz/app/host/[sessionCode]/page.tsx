@@ -132,6 +132,16 @@ export default function HostDashboard() {
 
   // Timer countdown effect
   useEffect(() => {
+    // Don't run timer if answer is revealed (review mode or answer already revealed)
+    if (gameState?.answerRevealed) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setTimeRemaining(0);
+      return;
+    }
+
     if (gameState?.status === "QUESTION_ACTIVE" && gameState.endAt) {
       const updateTimer = () => {
         const remaining = Math.max(
@@ -165,6 +175,7 @@ export default function HostDashboard() {
   }, [
     gameState?.status,
     gameState?.endAt,
+    gameState?.answerRevealed,
     socket,
     sessionCode,
     gameState?.questionIndex,
@@ -908,7 +919,7 @@ export default function HostDashboard() {
               )}
 
               {/* Timer Display */}
-              {isQuestionActive && (
+              {isQuestionActive && !gameState?.answerRevealed && (
                 <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                   <div className="text-center">
                     <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
