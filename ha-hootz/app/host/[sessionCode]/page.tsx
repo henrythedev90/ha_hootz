@@ -788,11 +788,17 @@ export default function HostDashboard() {
         playerScores={stats.playerScores}
         onRevealWinner={(leaderboard) => {
           // Emit winner-revealed event to all players
+          console.log("🏆 Host: Revealing winner, leaderboard:", leaderboard);
           if (socket) {
             socket.emit("REVEAL_WINNER", {
               sessionCode,
               leaderboard,
             });
+            console.log("🏆 Host: REVEAL_WINNER event emitted to server");
+          } else {
+            console.error(
+              "❌ Host: Socket not connected, cannot reveal winner"
+            );
           }
         }}
       />

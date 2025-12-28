@@ -394,9 +394,13 @@ export default function GamePage() {
       (data: {
         leaderboard: Array<{ playerId: string; name: string; score: number }>;
       }) => {
-        console.log("🏆 Winner revealed:", data);
+        console.log("🏆 Player: Winner revealed event received:", data);
+        console.log(
+          "🏆 Player: Setting leaderboard and showing winner display"
+        );
         setLeaderboard(data.leaderboard);
         setShowWinnerDisplay(true);
+        console.log("🏆 Player: showWinnerDisplay set to true");
       }
     );
 
@@ -495,12 +499,35 @@ export default function GamePage() {
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
         />
+
+        {/* Winner Display - Full screen overlay */}
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
       </>
     );
   }
 
   if (!connected || !gameState) {
-    return <Loading message="Connecting to game..." />;
+    return (
+      <>
+        <Loading message="Connecting to game..." />
+        {/* Winner Display - Full screen overlay */}
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
+      </>
+    );
   }
 
   // Lobby / Waiting Room - Welcome Screen
@@ -570,6 +597,16 @@ export default function GamePage() {
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
         />
+
+        {/* Winner Display - Full screen overlay */}
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
       </>
     );
   }
@@ -763,6 +800,16 @@ export default function GamePage() {
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
         />
+
+        {/* Winner Display - Full screen overlay */}
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
       </>
     );
   }
@@ -831,6 +878,13 @@ export default function GamePage() {
       />
 
       {/* Winner Display - Full screen overlay */}
+      {console.log("🎯 Game Page - WinnerDisplay render check:", {
+        showWinnerDisplay,
+        playerName,
+        playerId,
+        leaderboardLength: leaderboard.length,
+        willRender: !!(playerName && playerId),
+      })}
       {playerName && playerId && (
         <WinnerDisplay
           isOpen={showWinnerDisplay}
