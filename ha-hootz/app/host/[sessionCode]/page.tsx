@@ -784,6 +784,8 @@ export default function HostDashboard() {
         onNext={handleNextQuestion}
         canNavigate={canNavigate}
         connected={connected || false}
+        players={players}
+        playerScores={stats.playerScores}
       />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-7xl mx-auto">

@@ -651,6 +651,15 @@ export default function GamePage() {
               </div>
             )}
 
+            {/* Player Name Title */}
+            {playerName && (
+              <div className="text-center mb-4">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {playerName}
+                </h1>
+              </div>
+            )}
+
             {/* Question */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
