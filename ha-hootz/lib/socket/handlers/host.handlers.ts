@@ -90,6 +90,18 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       const stateStr = await redis.get(gameStateKey(sessionId));
       let gameState = stateStr ? JSON.parse(stateStr) : { status: "WAITING" };
 
+      // If status is WAITING, explicitly reset all game flags for a fresh session
+      if (gameState.status === "WAITING") {
+        gameState = {
+          ...gameState,
+          answerRevealed: false,
+          correctAnswer: undefined,
+          isReviewMode: false,
+          question: undefined,
+          endAt: undefined,
+        };
+      }
+
       // If there's an active question, fetch the question details
       if (
         gameState.status === "QUESTION_ACTIVE" &&
@@ -149,6 +161,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         ...existingState, // Preserve existing properties like scoringConfig
         status: "IN_PROGRESS",
         questionIndex: 0,
+        // Explicitly reset game state flags when starting a new game
+        answerRevealed: false,
+        correctAnswer: undefined,
+        isReviewMode: false,
+        question: undefined,
+        endAt: undefined,
       };
 
       await redis.set(gameStateKey(sessionId), JSON.stringify(state));
@@ -178,6 +196,19 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         const sessionId = await getSessionIdFromCode(sessionCode);
         if (!sessionId) {
           socket.emit("error", { message: "Session code not found" });
+          return;
+        }
+
+        // Check if this question has already been answered (prevent restarting answered questions)
+        const answers = await redis.hGetAll(
+          answersKey(sessionId, questionIndex ?? 0)
+        );
+        const hasAnswers = Object.keys(answers).length > 0;
+        if (hasAnswers) {
+          socket.emit("error", {
+            message:
+              "Cannot start a question that has already been answered. Use navigation to review it.",
+          });
           return;
         }
 
@@ -442,17 +473,19 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         return;
       }
 
-      // Check if this question has already been answered (previous question)
-      // If current question index is greater than the navigated index, it's a previous question
-      const currentQuestionIndex = gameState.questionIndex ?? 0;
-      const isPreviousQuestion = questionIndex < currentQuestionIndex;
-
       // Check if answers exist for this question (indicates it was already answered)
       const answers = await redis.hGetAll(answersKey(sessionId, questionIndex));
       const hasAnswers = Object.keys(answers).length > 0;
 
-      // If navigating to a previous question that has been answered, show it in review mode
-      const isReviewMode = isPreviousQuestion && hasAnswers;
+      // If a question has answers, it means it's been answered and should be in review mode
+      // This applies whether navigating forward or backward to an answered question
+      const isReviewMode = hasAnswers;
+
+      console.log(
+        `🔍 NAVIGATE_QUESTION: questionIndex=${questionIndex}, hasAnswers=${hasAnswers}, isReviewMode=${isReviewMode}, answerCount=${
+          Object.keys(answers).length
+        }`
+      );
 
       // Update game state (preserve scoringConfig and other properties)
       const newState = {
@@ -470,6 +503,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         },
         answerRevealed: isReviewMode, // Show answer if it's a previous question
         correctAnswer: isReviewMode ? question.correct : undefined,
+        isReviewMode: isReviewMode, // Store review mode flag in Redis
       };
 
       await redis.set(gameStateKey(sessionId), JSON.stringify(newState));
@@ -483,10 +517,13 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         isReviewMode: isReviewMode, // Flag to indicate this is review mode
       });
 
-      // Notify host
+      // Notify host with the same data structure
       socket.emit("question-navigated", {
         questionIndex,
         question: newState.question,
+        answerRevealed: isReviewMode,
+        correctAnswer: isReviewMode ? question.correct : undefined,
+        isReviewMode: isReviewMode, // Flag to indicate this is review mode
       });
 
       console.log(

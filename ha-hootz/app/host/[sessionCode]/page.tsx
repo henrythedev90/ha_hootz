@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import SessionQRCode from "@/components/SessionQRCode";
 import Loading from "@/components/Loading";
@@ -10,70 +10,97 @@ import PlayersListModal from "@/components/PlayersListModal";
 import AnswerRevealModal from "@/components/AnswerRevealModal";
 import Modal from "@/components/Modal";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-
-interface Question {
-  text: string;
-  A: string;
-  B: string;
-  C: string;
-  D: string;
-  correct: "A" | "B" | "C" | "D";
-  index: number;
-}
-
-interface GameState {
-  status: "WAITING" | "IN_PROGRESS" | "QUESTION_ACTIVE" | "QUESTION_ENDED";
-  questionIndex?: number;
-  questionCount?: number;
-  question?: Question;
-  endAt?: number;
-  answerRevealed?: boolean;
-  correctAnswer?: "A" | "B" | "C" | "D";
-}
-
-interface Stats {
-  playerCount: number;
-  answerCount: number;
-  answerDistribution: { A: number; B: number; C: number; D: number };
-  playersWithAnswers?: string[]; // Array of playerIds who have submitted answers
-  playerScores?: Record<string, number>; // playerId -> total score
-}
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  setSessionCode,
+  setGameState,
+  updateGameState,
+  setQuestion,
+  setQuestionIndex,
+  setAnswerRevealed,
+  setCorrectAnswer,
+  setReviewMode,
+  resetGameState,
+} from "@/store/slices/gameSlice";
+import {
+  setQuestions,
+  setPlayers,
+  addPlayer,
+  removePlayer,
+  setStats,
+  updateStats,
+  setTimeRemaining,
+  setSessionStatus,
+  setLeaderboard,
+  resetHostState,
+} from "@/store/slices/hostSlice";
+import {
+  setSocket,
+  setConnected,
+  setSocketSessionCode,
+} from "@/store/slices/socketSlice";
+import {
+  setShowPlayersModal,
+  setShowAnswerRevealModal,
+  setShowEndGameModal,
+  resetUiState,
+} from "@/store/slices/uiSlice";
+import type { Question } from "@/store/slices/gameSlice";
 
 export default function HostDashboard() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
   const sessionCode = params.sessionCode as string;
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [players, setPlayers] = useState<
-    Array<{ playerId: string; name: string }>
-  >([]);
-  const [stats, setStats] = useState<Stats>({
-    playerCount: 0,
-    answerCount: 0,
-    answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
-    playersWithAnswers: [],
-    playerScores: {},
-  });
-  const [timeRemaining, setTimeRemaining] = useState(0);
-  const [sessionStatus, setSessionStatus] = useState<
-    "waiting" | "live" | "ended" | null
-  >(null);
-  const [showPlayersModal, setShowPlayersModal] = useState(false);
-  const [showAnswerRevealModal, setShowAnswerRevealModal] = useState(false);
-  const [showEndGameModal, setShowEndGameModal] = useState(false);
+
+  // Redux state
+  const dispatch = useAppDispatch();
+  const gameState = useAppSelector((state) => state.game.gameState);
+  const questions = useAppSelector((state) => state.host.questions);
+  const players = useAppSelector((state) => state.host.players);
+  const stats = useAppSelector((state) => state.host.stats);
+  const timeRemaining = useAppSelector((state) => state.host.timeRemaining);
+  const sessionStatus = useAppSelector((state) => state.host.sessionStatus);
+  const socket = useAppSelector((state) => state.socket.socket);
+  const connected = useAppSelector((state) => state.socket.connected);
+  const showPlayersModal = useAppSelector((state) => state.ui.showPlayersModal);
+  const showAnswerRevealModal = useAppSelector(
+    (state) => state.ui.showAnswerRevealModal
+  );
+  const showEndGameModal = useAppSelector((state) => state.ui.showEndGameModal);
+
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const gameStateRef = useRef<GameState | null>(null);
+  const gameStateRef = useRef(gameState);
+  const statsRef = useRef(stats);
 
-  // Keep gameStateRef in sync with gameState
+  // Keep refs in sync with Redux state
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+
+  useEffect(() => {
+    statsRef.current = stats;
+  }, [stats]);
+
+  // Reset Redux state and set session code when sessionCode changes
+  useEffect(() => {
+    console.log("🔄 Session code changed, resetting all state:", sessionCode);
+    // Reset all state when sessionCode changes (new session)
+    dispatch(resetGameState());
+    dispatch(resetHostState());
+    dispatch(resetUiState()); // Reset all modals and UI state
+
+    // Explicitly close all modals as a safety measure
+    dispatch(setShowAnswerRevealModal(false));
+    dispatch(setShowPlayersModal(false));
+    dispatch(setShowEndGameModal(false));
+
+    if (sessionCode) {
+      dispatch(setSessionCode(sessionCode));
+      dispatch(setSocketSessionCode(sessionCode));
+    }
+  }, [sessionCode, dispatch]);
 
   // Fetch questions and game state when component mounts
   useEffect(() => {
@@ -82,7 +109,7 @@ export default function HostDashboard() {
         const response = await fetch(`/api/sessions/${sessionCode}/questions`);
         const data = await response.json();
         if (data.success && data.questions) {
-          setQuestions(data.questions);
+          dispatch(setQuestions(data.questions));
           return data.questions;
         }
         return [];
@@ -97,7 +124,7 @@ export default function HostDashboard() {
         const response = await fetch(`/api/sessions/validate/${sessionCode}`);
         const data = await response.json();
         if (data.sessionStatus) {
-          setSessionStatus(data.sessionStatus);
+          dispatch(setSessionStatus(data.sessionStatus));
         }
       } catch (error) {
         console.error("Error fetching session status:", error);
@@ -110,25 +137,74 @@ export default function HostDashboard() {
         const data = await response.json();
         if (data.success && data.gameState) {
           console.log("🔄 Restored game state on mount:", data.gameState);
-          setGameState({
-            ...data.gameState,
-            questionCount: questionCount || data.gameState.questionCount,
-          });
+          // Completely replace game state (don't merge with old state)
+          // If status is WAITING, explicitly reset all game flags
+          const isWaiting = data.gameState.status === "WAITING";
+          dispatch(
+            setGameState({
+              status: data.gameState.status || "WAITING",
+              sessionId: data.gameState.sessionId,
+              questionIndex: data.gameState.questionIndex ?? 0,
+              questionCount: questionCount || data.gameState.questionCount || 0,
+              question: isWaiting ? undefined : data.gameState.question,
+              endAt: isWaiting ? undefined : data.gameState.endAt,
+              answerRevealed: isWaiting
+                ? false
+                : data.gameState.answerRevealed || false,
+              correctAnswer: isWaiting
+                ? undefined
+                : data.gameState.correctAnswer,
+              isReviewMode: isWaiting
+                ? false
+                : data.gameState.isReviewMode || false,
+              scoringConfig: data.gameState.scoringConfig,
+            })
+          );
+          // Explicitly close all modals when fetching game state for a new session
+          if (isWaiting) {
+            dispatch(setShowAnswerRevealModal(false));
+            dispatch(setShowPlayersModal(false));
+            dispatch(setShowEndGameModal(false));
+          }
+        } else {
+          // If no game state exists, initialize with WAITING state
+          dispatch(
+            setGameState({
+              status: "WAITING",
+              questionIndex: 0,
+              questionCount: questionCount || 0,
+            })
+          );
+          // Close all modals for new sessions
+          dispatch(setShowAnswerRevealModal(false));
+          dispatch(setShowPlayersModal(false));
+          dispatch(setShowEndGameModal(false));
         }
       } catch (error) {
         console.error("Error fetching game state:", error);
+        // Initialize with WAITING state on error
+        dispatch(
+          setGameState({
+            status: "WAITING",
+            questionIndex: 0,
+            questionCount: questionCount || 0,
+          })
+        );
+        // Close all modals on error
+        dispatch(setShowAnswerRevealModal(false));
+        dispatch(setShowPlayersModal(false));
+        dispatch(setShowEndGameModal(false));
       }
     };
 
     if (sessionCode) {
       fetchQuestions().then(async (questionsData) => {
-        // Fetch game state after questions are loaded
         const questionCount = questionsData?.length || 0;
         await fetchGameState(questionCount);
       });
       fetchSessionStatus();
     }
-  }, [sessionCode]);
+  }, [sessionCode, dispatch]);
 
   // Timer countdown effect
   useEffect(() => {
@@ -138,7 +214,7 @@ export default function HostDashboard() {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
       }
-      setTimeRemaining(0);
+      dispatch(setTimeRemaining(0));
       return;
     }
 
@@ -148,7 +224,7 @@ export default function HostDashboard() {
           0,
           Math.floor((gameState.endAt! - Date.now()) / 1000)
         );
-        setTimeRemaining(remaining);
+        dispatch(setTimeRemaining(remaining));
 
         if (remaining === 0) {
           // Auto-end question when timer expires
@@ -170,7 +246,7 @@ export default function HostDashboard() {
         }
       };
     } else {
-      setTimeRemaining(0);
+      dispatch(setTimeRemaining(0));
     }
   }, [
     gameState?.status,
@@ -179,12 +255,12 @@ export default function HostDashboard() {
     socket,
     sessionCode,
     gameState?.questionIndex,
+    dispatch,
   ]);
 
   // Fetch stats periodically
   useEffect(() => {
     if (!connected) return;
-    // Check if questionIndex is defined (including 0)
     const questionIndex = gameState?.questionIndex;
     if (questionIndex === undefined) return;
 
@@ -195,77 +271,90 @@ export default function HostDashboard() {
         );
         const data = await response.json();
         if (data.success) {
-          setStats({
-            playerCount: data.playerCount,
-            answerCount: data.answerCount || 0,
-            answerDistribution: data.answerDistribution || {
-              A: 0,
-              B: 0,
-              C: 0,
-              D: 0,
-            },
-            playersWithAnswers: data.playersWithAnswers || [],
-            playerScores: data.playerScores || {},
-          });
+          dispatch(
+            setStats({
+              playerCount: data.playerCount,
+              answerCount: data.answerCount || 0,
+              answerDistribution: data.answerDistribution || {
+                A: 0,
+                B: 0,
+                C: 0,
+                D: 0,
+              },
+              playersWithAnswers: data.playersWithAnswers || [],
+              playerScores: data.playerScores || {},
+            })
+          );
         }
       } catch (error) {
         console.error("Error fetching stats:", error);
       }
     };
 
-    // Reset stats immediately when question index changes
-    setStats((prev) => ({
-      ...prev,
-      answerCount: 0,
-      answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
-      playersWithAnswers: [],
-    }));
-
-    // Fetch stats immediately, then set up interval
     fetchStats();
-    const interval = setInterval(fetchStats, 500); // Update every 500ms for more real-time updates
-
+    const interval = setInterval(fetchStats, 2000);
     return () => clearInterval(interval);
-  }, [connected, sessionCode, gameState?.questionIndex]);
+  }, [connected, gameState?.questionIndex, sessionCode, dispatch]);
 
-  // Verify authentication and host ownership
+  // Verify host ownership
   useEffect(() => {
-    // Wait for session to finish loading
-    if (status === "loading") return;
-
-    // Only redirect if we're certain the user is not authenticated
-    if (status === "unauthenticated" || (!session && status !== "loading")) {
-      router.push("/auth/signin");
-      return;
-    }
-
-    // Verify user is the host of this session
     const verifyHostOwnership = async () => {
+      // Wait for session to be fully loaded
+      if (status === "loading") return;
+
+      // If unauthenticated, redirect to sign in
+      if (status === "unauthenticated") {
+        router.push("/auth/signin");
+        return;
+      }
+
+      if (!session?.user?.id || !sessionCode) return;
+
       try {
-        const response = await fetch(`/api/sessions/${sessionCode}/questions`);
-        if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            // User is not authorized or not the host
-            router.push("/");
-            return;
-          }
+        const response = await fetch(
+          `/api/sessions/validate/${sessionCode}?hostCheck=true`
+        );
+        const data = await response.json();
+
+        // Check if session is valid and user is the host
+        if (!data.isValid) {
+          console.error("Session validation failed:", data.error);
+          router.push("/");
+          return;
         }
-        // If successful, user is the host (API route verifies ownership)
+
+        if (data.hostId && data.hostId !== session.user.id) {
+          console.error("Host ownership verification failed:", {
+            expected: session.user.id,
+            actual: data.hostId,
+          });
+          router.push("/");
+          return;
+        }
       } catch (error) {
         console.error("Error verifying host ownership:", error);
         router.push("/");
       }
     };
 
-    if (session && sessionCode) {
-      verifyHostOwnership();
-    }
+    verifyHostOwnership();
   }, [session, status, router, sessionCode]);
 
+  // Initialize Socket.io connection
   useEffect(() => {
     if (!sessionCode) return;
 
-    // Initialize Socket.io connection
+    // Don't create a new socket if one already exists
+    if (socketRef.current?.connected) {
+      return;
+    }
+
+    // Clean up existing socket if it exists but isn't connected
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+    }
+
     const newSocket = io("/", {
       path: "/api/socket",
       reconnection: true,
@@ -274,12 +363,11 @@ export default function HostDashboard() {
     });
 
     socketRef.current = newSocket;
-    setSocket(newSocket);
+    dispatch(setSocket(newSocket));
 
     newSocket.on("connect", () => {
       console.log("✅ Host connected to server");
-      setConnected(true);
-      // Emit host-join will be handled by separate effect when session is ready
+      dispatch(setConnected(true));
     });
 
     newSocket.on(
@@ -287,22 +375,18 @@ export default function HostDashboard() {
       (data: {
         sessionCode: string;
         players: Array<{ playerId: string; name: string }>;
-        gameState?: GameState;
+        gameState?: any;
       }) => {
         console.log("👑 Host joined session:", data);
-        setPlayers(data.players || []);
-        setStats((prev) => ({ ...prev, playerCount: data.players.length }));
+        dispatch(setPlayers(data.players || []));
 
-        // Restore game state if it exists (for reconnections)
         if (data.gameState) {
           console.log("🔄 Restoring game state:", data.gameState);
-          setGameState(data.gameState);
+          dispatch(setGameState(data.gameState));
 
-          // If there's a question in the state, make sure it's loaded
           if (data.gameState.question) {
-            // Question is already in gameState, no need to fetch
+            // Question already in gameState
           } else if (data.gameState.questionIndex !== undefined) {
-            // Fetch the question if we have an index but no question
             const fetchQuestion = async () => {
               try {
                 const response = await fetch(
@@ -313,14 +397,7 @@ export default function HostDashboard() {
                   const questionIndex = data.gameState!.questionIndex ?? 0;
                   const question = questionsData.questions[questionIndex];
                   if (question) {
-                    setGameState((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            question,
-                          }
-                        : null
-                    );
+                    dispatch(updateGameState({ question }));
                   }
                 }
               } catch (error) {
@@ -342,21 +419,12 @@ export default function HostDashboard() {
         playerCount?: number;
       }) => {
         console.log("👤 Player joined:", data);
-        setPlayers((prev) => {
-          const exists = prev.some((p) => p.playerId === data.playerId);
-          if (exists) return prev;
-          return [...prev, { playerId: data.playerId, name: data.name }];
-        });
+        dispatch(addPlayer({ playerId: data.playerId, name: data.name }));
+
         if (data.playerCount !== undefined) {
-          setStats((prev) => ({
-            ...prev,
-            playerCount: data.playerCount ?? prev.playerCount,
-          }));
+          dispatch(updateStats({ playerCount: data.playerCount }));
         }
 
-        // Refresh stats when a player joins/reconnects (in case they have existing answers)
-        // This ensures the host sees updated answer counts after player refresh
-        // Only refresh if question is active or in progress (not ended, since no new answers can be submitted)
         const currentState = gameStateRef.current;
         if (
           currentState &&
@@ -372,21 +440,19 @@ export default function HostDashboard() {
               );
               const statsData = await response.json();
               if (statsData.success) {
-                setStats((prev) => ({
-                  ...prev,
-                  answerCount: statsData.answerCount || 0,
-                  answerDistribution: statsData.answerDistribution || {
-                    A: 0,
-                    B: 0,
-                    C: 0,
-                    D: 0,
-                  },
-                  playersWithAnswers: statsData.playersWithAnswers || [],
-                  playerScores:
-                    statsData.playerScores || prev.playerScores || {},
-                }));
-                console.log(
-                  `📊 Refreshed stats after player join: ${statsData.answerCount} answers for question ${questionIndex}`
+                dispatch(
+                  updateStats({
+                    answerCount: statsData.answerCount || 0,
+                    answerDistribution: statsData.answerDistribution || {
+                      A: 0,
+                      B: 0,
+                      C: 0,
+                      D: 0,
+                    },
+                    playersWithAnswers: statsData.playersWithAnswers || [],
+                    playerScores:
+                      statsData.playerScores || stats.playerScores || {},
+                  })
                 );
               }
             } catch (error) {
@@ -407,12 +473,9 @@ export default function HostDashboard() {
         playerCount?: number;
       }) => {
         console.log("👋 Player left:", data);
-        setPlayers((prev) => prev.filter((p) => p.playerId !== data.playerId));
+        dispatch(removePlayer(data.playerId));
         if (data.playerCount !== undefined) {
-          setStats((prev) => ({
-            ...prev,
-            playerCount: data.playerCount ?? prev.playerCount,
-          }));
+          dispatch(updateStats({ playerCount: data.playerCount }));
         }
       }
     );
@@ -421,13 +484,13 @@ export default function HostDashboard() {
       "game-started",
       (data: { status: string; questionIndex: number }) => {
         console.log("🎮 Game started:", data);
-        // Show players modal after game starts
-        setShowPlayersModal(true);
-        setGameState((prev) => ({
-          ...prev,
-          status: "IN_PROGRESS",
-          questionIndex: data.questionIndex ?? 0,
-        }));
+        dispatch(setShowPlayersModal(true));
+        dispatch(
+          updateGameState({
+            status: "IN_PROGRESS",
+            questionIndex: data.questionIndex ?? 0,
+          })
+        );
       }
     );
 
@@ -435,83 +498,91 @@ export default function HostDashboard() {
       "question-started",
       (data: { question: Question; questionIndex: number; endAt: number }) => {
         console.log("❓ Question started:", data);
-        setGameState((prev) => ({
-          ...prev,
-          status: "QUESTION_ACTIVE",
-          question: data.question,
-          questionIndex: data.questionIndex,
-          endAt: data.endAt,
-          answerRevealed: false,
-        }));
+        dispatch(
+          updateGameState({
+            status: "QUESTION_ACTIVE",
+            question: data.question,
+            questionIndex: data.questionIndex,
+            endAt: data.endAt,
+            answerRevealed: false,
+          })
+        );
       }
     );
 
     newSocket.on("question-ended", (data: { questionIndex: number }) => {
       console.log("⏹️ Question ended:", data);
-      setGameState((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: "QUESTION_ENDED",
-            }
-          : null
-      );
+      dispatch(updateGameState({ status: "QUESTION_ENDED" }));
     });
 
     newSocket.on(
       "question-navigated",
-      async (data: { questionIndex: number; question: Question }) => {
+      async (data: {
+        questionIndex: number;
+        question: Question;
+        answerRevealed?: boolean;
+        correctAnswer?: "A" | "B" | "C" | "D";
+        isReviewMode?: boolean;
+      }) => {
         console.log("📄 Question navigated:", data);
+        const isReviewMode = data.isReviewMode || false;
+        const answerRevealed = data.answerRevealed || false;
 
-        // Check if this question has been answered before (previous question)
-        let hasAnswers = false;
-        try {
-          const response = await fetch(
-            `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
+        console.log("🔍 Navigation state:", {
+          isReviewMode,
+          answerRevealed,
+          questionIndex: data.questionIndex,
+        });
+
+        // Update game state with review mode flags from server
+        // If gameState doesn't exist, we need to set it first
+        if (!gameState) {
+          dispatch(
+            setGameState({
+              status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
+              questionIndex: data.questionIndex,
+              question: data.question,
+              answerRevealed: answerRevealed,
+              correctAnswer: data.correctAnswer,
+              isReviewMode: isReviewMode,
+            })
           );
-          const statsData = await response.json();
-          if (statsData.success) {
-            hasAnswers =
-              (statsData.answerCount || 0) > 0 ||
-              (statsData.playersWithAnswers?.length || 0) > 0;
-          }
-        } catch (error) {
-          console.error("Error checking if question has answers:", error);
+        } else {
+          dispatch(
+            updateGameState({
+              questionIndex: data.questionIndex,
+              question: data.question,
+              status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
+              answerRevealed: answerRevealed,
+              correctAnswer: data.correctAnswer,
+              isReviewMode: isReviewMode,
+              endAt: undefined,
+            })
+          );
         }
 
-        setGameState((prev) =>
-          prev
-            ? {
-                ...prev,
-                questionIndex: data.questionIndex,
-                question: data.question,
-                status: hasAnswers ? "QUESTION_ENDED" : "IN_PROGRESS",
-                answerRevealed: hasAnswers, // If question has answers, it's been answered
-                endAt: undefined,
-              }
-            : null
-        );
-
-        // Fetch stats for the navigated question
-        if (hasAnswers) {
+        // If in review mode, fetch stats to show player answers
+        if (isReviewMode) {
           try {
             const response = await fetch(
               `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
             );
             const statsData = await response.json();
             if (statsData.success) {
-              setStats({
-                playerCount: statsData.playerCount,
-                answerCount: statsData.answerCount || 0,
-                answerDistribution: statsData.answerDistribution || {
-                  A: 0,
-                  B: 0,
-                  C: 0,
-                  D: 0,
-                },
-                playersWithAnswers: statsData.playersWithAnswers || [],
-                playerScores: statsData.playerScores || {},
-              });
+              dispatch(
+                setStats({
+                  playerCount: statsData.playerCount,
+                  answerCount: statsData.answerCount || 0,
+                  answerDistribution: statsData.answerDistribution || {
+                    A: 0,
+                    B: 0,
+                    C: 0,
+                    D: 0,
+                  },
+                  playersWithAnswers: statsData.playersWithAnswers || [],
+                  playerScores: statsData.playerScores || {},
+                })
+              );
             }
           } catch (error) {
             console.error(
@@ -520,16 +591,16 @@ export default function HostDashboard() {
             );
           }
         } else {
-          // Reset stats for the new question
-          setStats((prev) => ({
-            ...prev,
-            answerCount: 0,
-            answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
-            playersWithAnswers: [],
-          }));
+          // Reset stats for new questions
+          dispatch(
+            updateStats({
+              answerCount: 0,
+              answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
+              playersWithAnswers: [],
+            })
+          );
         }
-        // Close the answer reveal modal when navigating to a new question
-        setShowAnswerRevealModal(false);
+        dispatch(setShowAnswerRevealModal(false));
       }
     );
 
@@ -541,16 +612,17 @@ export default function HostDashboard() {
         answerDistribution: { A: number; B: number; C: number; D: number };
         playersWithAnswers?: string[];
       }) => {
-        // Only update if it's for the current question (use ref to get latest state)
         if (data.questionIndex === gameStateRef.current?.questionIndex) {
-          setStats((prev) => ({
-            ...prev,
-            answerCount: data.answerCount,
-            answerDistribution: data.answerDistribution,
-            playersWithAnswers:
-              data.playersWithAnswers || prev.playersWithAnswers || [],
-            // Preserve playerScores - they're updated via stats API, not socket events
-          }));
+          dispatch(
+            updateStats({
+              answerCount: data.answerCount,
+              answerDistribution: data.answerDistribution,
+              playersWithAnswers:
+                data.playersWithAnswers ||
+                statsRef.current.playersWithAnswers ||
+                [],
+            })
+          );
         }
       }
     );
@@ -569,16 +641,17 @@ export default function HostDashboard() {
 
     newSocket.on("disconnect", () => {
       console.log("🔌 Host disconnected from server");
-      setConnected(false);
+      dispatch(setConnected(false));
     });
 
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
+      newSocket.removeAllListeners();
       newSocket.disconnect();
     };
-  }, [sessionCode, router]);
+  }, [sessionCode, router, dispatch]);
 
   // Emit host-join when socket is connected and session is ready
   useEffect(() => {
@@ -599,7 +672,6 @@ export default function HostDashboard() {
   const handleStartQuestion = () => {
     if (!socket || gameState?.questionIndex === undefined) return;
 
-    // Get question from gameState or from questions array
     const question = gameState.question || questions[gameState.questionIndex];
 
     if (!question) {
@@ -616,7 +688,7 @@ export default function HostDashboard() {
         C: question.C,
         D: question.D,
         correct: question.correct,
-        durationMs: 30000, // Default 30 seconds, can be made configurable
+        durationMs: 30000,
       },
       questionIndex: gameState.questionIndex,
     });
@@ -628,18 +700,14 @@ export default function HostDashboard() {
       sessionCode,
       questionIndex: gameState.questionIndex,
     });
-    setGameState((prev) =>
-      prev
-        ? {
-            ...prev,
-            answerRevealed: true,
-            correctAnswer: prev.question?.correct,
-            status: "QUESTION_ENDED", // Mark question as ended
-          }
-        : null
+    dispatch(
+      updateGameState({
+        answerRevealed: true,
+        correctAnswer: gameState.question?.correct,
+        status: "QUESTION_ENDED",
+      })
     );
-    // Open the modal immediately after revealing
-    setShowAnswerRevealModal(true);
+    dispatch(setShowAnswerRevealModal(true));
   };
 
   const handleNextQuestion = () => {
@@ -674,15 +742,24 @@ export default function HostDashboard() {
 
   const handleCancelSession = () => {
     if (!socket) return;
-    if (
-      !confirm(
-        "Are you sure you want to cancel this session? All players will be disconnected."
-      )
-    ) {
-      return;
-    }
-    socket.emit("CANCEL_SESSION", { sessionCode });
+    dispatch(setShowEndGameModal(true));
   };
+
+  // Debug: Log gameState changes for isReviewMode and answerRevealed
+  useEffect(() => {
+    if (gameState) {
+      console.log("🎮 GameState updated:", {
+        questionIndex: gameState.questionIndex,
+        isReviewMode: gameState.isReviewMode,
+        answerRevealed: gameState.answerRevealed,
+        status: gameState.status,
+      });
+    }
+  }, [
+    gameState?.isReviewMode,
+    gameState?.answerRevealed,
+    gameState?.questionIndex,
+  ]);
 
   // Get current question from gameState or fallback to questions array
   const currentQuestion =
@@ -693,12 +770,33 @@ export default function HostDashboard() {
   const isQuestionEnded = gameState?.status === "QUESTION_ENDED";
   const canNavigate = !isQuestionActive && gameState?.status !== "WAITING";
 
-  // Automatically open AnswerRevealModal when question ends
+  // Ensure modals are closed when game status is WAITING (new session)
   useEffect(() => {
-    if (isQuestionEnded && currentQuestion) {
-      setShowAnswerRevealModal(true);
+    if (gameState?.status === "WAITING") {
+      dispatch(setShowAnswerRevealModal(false));
+      dispatch(setShowPlayersModal(false));
+      dispatch(setShowEndGameModal(false));
     }
-  }, [isQuestionEnded, currentQuestion]);
+  }, [gameState?.status, dispatch]);
+
+  // Automatically open AnswerRevealModal when question ends
+  // Only open if game is not in WAITING state (new session) and question is not in review mode
+  useEffect(() => {
+    if (
+      isQuestionEnded &&
+      currentQuestion &&
+      gameState?.status !== "WAITING" &&
+      !gameState?.isReviewMode
+    ) {
+      dispatch(setShowAnswerRevealModal(true));
+    }
+  }, [
+    isQuestionEnded,
+    currentQuestion,
+    gameState?.status,
+    gameState?.isReviewMode,
+    dispatch,
+  ]);
 
   if (status === "loading") {
     return <Loading />;
@@ -708,7 +806,6 @@ export default function HostDashboard() {
     return null;
   }
 
-  // Show message if game has ended (host can still access dashboard when game is live)
   if (sessionStatus === "ended") {
     return (
       <CenteredLayout>
@@ -734,20 +831,17 @@ export default function HostDashboard() {
     );
   }
 
-  // If gameState is null but session is loaded and socket is connected,
-  // wait briefly for socket to restore state (this happens on refresh)
   if (!gameState && connected && socket) {
     return <Loading message="Restoring game state..." />;
   }
 
   // Lobby view (before game starts)
-  // Only show lobby if game state is explicitly WAITING
   if (gameState?.status === "WAITING") {
     return (
       <>
         <PlayersListModal
           isOpen={showPlayersModal}
-          onClose={() => setShowPlayersModal(false)}
+          onClose={() => dispatch(setShowPlayersModal(false))}
           sessionCode={sessionCode}
           socket={socket}
           connected={connected}
@@ -836,52 +930,55 @@ export default function HostDashboard() {
     );
   }
 
-  // Live Game Session View (Desktop-First Two-Column Layout)
+  // Live Game Session View
   return (
     <>
       <PlayersListModal
         isOpen={showPlayersModal}
-        onClose={() => setShowPlayersModal(false)}
+        onClose={() => dispatch(setShowPlayersModal(false))}
         sessionCode={sessionCode}
         socket={socket}
         connected={connected}
       />
-      <AnswerRevealModal
-        isOpen={showAnswerRevealModal}
-        onClose={() => setShowAnswerRevealModal(false)}
-        question={currentQuestion || null}
-        answerDistribution={stats.answerDistribution}
-        currentIndex={currentIndex}
-        questionCount={questionCount}
-        onPrevious={handlePreviousQuestion}
-        onNext={handleNextQuestion}
-        canNavigate={canNavigate}
-        connected={connected || false}
-        players={players}
-        playerScores={stats.playerScores}
-        onRevealWinner={(leaderboard) => {
-          // Emit winner-revealed event to all players
-          console.log("🏆 Host: Revealing winner, leaderboard:", leaderboard);
-          if (socket) {
-            socket.emit("REVEAL_WINNER", {
-              sessionCode,
-              leaderboard,
-            });
-            console.log("🏆 Host: REVEAL_WINNER event emitted to server");
-          } else {
-            console.error(
-              "❌ Host: Socket not connected, cannot reveal winner"
-            );
-          }
-        }}
-        onEndGame={() => {
-          // Show end game confirmation modal
-          setShowEndGameModal(true);
-        }}
-      />
+      {(() => {
+        // Check if game is in WAITING state (new session) - use string comparison to avoid TypeScript narrowing issues
+        const statusStr = String(gameState?.status || "");
+        const isWaiting = statusStr === "WAITING" || !gameState?.status;
+        return (
+          <AnswerRevealModal
+            isOpen={showAnswerRevealModal && !isWaiting}
+            onClose={() => dispatch(setShowAnswerRevealModal(false))}
+            question={isWaiting ? null : currentQuestion || null}
+            answerDistribution={stats.answerDistribution}
+            currentIndex={currentIndex}
+            questionCount={questionCount}
+            onPrevious={handlePreviousQuestion}
+            onNext={handleNextQuestion}
+            canNavigate={canNavigate}
+            connected={connected || false}
+            players={players}
+            playerScores={stats.playerScores}
+            onRevealWinner={(leaderboard) => {
+              console.log(
+                "🏆 Host: Revealing winner, leaderboard:",
+                leaderboard
+              );
+              if (socket) {
+                socket.emit("REVEAL_WINNER", {
+                  sessionCode,
+                  leaderboard,
+                });
+                console.log("🏆 Host: REVEAL_WINNER event emitted to server");
+              }
+            }}
+            onEndGame={() => {
+              dispatch(setShowEndGameModal(true));
+            }}
+          />
+        );
+      })()}
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
             <div className="flex justify-between items-center">
               <div>
@@ -903,22 +1000,18 @@ export default function HostDashboard() {
             </div>
           </div>
 
-          {/* Two-Column Layout: Desktop-First */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Panel: Question Control */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 Question Control
               </h2>
 
-              {/* Question Index */}
               {currentQuestion && (
                 <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
                   Question {currentIndex + 1} of {questionCount}
                 </div>
               )}
 
-              {/* Timer Display */}
               {isQuestionActive && !gameState?.answerRevealed && (
                 <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                   <div className="text-center">
@@ -932,7 +1025,6 @@ export default function HostDashboard() {
                 </div>
               )}
 
-              {/* Current Question Display */}
               {currentQuestion ? (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -964,22 +1056,30 @@ export default function HostDashboard() {
                 </div>
               )}
 
-              {/* Question Controls */}
               <div className="space-y-3">
                 <button
                   onClick={handleStartQuestion}
-                  disabled={
-                    !connected ||
-                    !currentQuestion ||
-                    isQuestionActive ||
-                    gameState?.answerRevealed ||
-                    stats.answerCount > 0 ||
-                    (stats.playersWithAnswers?.length || 0) > 0
-                  }
+                  disabled={(() => {
+                    const disabled =
+                      !connected ||
+                      !currentQuestion ||
+                      isQuestionActive ||
+                      gameState?.isReviewMode === true ||
+                      gameState?.answerRevealed === true;
+                    console.log("🔘 Start Question button disabled check:", {
+                      disabled,
+                      connected,
+                      hasCurrentQuestion: !!currentQuestion,
+                      isQuestionActive,
+                      isReviewMode: gameState?.isReviewMode,
+                      answerRevealed: gameState?.answerRevealed,
+                      questionIndex: gameState?.questionIndex,
+                    });
+                    return disabled;
+                  })()}
                   className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   title={
-                    stats.answerCount > 0 ||
-                    (stats.playersWithAnswers?.length || 0) > 0
+                    gameState?.isReviewMode || gameState?.answerRevealed
                       ? "This question has already been answered"
                       : undefined
                   }
@@ -990,11 +1090,9 @@ export default function HostDashboard() {
                 <button
                   onClick={() => {
                     if (!gameState?.answerRevealed) {
-                      // Reveal answer and open modal in one click
                       handleRevealAnswer();
                     } else {
-                      // If already revealed, just open the modal
-                      setShowAnswerRevealModal(true);
+                      dispatch(setShowAnswerRevealModal(true));
                     }
                   }}
                   disabled={
@@ -1024,13 +1122,11 @@ export default function HostDashboard() {
               </div>
             </div>
 
-            {/* Right Panel: Live Monitoring */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 Live Monitoring
               </h2>
 
-              {/* Player Count */}
               <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                 <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                   {stats.playerCount}
@@ -1040,7 +1136,6 @@ export default function HostDashboard() {
                 </div>
               </div>
 
-              {/* Answer Stats */}
               {isQuestionActive || isQuestionEnded ? (
                 <div className="mb-6">
                   <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
@@ -1065,7 +1160,6 @@ export default function HostDashboard() {
                 </div>
               )}
 
-              {/* Player List */}
               <div className="mt-6">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Players
@@ -1081,7 +1175,7 @@ export default function HostDashboard() {
                         ...player,
                         score: stats.playerScores?.[player.playerId] || 0,
                       }))
-                      .sort((a, b) => b.score - a.score) // Sort by score descending
+                      .sort((a, b) => b.score - a.score)
                       .map((player) => {
                         const hasSubmitted =
                           stats.playersWithAnswers?.includes(player.playerId) ||
@@ -1115,10 +1209,9 @@ export default function HostDashboard() {
         </div>
       </div>
 
-      {/* End Game Confirmation Modal */}
       <Modal
         isOpen={showEndGameModal}
-        onClose={() => setShowEndGameModal(false)}
+        onClose={() => dispatch(setShowEndGameModal(false))}
         title="End Game"
         size="md"
       >
@@ -1129,7 +1222,7 @@ export default function HostDashboard() {
           </p>
           <div className="flex justify-end gap-3 pt-4">
             <button
-              onClick={() => setShowEndGameModal(false)}
+              onClick={() => dispatch(setShowEndGameModal(false))}
               className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
             >
               Cancel
@@ -1145,13 +1238,9 @@ export default function HostDashboard() {
                     "✅ Host: CANCEL_SESSION event emitted for session",
                     sessionCode
                   );
-                } else {
-                  console.error(
-                    "❌ Host: Socket not connected, cannot cancel session"
-                  );
                 }
-                setShowEndGameModal(false);
-                setShowAnswerRevealModal(false);
+                dispatch(setShowEndGameModal(false));
+                dispatch(setShowAnswerRevealModal(false));
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
             >

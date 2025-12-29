@@ -107,6 +107,12 @@ export async function POST(request: NextRequest) {
       hostId: session.user.id,
       presentationId: presentationId,
       scoringConfig: scoringConfig,
+      // Explicitly reset all game state flags for a fresh session
+      answerRevealed: false,
+      correctAnswer: undefined,
+      isReviewMode: false,
+      question: undefined,
+      endAt: undefined,
     };
     await redis.set(gameStateKey(sessionId), JSON.stringify(initialGameState));
 

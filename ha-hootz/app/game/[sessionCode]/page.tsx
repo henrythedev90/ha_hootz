@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import Loading from "@/components/Loading";
@@ -9,30 +9,37 @@ import CenteredLayout from "@/components/CenteredLayout";
 import GameWelcomeModal from "@/components/GameWelcomeModal";
 import WinnerDisplay from "@/components/WinnerDisplay";
 import ThankYouModal from "@/components/ThankYouModal";
-
-type GameStatus =
-  | "WAITING"
-  | "IN_PROGRESS"
-  | "QUESTION_ACTIVE"
-  | "QUESTION_ENDED";
-
-interface GameState {
-  status: GameStatus;
-  sessionId?: string;
-  questionIndex?: number;
-  questionCount?: number;
-  question?: {
-    text: string;
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
-  endAt?: number;
-  playerAnswers?: Record<number, string>;
-  answerRevealed?: boolean;
-  correctAnswer?: "A" | "B" | "C" | "D";
-}
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  setSessionCode,
+  setGameState,
+  updateGameState,
+} from "@/store/slices/gameSlice";
+import {
+  setPlayerId,
+  setPlayerName,
+  setHostName,
+  setPlayerCount,
+  setSelectedAnswer,
+  setTimeRemaining,
+  setIsTimerExpired,
+  setPreviousAnswer,
+  setLeaderboard,
+} from "@/store/slices/playerSlice";
+import {
+  setSocket,
+  setConnected,
+  setSocketSessionCode,
+} from "@/store/slices/socketSlice";
+import {
+  setShowWelcomeModal,
+  setShowWinnerDisplay,
+  setShowThankYouModal,
+  setIsExitModalOpen,
+  setSessionEnded,
+  setError,
+  clearError,
+} from "@/store/slices/uiSlice";
 
 export default function GamePage() {
   const params = useParams();
@@ -40,35 +47,53 @@ export default function GamePage() {
   const sessionCode = params.sessionCode as string;
   const playerName = searchParams.get("name");
 
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [playerCount, setPlayerCount] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<
-    "A" | "B" | "C" | "D" | null
-  >(null);
-  const [timeRemaining, setTimeRemaining] = useState(0);
-  const [isTimerExpired, setIsTimerExpired] = useState(false);
-  const [error, setError] = useState("");
-  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
-  const [hostName, setHostName] = useState<string | null>(null);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-  const [playerId, setPlayerId] = useState<string | null>(null);
-  const [showWinnerDisplay, setShowWinnerDisplay] = useState(false);
-  const [showThankYouModal, setShowThankYouModal] = useState(false);
-  const [sessionEnded, setSessionEnded] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<
-    Array<{ playerId: string; name: string; score: number }>
-  >([]);
+  // Redux state
+  const dispatch = useAppDispatch();
+  const gameState = useAppSelector((state) => state.game.gameState);
+  const playerId = useAppSelector((state) => state.player.playerId);
+  const hostName = useAppSelector((state) => state.player.hostName);
+  const playerCount = useAppSelector((state) => state.player.playerCount);
+  const selectedAnswer = useAppSelector((state) => state.player.selectedAnswer);
+  const timeRemaining = useAppSelector((state) => state.player.timeRemaining);
+  const isTimerExpired = useAppSelector((state) => state.player.isTimerExpired);
+  const leaderboard = useAppSelector((state) => state.player.leaderboard);
+  const socket = useAppSelector((state) => state.socket.socket);
+  const connected = useAppSelector((state) => state.socket.connected);
+  const showWelcomeModal = useAppSelector((state) => state.ui.showWelcomeModal);
+  const showWinnerDisplay = useAppSelector(
+    (state) => state.ui.showWinnerDisplay
+  );
+  const showThankYouModal = useAppSelector(
+    (state) => state.ui.showThankYouModal
+  );
+  const isExitModalOpen = useAppSelector((state) => state.ui.isExitModalOpen);
+  const sessionEnded = useAppSelector((state) => state.ui.sessionEnded);
+  const error = useAppSelector((state) => state.ui.error);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const gameStateRef = useRef(gameState);
+
+  // Keep gameStateRef in sync with Redux gameState
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  // Set session code and player name in Redux
+  useEffect(() => {
+    if (sessionCode) {
+      dispatch(setSessionCode(sessionCode));
+      dispatch(setSocketSessionCode(sessionCode));
+    }
+    if (playerName) {
+      dispatch(setPlayerName(playerName));
+    }
+  }, [sessionCode, playerName, dispatch]);
 
   // Check session status and fetch host name when component mounts
   useEffect(() => {
     const checkSessionStatus = async () => {
       try {
-        // Check if session has ended
         const validateResponse = await fetch(
           `/api/sessions/validate/${sessionCode}`
         );
@@ -76,15 +101,14 @@ export default function GamePage() {
 
         if (validateData.sessionStatus === "ended") {
           console.log("❌ Session has ended, showing ended message");
-          setSessionEnded(true);
+          dispatch(setSessionEnded(true));
           return;
         }
 
-        // Fetch host name
         const hostResponse = await fetch(`/api/sessions/${sessionCode}/host`);
         const hostData = await hostResponse.json();
         if (hostData.success && hostData.hostName) {
-          setHostName(hostData.hostName);
+          dispatch(setHostName(hostData.hostName));
         }
       } catch (error) {
         console.error("Error checking session status:", error);
@@ -94,18 +118,17 @@ export default function GamePage() {
     if (sessionCode) {
       checkSessionStatus();
     }
-  }, [sessionCode]);
+  }, [sessionCode, dispatch]);
 
   // Timer countdown effect
   useEffect(() => {
-    // Set timer to 0 if answer is revealed
     if (gameState?.answerRevealed) {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
       }
-      setTimeRemaining(0);
-      setIsTimerExpired(true);
+      dispatch(setTimeRemaining(0));
+      dispatch(setIsTimerExpired(true));
       return;
     }
 
@@ -115,11 +138,10 @@ export default function GamePage() {
           0,
           Math.floor((gameState.endAt! - Date.now()) / 1000)
         );
-        setTimeRemaining(remaining);
-        setIsTimerExpired(remaining === 0);
+        dispatch(setTimeRemaining(remaining));
+        dispatch(setIsTimerExpired(remaining === 0));
 
         if (remaining === 0 && selectedAnswer && socket) {
-          // Auto-submit when timer expires
           socket.emit("SUBMIT_ANSWER", {
             gameId: gameState.sessionId,
             questionIndex: gameState.questionIndex,
@@ -128,8 +150,8 @@ export default function GamePage() {
         }
       };
 
-      updateTimer(); // Initial update
-      timerIntervalRef.current = setInterval(updateTimer, 100); // Update every 100ms for smooth countdown
+      updateTimer();
+      timerIntervalRef.current = setInterval(updateTimer, 100);
 
       return () => {
         if (timerIntervalRef.current) {
@@ -137,9 +159,8 @@ export default function GamePage() {
         }
       };
     } else {
-      setTimeRemaining(0);
-      // Only set timer as expired if question has explicitly ended
-      setIsTimerExpired(gameState?.status === "QUESTION_ENDED");
+      dispatch(setTimeRemaining(0));
+      dispatch(setIsTimerExpired(gameState?.status === "QUESTION_ENDED"));
     }
   }, [
     gameState?.status,
@@ -149,22 +170,21 @@ export default function GamePage() {
     socket,
     gameState?.sessionId,
     gameState?.questionIndex,
+    dispatch,
   ]);
 
   // Socket.io connection and event handlers
   useEffect(() => {
     if (!playerName || !sessionCode) {
-      setError("Missing player name or session code");
+      dispatch(setError("Missing player name or session code"));
       return;
     }
 
-    // Don't connect if session has ended
     if (sessionEnded) {
       console.log("❌ Session has ended, not connecting socket");
       return;
     }
 
-    // Initialize Socket.io connection
     const newSocket = io("/", {
       path: "/api/socket",
       reconnection: true,
@@ -173,13 +193,11 @@ export default function GamePage() {
     });
 
     socketRef.current = newSocket;
-    setSocket(newSocket);
+    dispatch(setSocket(newSocket));
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to server");
-      setConnected(true);
-
-      // Emit join-session event with nickname
+      dispatch(setConnected(true));
       newSocket.emit("join-session", {
         sessionCode,
         name: playerName,
@@ -189,25 +207,24 @@ export default function GamePage() {
     newSocket.on(
       "joined-session",
       (data: {
-        gameState: GameState;
+        gameState: any;
         sessionId?: string;
         playerId?: string;
         playerCount?: number;
       }) => {
         console.log("✅ Joined session:", data);
-        // Store playerId
         if (data.playerId) {
-          setPlayerId(data.playerId);
+          dispatch(setPlayerId(data.playerId));
         }
-        // Ensure sessionId is set in gameState (needed for answer submission)
-        setGameState({
-          ...data.gameState,
-          sessionId: data.sessionId || data.gameState.sessionId,
-        });
+        dispatch(
+          setGameState({
+            ...data.gameState,
+            sessionId: data.sessionId || data.gameState.sessionId,
+          })
+        );
         if (data.playerCount !== undefined) {
-          setPlayerCount(data.playerCount);
+          dispatch(setPlayerCount(data.playerCount));
         }
-        // Restore previous answer if reconnected
         if (
           data.gameState.playerAnswers &&
           data.gameState.questionIndex !== undefined
@@ -215,51 +232,45 @@ export default function GamePage() {
           const prevAnswer =
             data.gameState.playerAnswers[data.gameState.questionIndex];
           if (prevAnswer) {
-            setSelectedAnswer(prevAnswer as "A" | "B" | "C" | "D");
+            dispatch(setSelectedAnswer(prevAnswer as "A" | "B" | "C" | "D"));
           }
         }
-
-        // Reset timer expired state when reconnecting to an active question
-        // This allows players to submit answers even if the timer appears expired
-        // The server will validate if the question is still active
         if (data.gameState.status === "QUESTION_ACTIVE") {
-          setIsTimerExpired(false);
+          dispatch(setIsTimerExpired(false));
         }
       }
     );
 
     newSocket.on("join-error", (data: { reason?: string } | string) => {
       console.error("❌ Join error:", data);
-      // Handle both object and string error formats
       const errorMessage =
         typeof data === "string"
           ? data
           : data?.reason || "Failed to join session";
 
-      // Check if session has ended
       if (
         errorMessage.includes("ended") ||
         errorMessage.includes("cancelled")
       ) {
-        setSessionEnded(true);
+        dispatch(setSessionEnded(true));
         newSocket.disconnect();
-        setConnected(false);
+        dispatch(setConnected(false));
       } else {
-        setError(errorMessage);
+        dispatch(setError(errorMessage));
       }
     });
 
     newSocket.on("player-joined", (data: { playerCount?: number }) => {
       console.log("👤 Player joined:", data);
       if (data.playerCount !== undefined) {
-        setPlayerCount(data.playerCount);
+        dispatch(setPlayerCount(data.playerCount));
       }
     });
 
     newSocket.on("player-left", (data: { playerCount?: number }) => {
       console.log("👋 Player left:", data);
       if (data.playerCount !== undefined) {
-        setPlayerCount(data.playerCount);
+        dispatch(setPlayerCount(data.playerCount));
       }
     });
 
@@ -267,63 +278,65 @@ export default function GamePage() {
       "game-started",
       (data: { status: string; questionIndex: number }) => {
         console.log("🎮 Game started:", data);
-        setGameState(
-          (prev) =>
-            ({
-              ...prev,
-              ...data,
-              status: "IN_PROGRESS", // Override status to ensure it's IN_PROGRESS
-            } as GameState)
+        dispatch(
+          updateGameState({
+            ...data,
+            status: "IN_PROGRESS",
+          })
         );
-        setSelectedAnswer(null);
-        setIsTimerExpired(false);
-        // Show welcome modal when game starts
-        setShowWelcomeModal(true);
+        dispatch(setSelectedAnswer(null));
+        dispatch(setIsTimerExpired(false));
+        dispatch(setShowWelcomeModal(true));
       }
     );
 
     newSocket.on(
       "question-started",
       (data: {
-        question: { text: string; A: string; B: string; C: string; D: string };
+        question: {
+          text: string;
+          A: string;
+          B: string;
+          C: string;
+          D: string;
+          correct: "A" | "B" | "C" | "D";
+        };
         questionIndex: number;
         endAt: number;
       }) => {
         console.log("❓ Question started:", data);
-        setGameState(
-          (prev) =>
-            ({
-              ...prev,
-              status: "QUESTION_ACTIVE",
-              question: data.question,
-              questionIndex: data.questionIndex,
-              endAt: data.endAt,
-            } as GameState)
+        dispatch(
+          updateGameState({
+            status: "QUESTION_ACTIVE",
+            question: data.question,
+            questionIndex: data.questionIndex,
+            endAt: data.endAt,
+          })
         );
-        setSelectedAnswer(null);
-        setIsTimerExpired(false);
-        // Close welcome modal when question starts
-        setShowWelcomeModal(false);
+        dispatch(setSelectedAnswer(null));
+        dispatch(setIsTimerExpired(false));
+        dispatch(setShowWelcomeModal(false));
       }
     );
 
     newSocket.on("question-ended", (data: any) => {
       console.log("⏹️ Question ended:", data);
-      setGameState(
-        (prev) =>
-          ({
-            ...prev,
-            status: "QUESTION_ENDED",
-          } as GameState)
-      );
-      setIsTimerExpired(true);
+      dispatch(updateGameState({ status: "QUESTION_ENDED" }));
+      dispatch(setIsTimerExpired(true));
     });
 
     newSocket.on(
       "question-navigated",
       async (data: {
         questionIndex: number;
-        question: { text: string; A: string; B: string; C: string; D: string };
+        question: {
+          text: string;
+          A: string;
+          B: string;
+          C: string;
+          D: string;
+          correct: "A" | "B" | "C" | "D";
+        };
         answerRevealed?: boolean;
         correctAnswer?: "A" | "B" | "C" | "D";
         isReviewMode?: boolean;
@@ -331,7 +344,6 @@ export default function GamePage() {
         console.log("📄 Question navigated:", data);
         const isReviewMode = data.isReviewMode || false;
 
-        // If in review mode, fetch the player's previous answer for this question
         if (isReviewMode && playerId) {
           try {
             const response = await fetch(
@@ -343,32 +355,35 @@ export default function GamePage() {
               answerData.answer &&
               answerData.answer !== "NO_ANSWER"
             ) {
-              setSelectedAnswer(answerData.answer as "A" | "B" | "C" | "D");
+              dispatch(
+                setSelectedAnswer(answerData.answer as "A" | "B" | "C" | "D")
+              );
+              dispatch(
+                setPreviousAnswer(answerData.answer as "A" | "B" | "C" | "D")
+              );
             } else {
-              setSelectedAnswer(null);
+              dispatch(setSelectedAnswer(null));
             }
           } catch (error) {
             console.error("Error fetching previous answer:", error);
-            setSelectedAnswer(null);
+            dispatch(setSelectedAnswer(null));
           }
         } else {
-          setSelectedAnswer(null);
+          dispatch(setSelectedAnswer(null));
         }
 
-        setGameState(
-          (prev) =>
-            ({
-              ...prev,
-              status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
-              questionIndex: data.questionIndex,
-              question: data.question,
-              endAt: undefined,
-              answerRevealed: data.answerRevealed || false,
-              correctAnswer: data.correctAnswer,
-            } as GameState)
+        dispatch(
+          updateGameState({
+            status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
+            questionIndex: data.questionIndex,
+            question: data.question,
+            endAt: undefined,
+            answerRevealed: data.answerRevealed || false,
+            correctAnswer: data.correctAnswer,
+          })
         );
-        setIsTimerExpired(isReviewMode); // Timer is expired in review mode
-        setTimeRemaining(0); // Reset timer
+        dispatch(setIsTimerExpired(isReviewMode));
+        dispatch(setTimeRemaining(0));
       }
     );
 
@@ -379,22 +394,17 @@ export default function GamePage() {
         correctAnswer: "A" | "B" | "C" | "D";
       }) => {
         console.log("✅ Answer revealed:", data);
-        // Stop the timer and set it to 0 when answer is revealed
         if (timerIntervalRef.current) {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
         }
-        setTimeRemaining(0);
-        setIsTimerExpired(true);
-        // Keep the question view but mark answer as revealed
-        setGameState((prev) =>
-          prev
-            ? {
-                ...prev,
-                answerRevealed: true,
-                correctAnswer: data.correctAnswer,
-              }
-            : null
+        dispatch(setTimeRemaining(0));
+        dispatch(setIsTimerExpired(true));
+        dispatch(
+          updateGameState({
+            answerRevealed: true,
+            correctAnswer: data.correctAnswer,
+          })
         );
       }
     );
@@ -408,7 +418,6 @@ export default function GamePage() {
           );
         } else {
           console.error("❌ Answer rejected:", data.reason);
-          // Show error to user if answer was rejected
           if (data.reason) {
             alert(`Answer not accepted: ${data.reason}`);
           }
@@ -418,37 +427,28 @@ export default function GamePage() {
 
     newSocket.on("session-cancelled", (data: { message?: string }) => {
       console.log("❌ Player: Session cancelled event received:", data);
-      // Show thank you modal instead of error screen
       console.log("🎉 Player: Showing thank you modal");
-      setShowThankYouModal(true);
-      setGameState((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: "QUESTION_ENDED",
-            }
-          : null
-      );
-      // Disconnect the socket since session is cancelled
+      dispatch(setShowThankYouModal(true));
+      dispatch(updateGameState({ status: "QUESTION_ENDED" }));
       console.log("🔌 Player: Disconnecting socket after session cancellation");
       newSocket.disconnect();
-      setConnected(false);
+      dispatch(setConnected(false));
     });
 
     newSocket.on("force-disconnect", (data: { reason: string }) => {
       console.log("🔌 Force disconnect:", data);
-      setError(data.reason || "Another connection detected");
+      dispatch(setError(data.reason || "Another connection detected"));
       newSocket.disconnect();
     });
 
     newSocket.on("disconnect", () => {
       console.log("🔌 Disconnected from server");
-      setConnected(false);
+      dispatch(setConnected(false));
     });
 
     newSocket.on("connect_error", (error) => {
       console.error("Connection error:", error);
-      setError("Failed to connect to server");
+      dispatch(setError("Failed to connect to server"));
     });
 
     newSocket.on(
@@ -460,8 +460,8 @@ export default function GamePage() {
         console.log(
           "🏆 Player: Setting leaderboard and showing winner display"
         );
-        setLeaderboard(data.leaderboard);
-        setShowWinnerDisplay(true);
+        dispatch(setLeaderboard(data.leaderboard));
+        dispatch(setShowWinnerDisplay(true));
         console.log("🏆 Player: showWinnerDisplay set to true");
       }
     );
@@ -472,19 +472,15 @@ export default function GamePage() {
       }
       newSocket.disconnect();
     };
-  }, [sessionCode, playerName, sessionEnded]);
+  }, [sessionCode, playerName, sessionEnded, playerId, dispatch]);
 
   const handleAnswerSelect = (answer: "A" | "B" | "C" | "D") => {
     if (!socket || !gameState) return;
-    // Only allow if question is active - server will validate if timer has expired
-    // Don't allow answer changes in review mode (when answer is already revealed)
     if (gameState.status !== "QUESTION_ACTIVE" || gameState.answerRevealed)
       return;
 
-    // Update selected answer immediately (optimistic UI)
-    setSelectedAnswer(answer);
+    dispatch(setSelectedAnswer(answer));
 
-    // Emit answer to server (allows changing answers while timer is active)
     socket.emit("SUBMIT_ANSWER", {
       gameId: gameState.sessionId,
       questionIndex: gameState.questionIndex,
@@ -493,27 +489,24 @@ export default function GamePage() {
   };
 
   const handleExitGame = () => {
-    setIsExitModalOpen(true);
+    dispatch(setIsExitModalOpen(true));
   };
 
   const handleConfirmExit = () => {
-    // Emit leave-game event to server
     if (socket) {
       socket.emit("leave-game", { sessionCode });
-    }
-
-    // Disconnect socket
-    if (socket) {
       socket.disconnect();
     }
-    setConnected(false);
-    setError(
-      "GOODBYE: You have left the game. You cannot rejoin with the same name."
+    dispatch(setConnected(false));
+    dispatch(
+      setError(
+        "GOODBYE: You have left the game. You cannot rejoin with the same name."
+      )
     );
-    setIsExitModalOpen(false);
+    dispatch(setIsExitModalOpen(false));
   };
 
-  // Show error screen if there's an error (including session cancelled or player exit)
+  // Show error screen if there's an error
   if (error) {
     const isCancelled = error.includes("cancelled");
     const isGoodbye = error.includes("GOODBYE:");
@@ -592,18 +585,16 @@ export default function GamePage() {
           </div>
         </CenteredLayout>
 
-        {/* Exit Game Confirmation Modal */}
         <DeleteConfirmationModal
           isOpen={isExitModalOpen}
           playerMode={true}
-          onClose={() => setIsExitModalOpen(false)}
+          onClose={() => dispatch(setIsExitModalOpen(false))}
           onConfirm={handleConfirmExit}
           title="Exit Game"
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {/* Winner Display - Full screen overlay */}
         {playerName && playerId && (
           <WinnerDisplay
             isOpen={showWinnerDisplay}
@@ -613,12 +604,63 @@ export default function GamePage() {
           />
         )}
 
-        {/* Thank You Modal - Shows when host ends the game */}
         <ThankYouModal
           isOpen={showThankYouModal}
           hostName={hostName}
           playerName={playerName}
-          onClose={() => setShowThankYouModal(false)}
+          onClose={() => dispatch(setShowThankYouModal(false))}
+        />
+      </>
+    );
+  }
+
+  if (sessionEnded) {
+    return (
+      <>
+        <CenteredLayout>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
+            <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
+              Game Session Ended
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              This game session has ended. You can close this page.
+            </p>
+            {hostName && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Thanks for playing {hostName}'s game!
+              </p>
+            )}
+            <div className="space-y-4">
+              <a
+                href="/"
+                className="block w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+              >
+                Go to Dashboard
+              </a>
+              <button
+                onClick={() => (window.location.href = "/auth/signup")}
+                className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium shadow-md"
+              >
+                Create Your Own Ha-Hootz Account
+              </button>
+            </div>
+          </div>
+        </CenteredLayout>
+
+        {playerName && playerId && (
+          <WinnerDisplay
+            isOpen={showWinnerDisplay}
+            playerName={playerName}
+            playerId={playerId}
+            leaderboard={leaderboard}
+          />
+        )}
+
+        <ThankYouModal
+          isOpen={showThankYouModal}
+          hostName={hostName}
+          playerName={playerName}
+          onClose={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -628,7 +670,6 @@ export default function GamePage() {
     return (
       <>
         <Loading message="Connecting to game..." />
-        {/* Winner Display - Full screen overlay */}
         {playerName && playerId && (
           <WinnerDisplay
             isOpen={showWinnerDisplay}
@@ -638,23 +679,21 @@ export default function GamePage() {
           />
         )}
 
-        {/* Thank You Modal - Shows when host ends the game */}
         <ThankYouModal
           isOpen={showThankYouModal}
           hostName={hostName}
           playerName={playerName}
-          onClose={() => setShowThankYouModal(false)}
+          onClose={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
   }
 
-  // Lobby / Waiting Room - Welcome Screen
+  // Lobby / Waiting Room
   if (gameState.status === "WAITING") {
     return (
       <>
         <CenteredLayout relative>
-          {/* Exit Button - Fixed position top right */}
           <button
             onClick={handleExitGame}
             className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
@@ -706,18 +745,16 @@ export default function GamePage() {
           </div>
         </CenteredLayout>
 
-        {/* Exit Game Confirmation Modal */}
         <DeleteConfirmationModal
           playerMode={true}
           isOpen={isExitModalOpen}
-          onClose={() => setIsExitModalOpen(false)}
+          onClose={() => dispatch(setIsExitModalOpen(false))}
           onConfirm={handleConfirmExit}
           title="Exit Game"
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {/* Winner Display - Full screen overlay */}
         {playerName && playerId && (
           <WinnerDisplay
             isOpen={showWinnerDisplay}
@@ -727,19 +764,17 @@ export default function GamePage() {
           />
         )}
 
-        {/* Thank You Modal - Shows when host ends the game */}
         <ThankYouModal
           isOpen={showThankYouModal}
           hostName={hostName}
           playerName={playerName}
-          onClose={() => setShowThankYouModal(false)}
+          onClose={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
   }
 
-  // Active Question View - Show when question is active, ended, or in progress
-  // But answer buttons only show when question is ACTIVE or ENDED (not just IN_PROGRESS)
+  // Active Question View
   if (
     gameState.question &&
     (gameState.status === "QUESTION_ACTIVE" ||
@@ -761,7 +796,6 @@ export default function GamePage() {
       const isSelected = selectedAnswer === option;
       const isDisabled =
         isTimerExpired || gameState.status === "QUESTION_ENDED";
-      // Only show correct/incorrect styling when question has ended AND answer is revealed
       const isCorrect =
         gameState.status === "QUESTION_ENDED" &&
         gameState.answerRevealed &&
@@ -776,12 +810,10 @@ export default function GamePage() {
         return `${baseClass} bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`;
       }
 
-      // Show correct answer highlighted when revealed
       if (isCorrect) {
         return `${baseClass} bg-green-600 dark:bg-green-700 text-white shadow-lg border-4 border-green-400`;
       }
 
-      // Show incorrect selected answer when revealed
       if (isIncorrect) {
         return `${baseClass} bg-red-600 dark:bg-red-700 text-white`;
       }
@@ -800,7 +832,6 @@ export default function GamePage() {
     return (
       <>
         <CenteredLayout relative flexCol>
-          {/* Exit Button - Fixed position top right */}
           <button
             onClick={handleExitGame}
             className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
@@ -823,7 +854,6 @@ export default function GamePage() {
           </button>
 
           <div className="max-w-md mx-auto w-full flex flex-col flex-1">
-            {/* Timer - Only show when question is active */}
             {isQuestionActive && (
               <div className="text-center mb-6">
                 <div
@@ -837,7 +867,6 @@ export default function GamePage() {
               </div>
             )}
 
-            {/* Player Name Title */}
             {playerName && (
               <div className="text-center mb-4">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -846,18 +875,15 @@ export default function GamePage() {
               </div>
             )}
 
-            {/* Question */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
                 {gameState.question.text}
               </h2>
             </div>
 
-            {/* Answer Buttons - Only show when question is active or ended */}
             {showAnswerButtons ? (
               <div className="space-y-4 mb-4">
                 {(["A", "B", "C", "D"] as const).map((option) => {
-                  // Only show correct indicator if answer is revealed AND question is ended
                   const showCorrectIndicator =
                     gameState.answerRevealed &&
                     gameState.correctAnswer === option &&
@@ -868,7 +894,6 @@ export default function GamePage() {
                       key={option}
                       onClick={() => handleAnswerSelect(option)}
                       disabled={
-                        // Disable if question has ended OR if answer is revealed (review mode)
                         gameState.status === "QUESTION_ENDED" ||
                         gameState.answerRevealed
                       }
@@ -896,7 +921,6 @@ export default function GamePage() {
               </div>
             )}
 
-            {/* Status indicator */}
             {isTimerExpired && !gameState.answerRevealed && (
               <div className="text-center text-sm text-gray-500 dark:text-gray-400">
                 Time's up! Your answer has been submitted.
@@ -917,18 +941,16 @@ export default function GamePage() {
           </div>
         </CenteredLayout>
 
-        {/* Exit Game Confirmation Modal */}
         <DeleteConfirmationModal
           playerMode={true}
           isOpen={isExitModalOpen}
-          onClose={() => setIsExitModalOpen(false)}
+          onClose={() => dispatch(setIsExitModalOpen(false))}
           onConfirm={handleConfirmExit}
           title="Exit Game"
           itemName="game"
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {/* Winner Display - Full screen overlay */}
         {playerName && playerId && (
           <WinnerDisplay
             isOpen={showWinnerDisplay}
@@ -938,23 +960,20 @@ export default function GamePage() {
           />
         )}
 
-        {/* Thank You Modal - Shows when host ends the game */}
         <ThankYouModal
           isOpen={showThankYouModal}
           hostName={hostName}
           playerName={playerName}
-          onClose={() => setShowThankYouModal(false)}
+          onClose={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
   }
 
   // Fallback: Game in progress but no question active yet
-  // Show welcome modal and waiting screen
   return (
     <>
       <CenteredLayout relative>
-        {/* Exit Button - Fixed position top right */}
         <button
           onClick={handleExitGame}
           className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
@@ -992,34 +1011,24 @@ export default function GamePage() {
         </div>
       </CenteredLayout>
 
-      {/* Game Welcome Modal - Shows when game starts but before first question */}
       <GameWelcomeModal
         isOpen={showWelcomeModal}
-        onClose={() => setShowWelcomeModal(false)}
+        onClose={() => dispatch(setShowWelcomeModal(false))}
         playerName={playerName}
         hostName={hostName}
         sessionCode={sessionCode}
       />
 
-      {/* Exit Game Confirmation Modal */}
       <DeleteConfirmationModal
         playerMode={true}
         isOpen={isExitModalOpen}
-        onClose={() => setIsExitModalOpen(false)}
+        onClose={() => dispatch(setIsExitModalOpen(false))}
         onConfirm={handleConfirmExit}
         title="Exit Game"
         itemName="game"
         description="You won't be able to rejoin with the same name if you leave now."
       />
 
-      {/* Winner Display - Full screen overlay */}
-      {console.log("🎯 Game Page - WinnerDisplay render check:", {
-        showWinnerDisplay,
-        playerName,
-        playerId,
-        leaderboardLength: leaderboard.length,
-        willRender: !!(playerName && playerId),
-      })}
       {playerName && playerId && (
         <WinnerDisplay
           isOpen={showWinnerDisplay}
@@ -1029,12 +1038,11 @@ export default function GamePage() {
         />
       )}
 
-      {/* Thank You Modal - Shows when host ends the game */}
       <ThankYouModal
         isOpen={showThankYouModal}
         hostName={hostName}
         playerName={playerName}
-        onClose={() => setShowThankYouModal(false)}
+        onClose={() => dispatch(setShowThankYouModal(false))}
       />
     </>
   );

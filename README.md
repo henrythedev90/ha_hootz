@@ -34,6 +34,9 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - Session cancellation by host
   - **Host Dashboard Persistence**: Host stays in session on page refresh, game state automatically restored
   - **Players List Modal**: Shows all joined players with countdown before starting first question
+    - Responsive layout: 1 column for few players, 2 columns for many players
+    - Scrollable overflow for large player lists
+    - Centered text alignment with consistent emoji positioning
   - **Player Exit Control**: Players who leave cannot rejoin with the same name
   - **Answer Reveal Modal**: Dedicated modal showing correct answer and distribution when host reveals
     - Automatically opens when question ends
@@ -44,13 +47,16 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - **Smart Answer Reveal**: Button only enabled when all connected players have submitted
   - **Timer Control**: Timer automatically stops (set to 0) when answer is revealed
   - **Question Navigation**: Navigate between questions with automatic state reset
-    - **Previous Question Review Mode**: When navigating to a previously answered question:
+    - **Previous Question Review Mode**: When navigating to any previously answered question (forward or backward):
+      - Automatically detects if question has been answered (checks Redis for existing answers)
       - Question is displayed in review mode (read-only)
       - Correct answer is automatically revealed
       - Players see their previous answer highlighted
       - Players cannot change their answers in review mode
-      - "Start Question" button is disabled for answered questions
+      - "Start Question" button is disabled for answered questions (prevents restarting answered questions)
       - Question status is set to "QUESTION_ENDED" (no timer, no active submission)
+      - Timer does not run in review mode
+      - Works for both navigating backward and forward to answered questions
   - **Comprehensive Scoring System**:
     - Configurable base points per question
     - Time-based bonuses (awarded for fast answers)
@@ -61,6 +67,10 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - **Winner Display**: Full-screen winner announcement for players at game end
   - **End Game Functionality**: Host can end game with confirmation modal, all players see thank you message
   - **Session Ended Detection**: Players who refresh after game ends see appropriate message instead of game screen
+  - **Clean Session State**: Each new game session starts with fresh state (no carryover from previous sessions)
+    - Game state flags (isReviewMode, answerRevealed) are reset for new sessions
+    - All modals are closed when starting a new session
+    - Prevents old game state from appearing in new sessions
 
 - **Player Experience (Mobile-First)**
 
@@ -104,11 +114,13 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - Live answer distribution visualization
   - **Leaderboard Display**: Shows all players with their scores, sorted by rank
   - Question navigation (previous/next) with automatic state reset
-    - **Previous Question Review**: Navigating to a previously answered question:
-      - Automatically detects if question has been answered
+    - **Previous Question Review**: Navigating to any previously answered question:
+      - Automatically detects if question has been answered (works for forward and backward navigation)
       - Loads answer distribution and player responses
       - Disables "Start Question" button (tooltip explains why)
+      - Prevents restarting questions that have already been answered
       - Sets question to review mode for players
+      - Timer does not run in review mode
   - Answer reveal modal with distribution charts and leaderboard
   - **Reveal Winner**: Button on last question to announce winner to all players
   - **End Game**: Confirmation modal to end game session, disconnects all players
@@ -131,6 +143,7 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
 - **Database**: MongoDB Atlas (for persistent data)
 - **Cache/Real-time**: Redis (Upstash compatible, serverless-safe)
 - **WebSocket**: Socket.io with Redis adapter (multi-server support)
+- **State Management**: Redux Toolkit with React-Redux for centralized state management
 - **Authentication**: NextAuth.js v5
 - **Styling**: Tailwind CSS v4
 - **Password Hashing**: bcryptjs
@@ -301,6 +314,16 @@ ha-hootz/
 │   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
 │   └── utils.ts                            # Utility functions (generateId, formatDate)
+├── store/
+│   ├── index.ts                            # Redux store configuration
+│   ├── hooks.ts                            # Typed Redux hooks (useAppDispatch, useAppSelector)
+│   ├── StoreProvider.tsx                   # Redux Provider component for Next.js App Router
+│   └── slices/
+│       ├── gameSlice.ts                    # Game state slice (status, questions, review mode)
+│       ├── hostSlice.ts                    # Host state slice (players, stats, leaderboard)
+│       ├── playerSlice.ts                  # Player state slice (answers, timer, leaderboard)
+│       ├── socketSlice.ts                  # Socket connection state slice
+│       └── uiSlice.ts                      # UI state slice (modals, errors, loading)
 ├── server.ts                               # Custom Next.js server with Socket.io integration
 └── types/
     ├── index.ts                            # TypeScript types
@@ -385,6 +408,7 @@ ha-hootz/
 - `GET /api/sessions/[sessionCode]/stats` - Get game statistics (player count, answer count, distribution, players with answers)
 - `GET /api/sessions/[sessionCode]/player-answer` - Get a player's answer for a specific question (used for review mode)
 - `GET /api/qr/[sessionCode]` - Generate QR code for session join URL
+- `GET /api/sessions/validate/[sessionCode]?hostCheck=true` - Validate session code with host ownership check (allows host access to live/ended sessions)
 
 ### Socket.io Events
 
@@ -565,6 +589,12 @@ npm run lint
 - [x] Reveal winner functionality on last question
 - [x] End game functionality with confirmation modal
 - [x] Scoring configuration UI with tooltips and explanations
+- [x] Redux Toolkit integration for centralized state management
+- [x] Previous question review mode improvements (works for forward and backward navigation)
+- [x] Game state reset between sessions (prevents carryover from previous sessions)
+- [x] Modal state reset for new sessions (ensures clean UI state)
+- [x] Start Question button improvements (disabled for answered questions)
+- [x] Player list layout improvements (responsive columns, scrollable overflow)
 - [ ] Image support for questions
 - [ ] Presentation sharing and collaboration
 - [ ] Game history and analytics
