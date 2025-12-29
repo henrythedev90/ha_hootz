@@ -364,22 +364,6 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
       // Store submission timestamp for time-based bonus calculation
       // Always update timestamp on each submission (even if answer changed)
       const submissionTime = Date.now();
-      const submissionDate = new Date(submissionTime);
-
-      // Calculate question start time and timing info
-      // Note: endAt is already declared above at line 315
-      const questionDuration = 30000; // Default 30 seconds (should match host's durationMs)
-      const questionStartTime = endAt ? endAt - questionDuration : null;
-      const timeSinceStart = questionStartTime
-        ? submissionTime - questionStartTime
-        : null;
-      const secondsSinceStart = timeSinceStart
-        ? Math.floor(timeSinceStart / 1000)
-        : null;
-      const timeRemaining = endAt ? Math.max(0, endAt - submissionTime) : null;
-      const timeRemainingSeconds = timeRemaining
-        ? Math.floor(timeRemaining / 1000)
-        : null;
 
       await storeAnswerTimestamp(
         gameId,
