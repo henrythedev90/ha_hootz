@@ -496,19 +496,40 @@ export default function HostDashboard() {
       }) => {
         console.log("📄 Question navigated:", data);
         const isReviewMode = data.isReviewMode || false;
+        const answerRevealed = data.answerRevealed || false;
+
+        console.log("🔍 Navigation state:", {
+          isReviewMode,
+          answerRevealed,
+          questionIndex: data.questionIndex,
+        });
 
         // Update game state with review mode flags from server
-        dispatch(
-          updateGameState({
-            questionIndex: data.questionIndex,
-            question: data.question,
-            status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
-            answerRevealed: data.answerRevealed || false,
-            correctAnswer: data.correctAnswer,
-            isReviewMode: isReviewMode,
-            endAt: undefined,
-          })
-        );
+        // If gameState doesn't exist, we need to set it first
+        if (!gameState) {
+          dispatch(
+            setGameState({
+              status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
+              questionIndex: data.questionIndex,
+              question: data.question,
+              answerRevealed: answerRevealed,
+              correctAnswer: data.correctAnswer,
+              isReviewMode: isReviewMode,
+            })
+          );
+        } else {
+          dispatch(
+            updateGameState({
+              questionIndex: data.questionIndex,
+              question: data.question,
+              status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
+              answerRevealed: answerRevealed,
+              correctAnswer: data.correctAnswer,
+              isReviewMode: isReviewMode,
+              endAt: undefined,
+            })
+          );
+        }
 
         // If in review mode, fetch stats to show player answers
         if (isReviewMode) {
@@ -693,6 +714,22 @@ export default function HostDashboard() {
     if (!socket) return;
     dispatch(setShowEndGameModal(true));
   };
+
+  // Debug: Log gameState changes for isReviewMode and answerRevealed
+  useEffect(() => {
+    if (gameState) {
+      console.log("🎮 GameState updated:", {
+        questionIndex: gameState.questionIndex,
+        isReviewMode: gameState.isReviewMode,
+        answerRevealed: gameState.answerRevealed,
+        status: gameState.status,
+      });
+    }
+  }, [
+    gameState?.isReviewMode,
+    gameState?.answerRevealed,
+    gameState?.questionIndex,
+  ]);
 
   // Get current question from gameState or fallback to questions array
   const currentQuestion =
@@ -961,16 +998,28 @@ export default function HostDashboard() {
               <div className="space-y-3">
                 <button
                   onClick={handleStartQuestion}
-                  disabled={
-                    !connected ||
-                    !currentQuestion ||
-                    isQuestionActive ||
-                    (gameState?.isReviewMode && gameState?.answerRevealed)
-                  }
+                  disabled={(() => {
+                    const disabled =
+                      !connected ||
+                      !currentQuestion ||
+                      isQuestionActive ||
+                      gameState?.isReviewMode === true ||
+                      gameState?.answerRevealed === true;
+                    console.log("🔘 Start Question button disabled check:", {
+                      disabled,
+                      connected,
+                      hasCurrentQuestion: !!currentQuestion,
+                      isQuestionActive,
+                      isReviewMode: gameState?.isReviewMode,
+                      answerRevealed: gameState?.answerRevealed,
+                      questionIndex: gameState?.questionIndex,
+                    });
+                    return disabled;
+                  })()}
                   className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   title={
-                    gameState?.isReviewMode && gameState?.answerRevealed
-                      ? "This question has already been answered in review mode"
+                    gameState?.isReviewMode || gameState?.answerRevealed
+                      ? "This question has already been answered"
                       : undefined
                   }
                 >

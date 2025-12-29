@@ -181,6 +181,19 @@ export function registerHostHandlers(io: Server, socket: Socket) {
           return;
         }
 
+        // Check if this question has already been answered (prevent restarting answered questions)
+        const answers = await redis.hGetAll(
+          answersKey(sessionId, questionIndex ?? 0)
+        );
+        const hasAnswers = Object.keys(answers).length > 0;
+        if (hasAnswers) {
+          socket.emit("error", {
+            message:
+              "Cannot start a question that has already been answered. Use navigation to review it.",
+          });
+          return;
+        }
+
         const startTime = Date.now();
         const endAt = startTime + question.durationMs;
 
@@ -442,17 +455,19 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         return;
       }
 
-      // Check if this question has already been answered (previous question)
-      // If current question index is greater than the navigated index, it's a previous question
-      const currentQuestionIndex = gameState.questionIndex ?? 0;
-      const isPreviousQuestion = questionIndex < currentQuestionIndex;
-
       // Check if answers exist for this question (indicates it was already answered)
       const answers = await redis.hGetAll(answersKey(sessionId, questionIndex));
       const hasAnswers = Object.keys(answers).length > 0;
 
-      // If navigating to a previous question that has been answered, show it in review mode
-      const isReviewMode = isPreviousQuestion && hasAnswers;
+      // If a question has answers, it means it's been answered and should be in review mode
+      // This applies whether navigating forward or backward to an answered question
+      const isReviewMode = hasAnswers;
+
+      console.log(
+        `🔍 NAVIGATE_QUESTION: questionIndex=${questionIndex}, hasAnswers=${hasAnswers}, isReviewMode=${isReviewMode}, answerCount=${
+          Object.keys(answers).length
+        }`
+      );
 
       // Update game state (preserve scoringConfig and other properties)
       const newState = {
