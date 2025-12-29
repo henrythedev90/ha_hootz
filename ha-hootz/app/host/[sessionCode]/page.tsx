@@ -809,7 +809,7 @@ export default function HostDashboard() {
   if (sessionStatus === "ended") {
     return (
       <CenteredLayout>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
+        <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center border border-indigo/20">
           <h1 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-4">
             Game Has Ended
           </h1>
@@ -822,7 +822,7 @@ export default function HostDashboard() {
           </p>
           <button
             onClick={() => router.push("/")}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+            className="w-full px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium"
           >
             Return to Dashboard
           </button>
@@ -848,7 +848,7 @@ export default function HostDashboard() {
         />
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
           <div className="max-w-6xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+            <div className="bg-card-bg rounded-lg shadow-md p-6 mb-6 border border-indigo/20">
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -871,7 +871,7 @@ export default function HostDashboard() {
                   joinUrl={`/join/${sessionCode}`}
                 />
 
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <div className="bg-card-bg rounded-lg shadow-md p-6 border border-indigo/20">
                   <h3 className="text-lg text-center font-semibold text-gray-900 dark:text-white mb-4">
                     Players ({players.length})
                   </h3>
@@ -979,7 +979,7 @@ export default function HostDashboard() {
       })()}
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
+          <div className="bg-card-bg rounded-lg shadow-md p-4 mb-4 border border-indigo/20">
             <div className="flex justify-between items-center">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -993,7 +993,7 @@ export default function HostDashboard() {
               <button
                 onClick={handleCancelSession}
                 disabled={!connected}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                className="px-4 py-2 bg-error text-white rounded-lg hover:bg-error/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
               >
                 Cancel Session
               </button>
@@ -1077,7 +1077,7 @@ export default function HostDashboard() {
                     });
                     return disabled;
                   })()}
-                  className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="w-full px-4 py-3 bg-success text-white rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   title={
                     gameState?.isReviewMode || gameState?.answerRevealed
                       ? "This question has already been answered"
@@ -1101,7 +1101,7 @@ export default function HostDashboard() {
                       (stats.playerCount === 0 ||
                         stats.answerCount < stats.playerCount))
                   }
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="w-full px-4 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   {stats.playerCount === 0
                     ? "Reveal Answer (No Players)"
@@ -1223,7 +1223,7 @@ export default function HostDashboard() {
           <div className="flex justify-end gap-3 pt-4">
             <button
               onClick={() => dispatch(setShowEndGameModal(false))}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+              className="px-4 py-2 bg-card-bg border border-indigo/30 text-text-light rounded-lg hover:bg-indigo/10 transition-colors font-medium"
             >
               Cancel
             </button>
@@ -1242,7 +1242,7 @@ export default function HostDashboard() {
                 dispatch(setShowEndGameModal(false));
                 dispatch(setShowAnswerRevealModal(false));
               }}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+              className="px-4 py-2 bg-error text-white rounded-lg hover:bg-error/90 transition-colors font-medium"
             >
               End Game
             </button>

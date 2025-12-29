@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Electric Night Theme Colors */
+  --deep-navy: #0b1020;
+  --indigo: #6366f1;
+  --cyan: #22d3ee;
+  --success: #22c55e;
+  --error: #ef4444;
+  --text-light: #e5e7eb;
+  --card-bg: #1a1f35;
+
+  --background: var(--deep-navy);
+  --foreground: var(--text-light);
 }
 
+/* stylelint-disable-next-line unknownAtRules */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Theme Colors */
+  --color-deep-navy: var(--deep-navy);
+  --color-indigo: var(--indigo);
+  --color-cyan: var(--cyan);
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --color-text-light: var(--text-light);
+  --color-card-bg: var(--card-bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--deep-navy);
+  color: var(--text-light);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
 }

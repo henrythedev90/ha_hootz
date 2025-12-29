@@ -117,7 +117,7 @@ export default function QuestionEditor({
               </label>
               <button
                 onClick={() => handleDeleteOption(option.id)}
-                className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                className="px-3 py-2 bg-[var(--error)] text-white rounded-lg hover:bg-[var(--error)]/90 text-sm transition-colors"
               >
                 Delete
               </button>
@@ -130,12 +130,12 @@ export default function QuestionEditor({
             value={newOptionText}
             onChange={(e) => setNewOptionText(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleAddOption()}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="flex-1 px-3 py-2 border border-[var(--indigo)]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--indigo)] bg-[var(--card-bg)] text-[var(--text-light)]"
             placeholder="Add new option..."
           />
           <button
             onClick={handleAddOption}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+            className="px-4 py-2 bg-[var(--success)] text-white rounded-lg hover:bg-[var(--success)]/90 text-sm font-medium transition-colors"
           >
             Add Option
           </button>
@@ -146,20 +146,20 @@ export default function QuestionEditor({
         {onDelete && (
           <button
             onClick={onDelete}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+            className="px-4 py-2 bg-[var(--error)] text-white rounded-lg hover:bg-[var(--error)]/90 text-sm font-medium transition-colors"
           >
             Delete Question
           </button>
         )}
         <button
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-medium"
+          className="px-4 py-2 bg-[var(--card-bg)] border border-[var(--indigo)]/30 text-[var(--text-light)] rounded-lg hover:bg-[var(--indigo)]/10 text-sm font-medium transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+          className="px-4 py-2 bg-[var(--indigo)] text-white rounded-lg hover:bg-[var(--indigo)]/90 text-sm font-medium transition-colors"
         >
           Save Question
         </button>

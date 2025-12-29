@@ -39,9 +39,9 @@ export default function GameWelcomeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-8 text-center">
+      <div className="bg-[var(--card-bg)] rounded-lg shadow-xl max-w-md w-full p-8 text-center border border-[var(--indigo)]/20">
         <div className="mb-6">
-          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-[var(--indigo)] rounded-full flex items-center justify-center mx-auto mb-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-10 w-10 text-white"
@@ -57,14 +57,14 @@ export default function GameWelcomeModal({
               />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h2 className="text-3xl font-bold text-[var(--text-light)] mb-2">
             Your Game will be starting shortly!
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-lg">
+          <p className="text-[var(--text-light)]/80 text-lg">
             {playerName && (
               <>
                 Hey{" "}
-                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                <span className="font-semibold text-[var(--cyan)]">
                   {playerName}
                 </span>
                 !
@@ -75,8 +75,8 @@ export default function GameWelcomeModal({
         </div>
 
         <div className="mb-6 space-y-3">
-          <p className="text-gray-700 dark:text-gray-200">Good luck!</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-[var(--text-light)]">Good luck!</p>
+          <p className="text-sm text-[var(--text-light)]/70">
             {hostName ? (
               <>
                 <span className="font-semibold">{hostName}</span> is preparing
@@ -86,11 +86,11 @@ export default function GameWelcomeModal({
               "The host is preparing the first question."
             )}
           </p>
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+          <div className="pt-4 border-t border-[var(--indigo)]/20">
+            <p className="text-xs text-[var(--text-light)]/60 mb-1">
               Session Code
             </p>
-            <p className="text-lg font-mono font-semibold text-blue-600 dark:text-blue-400">
+            <p className="text-lg font-mono font-semibold text-[var(--cyan)]">
               {sessionCode}
             </p>
           </div>
@@ -101,7 +101,7 @@ export default function GameWelcomeModal({
             setShowModal(false);
             onClose();
           }}
-          className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+          className="w-full px-6 py-3 bg-[var(--indigo)] text-white rounded-lg hover:bg-[var(--indigo)]/90 transition-colors font-medium"
         >
           Got it!
         </button>

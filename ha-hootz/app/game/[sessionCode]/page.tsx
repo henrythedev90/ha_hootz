@@ -514,7 +514,7 @@ export default function GamePage() {
     return (
       <>
         <CenteredLayout>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
+          <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center border border-indigo/20">
             <h1 className="text-2xl font-bold mb-4">
               {isGoodbye ? (
                 <span className="text-blue-600 dark:text-blue-400">
@@ -543,11 +543,11 @@ export default function GamePage() {
                     </p>
                     <button
                       onClick={() => (window.location.href = "/auth/signup")}
-                      className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                      className="w-full px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md"
                     >
                       Create Your Own Ha-Hootz Account
                     </button>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <p className="text-xs text-text-light/60 mt-2">
                       Host your own trivia games and create engaging
                       presentations!
                     </p>
@@ -556,17 +556,17 @@ export default function GamePage() {
               </div>
             ) : isCancelled ? (
               <div className="space-y-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-text-light/60">
                   The host has ended this session. You can close this page.
                 </p>
                 {playerName && (
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                  <div className="pt-4 border-t border-indigo/20">
+                    <p className="text-sm text-text-light/80 mb-3">
                       Hey {playerName}! Did you enjoy playing?
                     </p>
                     <button
                       onClick={() => (window.location.href = "/auth/signup")}
-                      className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                      className="w-full px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md"
                     >
                       Create Your Own Ha-Hootz Account
                     </button>
@@ -618,7 +618,7 @@ export default function GamePage() {
     return (
       <>
         <CenteredLayout>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
+          <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center border border-indigo/20">
             <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
               Game Session Ended
             </h1>
@@ -633,13 +633,13 @@ export default function GamePage() {
             <div className="space-y-4">
               <a
                 href="/"
-                className="block w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                className="block w-full px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md"
               >
                 Go to Dashboard
               </a>
               <button
                 onClick={() => (window.location.href = "/auth/signup")}
-                className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium shadow-md"
+                className="w-full px-6 py-3 bg-success text-white rounded-lg hover:bg-success/90 transition-colors font-medium shadow-md"
               >
                 Create Your Own Ha-Hootz Account
               </button>
@@ -696,7 +696,7 @@ export default function GamePage() {
         <CenteredLayout relative>
           <button
             onClick={handleExitGame}
-            className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+            className="absolute top-4 right-4 w-10 h-10 bg-error hover:bg-error/90 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
             title="Exit Game"
           >
             <svg
@@ -716,7 +716,7 @@ export default function GamePage() {
           </button>
 
           <div className="w-full max-w-md">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
+            <div className="bg-card-bg rounded-lg shadow-md p-8 text-center border border-indigo/20">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 Welcome to Ha-Hootz!
               </h1>
@@ -807,26 +807,26 @@ export default function GamePage() {
         !isCorrect;
 
       if (isDisabled && !gameState.answerRevealed) {
-        return `${baseClass} bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`;
+        return `${baseClass} bg-card-bg border border-indigo/20 text-text-light/40 cursor-not-allowed`;
       }
 
       if (isCorrect) {
-        return `${baseClass} bg-green-600 dark:bg-green-700 text-white shadow-lg border-4 border-green-400`;
+        return `${baseClass} bg-success text-white shadow-lg border-4 border-success/80`;
       }
 
       if (isIncorrect) {
-        return `${baseClass} bg-red-600 dark:bg-red-700 text-white`;
+        return `${baseClass} bg-error text-white`;
       }
 
       if (isSelected && !gameState.answerRevealed) {
-        return `${baseClass} bg-green-600 dark:bg-green-700 text-white shadow-lg transform scale-105`;
+        return `${baseClass} bg-success text-white shadow-lg transform scale-105`;
       }
 
       if (isDisabled) {
-        return `${baseClass} bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`;
+        return `${baseClass} bg-card-bg border border-indigo/20 text-text-light/40 cursor-not-allowed`;
       }
 
-      return `${baseClass} bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95`;
+      return `${baseClass} bg-indigo text-white hover:bg-indigo/90 active:scale-95`;
     };
 
     return (
@@ -834,7 +834,7 @@ export default function GamePage() {
         <CenteredLayout relative flexCol>
           <button
             onClick={handleExitGame}
-            className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+            className="absolute top-4 right-4 w-10 h-10 bg-error hover:bg-error/90 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
             title="Exit Game"
           >
             <svg
@@ -875,7 +875,7 @@ export default function GamePage() {
               </div>
             )}
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
+            <div className="bg-card-bg rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center border border-indigo/20">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
                 {gameState.question.text}
               </h2>

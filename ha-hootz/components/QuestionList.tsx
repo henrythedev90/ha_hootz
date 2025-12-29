@@ -58,7 +58,7 @@ export default function QuestionList({
             setIsAdding(true);
             setEditingId(null);
           }}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+          className="px-4 py-2 bg-[var(--success)] text-white rounded-lg hover:bg-[var(--success)]/90 font-medium transition-colors"
         >
           + Add Question
         </button>
@@ -118,7 +118,7 @@ export default function QuestionList({
                 </div>
                 <button
                   onClick={() => handleEdit(question)}
-                  className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                  className="ml-4 px-4 py-2 bg-[var(--indigo)] text-white rounded-lg hover:bg-[var(--indigo)]/90 text-sm font-medium transition-colors"
                 >
                   Edit
                 </button>

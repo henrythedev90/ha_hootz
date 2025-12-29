@@ -59,68 +59,60 @@ export default function WinnerDisplay({
     leaderboardLength: leaderboard.length,
   });
 
+  // Confetti particles
+  const confettiColors = ['#6366F1', '#22D3EE', '#22C55E', '#EF4444', '#FFD700'];
+  const confetti = Array.from({ length: 50 }, (_, i) => ({
+    id: i,
+    color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+    delay: Math.random() * 2,
+    duration: 3 + Math.random() * 2,
+    x: Math.random() * 100,
+  }));
+
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black bg-opacity-90 p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl">
-        {/* Winner Announcement Banner */}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0B1020] bg-opacity-95 p-4 overflow-y-auto relative">
+      {/* Confetti */}
+      {isWinner && confetti.map((particle) => (
+        <div
+          key={particle.id}
+          className="absolute w-2 h-2 rounded-sm animate-confetti"
+          style={{
+            backgroundColor: particle.color,
+            left: `${particle.x}%`,
+            animationDelay: `${particle.delay}s`,
+            animationDuration: `${particle.duration}s`,
+          }}
+        />
+      ))}
+
+      <div className="relative z-10 w-full max-w-4xl">
+        {/* Winner Section */}
         {isWinner && (
-          <div className="mb-8 text-center animate-pulse">
-            <div className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-600 dark:from-yellow-500 dark:via-yellow-600 dark:to-yellow-700 rounded-2xl p-12 shadow-2xl border-4 border-yellow-300 dark:border-yellow-500 transform scale-105">
-              <div className="text-8xl mb-6 animate-bounce">🏆</div>
-              <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-lg">
-                {isTie ? "It's a Tie!" : "Congratulations!"}
-              </h1>
-              <h2 className="text-4xl text-yellow-100 mb-2 font-semibold">
-                {playerName}
-              </h2>
-              <p className="text-3xl text-yellow-100 font-bold">
-                You Won with {playerScore} points!
-              </p>
+          <div className="mb-16 text-center">
+            <div className="mb-6 animate-bounce">
+              <div className="text-8xl">🏆</div>
+            </div>
+            
+            <h1 className="text-6xl md:text-8xl font-bold mb-4 bg-gradient-to-r from-[#FFD700] via-[#22D3EE] to-[#6366F1] bg-clip-text text-transparent">
+              {playerName}
+            </h1>
+            
+            <p className="text-3xl md:text-4xl text-[#E5E7EB]/80 mb-2">
+              is the Champion!
+            </p>
+            
+            <div className="inline-block px-8 py-4 bg-gradient-to-r from-[#6366F1] to-[#22D3EE] rounded-full mt-4">
+              <span className="text-4xl font-bold text-white">{playerScore} points</span>
             </div>
           </div>
         )}
 
-        {/* Player's Rank Display */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 mb-6">
-          <div className="text-center">
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
-              Your Final Rank
-            </h2>
-            <div
-              className={`inline-flex items-center justify-center w-32 h-32 rounded-full text-6xl font-bold mb-4 ${
-                isWinner
-                  ? "bg-linear-to-br from-yellow-400 to-yellow-600 text-yellow-900 shadow-lg scale-110 animate-pulse"
-                  : isSecond
-                  ? "bg-linear-to-br from-gray-300 to-gray-500 text-gray-800 shadow-lg"
-                  : isThird
-                  ? "bg-linear-to-br from-orange-400 to-orange-600 text-orange-900 shadow-lg"
-                  : "bg-linear-to-br from-blue-400 to-blue-600 text-white shadow-lg"
-              }`}
-            >
-              {isWinner ? "👑" : `#${playerRank}`}
-            </div>
-            <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              {playerName}
-            </h3>
-            <p className="text-2xl text-blue-600 dark:text-blue-400 font-semibold mb-4">
-              {playerScore} points
-            </p>
-            <p className="text-lg text-gray-600 dark:text-gray-400">
-              Out of {totalPlayers} {totalPlayers === 1 ? "player" : "players"}
-            </p>
-          </div>
-        </div>
-
-        {/* Full Leaderboard */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
-          <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-            Final Leaderboard
-          </h3>
-          <div className="space-y-4">
+        {/* Leaderboard */}
+        <div className="w-full">
+          <h2 className="text-2xl font-semibold text-center mb-6 text-[#E5E7EB]">Final Leaderboard</h2>
+          <div className="space-y-3">
             {leaderboard.length === 0 ? (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-                No players
-              </p>
+              <p className="text-center text-[#E5E7EB]/60 py-8">No players</p>
             ) : (
               leaderboard.map((player, index) => {
                 const rank = index + 1;
@@ -130,55 +122,50 @@ export default function WinnerDisplay({
                 return (
                   <div
                     key={player.playerId}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      isPlayer
-                        ? "bg-blue-100 dark:bg-blue-900/50 border-blue-500 dark:border-blue-400 shadow-xl scale-105 ring-4 ring-blue-300 dark:ring-blue-600"
-                        : isTopThree
-                        ? rank === 1
-                          ? "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-500 dark:border-yellow-500"
-                          : rank === 2
-                          ? "bg-gray-100 dark:bg-gray-700 border-gray-400 dark:border-gray-400"
-                          : "bg-orange-100 dark:bg-orange-900/30 border-orange-500 dark:border-orange-500"
-                        : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                    }`}
+                    className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
+                      index === 0
+                        ? 'bg-gradient-to-r from-[#FFD700]/20 to-[#FFD700]/10 border-2 border-[#FFD700]/50 shadow-[0_0_30px_rgba(255,215,0,0.2)]'
+                        : index === 1
+                        ? 'bg-gradient-to-r from-[#C0C0C0]/20 to-[#C0C0C0]/10 border-2 border-[#C0C0C0]/50'
+                        : index === 2
+                        ? 'bg-gradient-to-r from-[#CD7F32]/20 to-[#CD7F32]/10 border-2 border-[#CD7F32]/50'
+                        : 'bg-[#1A1F35] border-2 border-[#6366F1]/20'
+                    } ${isPlayer ? 'ring-4 ring-[#22D3EE]/50' : ''}`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`text-3xl font-bold ${
-                          isTopThree
-                            ? rank === 1
-                              ? "text-yellow-600 dark:text-yellow-400"
-                              : rank === 2
-                              ? "text-gray-600 dark:text-gray-400"
-                              : "text-orange-600 dark:text-orange-400"
-                            : "text-gray-500 dark:text-gray-400"
-                        }`}
-                      >
-                        {rank === 1 ? "👑" : `#${rank}`}
-                      </div>
-                      <span
-                        className={`flex-1 text-xl font-semibold ${
-                          isPlayer
-                            ? "text-blue-900 dark:text-blue-100"
-                            : "text-gray-900 dark:text-white"
-                        }`}
-                      >
+                    {/* Rank Badge */}
+                    <div className={`flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl ${
+                      index === 0
+                        ? 'bg-[#FFD700] text-[#0B1020]'
+                        : index === 1
+                        ? 'bg-[#C0C0C0] text-[#0B1020]'
+                        : index === 2
+                        ? 'bg-[#CD7F32] text-[#0B1020]'
+                        : 'bg-[#6366F1]/30 text-[#6366F1]'
+                    }`}>
+                      {index === 0 ? '🏆' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                    </div>
+
+                    {/* Player Name */}
+                    <div className="flex-1">
+                      <p className={`text-xl font-semibold ${
+                        index === 0 ? 'text-[#FFD700]' : 'text-[#E5E7EB]'
+                      }`}>
                         {player.name}
-                        {isPlayer && (
-                          <span className="ml-2 text-blue-600 dark:text-blue-400">
-                            (You)
-                          </span>
-                        )}
-                      </span>
-                      <span
-                        className={`text-2xl font-bold ${
-                          isPlayer
-                            ? "text-blue-700 dark:text-blue-300"
-                            : "text-blue-600 dark:text-blue-400"
-                        }`}
-                      >
-                        {player.score} pts
-                      </span>
+                        {isPlayer && <span className="ml-2 text-[#22D3EE]">(You)</span>}
+                      </p>
+                    </div>
+
+                    {/* Score */}
+                    <div className={`text-2xl font-bold ${
+                      index === 0
+                        ? 'text-[#FFD700]'
+                        : index === 1
+                        ? 'text-[#C0C0C0]'
+                        : index === 2
+                        ? 'text-[#CD7F32]'
+                        : 'text-[#22D3EE]'
+                    }`}>
+                      {player.score}
                     </div>
                   </div>
                 );
@@ -187,6 +174,22 @@ export default function WinnerDisplay({
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes confetti {
+          0% {
+            transform: translateY(-20px) rotate(0deg);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(110vh) rotate(360deg);
+            opacity: 0;
+          }
+        }
+        .animate-confetti {
+          animation: confetti linear infinite;
+        }
+      `}</style>
     </div>
   );
 }

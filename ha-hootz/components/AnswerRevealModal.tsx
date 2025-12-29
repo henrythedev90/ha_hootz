@@ -84,12 +84,12 @@ export default function AnswerRevealModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-card-bg rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-indigo/20">
         <div className="p-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-3xl font-bold text-text-light mb-2">
                 {showLeaderboard
                   ? winnerRevealed
                     ? "🏆 Winner!"
@@ -97,14 +97,14 @@ export default function AnswerRevealModal({
                   : "Answer Revealed"}
               </h2>
               {!showLeaderboard && (
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-text-light/80">
                   Question {currentIndex + 1} of {questionCount}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="text-text-light/60 hover:text-text-light transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -157,7 +157,7 @@ export default function AnswerRevealModal({
               )}
               <div className="space-y-3">
                 {leaderboard.length === 0 ? (
-                  <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  <p className="text-center text-text-light/60 py-8">
                     No players yet
                   </p>
                 ) : (
@@ -230,7 +230,7 @@ export default function AnswerRevealModal({
             <>
               {/* Question */}
               <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-xl font-semibold text-text-light mb-4">
                   {question.text}
                 </h3>
 
@@ -243,19 +243,19 @@ export default function AnswerRevealModal({
                         key={option}
                         className={`p-4 rounded-lg border-2 ${
                           isCorrect
-                            ? "bg-green-100 dark:bg-green-900/30 border-green-500 dark:border-green-500"
-                            : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                            ? "bg-success/20 border-success"
+                            : "bg-card-bg border-indigo/20"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <span className="font-bold text-gray-700 dark:text-gray-300">
+                          <span className="font-bold text-text-light/80">
                             {option}:
                           </span>
-                          <span className="text-gray-900 dark:text-white flex-1">
+                          <span className="text-text-light flex-1">
                             {question[option]}
                           </span>
                           {isCorrect && (
-                            <span className="text-green-600 dark:text-green-400 font-semibold">
+                            <span className="text-success font-semibold">
                               ✓ Correct
                             </span>
                           )}
@@ -268,7 +268,7 @@ export default function AnswerRevealModal({
 
               {/* Answer Distribution */}
               <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                <h4 className="text-lg font-semibold text-text-light/80 mb-4">
                   Answer Distribution
                 </h4>
                 <div className="space-y-3">
@@ -287,22 +287,20 @@ export default function AnswerRevealModal({
                         <div className="flex justify-between text-sm">
                           <span
                             className={`font-medium ${
-                              isCorrect
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-gray-700 dark:text-gray-300"
+                              isCorrect ? "text-success" : "text-text-light/80"
                             }`}
                           >
                             {option}
                             {isCorrect && " (Correct)"}
                           </span>
-                          <span className="text-gray-600 dark:text-gray-400">
+                          <span className="text-text-light/60">
                             {count} ({percentage}%)
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div className="w-full bg-indigo/20 rounded-full h-3">
                           <div
                             className={`h-3 rounded-full transition-all ${
-                              isCorrect ? "bg-green-600" : "bg-blue-600"
+                              isCorrect ? "bg-success" : "bg-indigo"
                             }`}
                             style={{ width: `${percentage}%` }}
                           />
@@ -316,13 +314,13 @@ export default function AnswerRevealModal({
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center pt-6 border-t border-indigo/20">
             {showLeaderboard ? (
               <div className="flex gap-3 w-full">
                 <button
                   onClick={() => setShowLeaderboard(false)}
                   disabled={winnerRevealed}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   ← Back to Answer
                 </button>
@@ -335,7 +333,7 @@ export default function AnswerRevealModal({
                         onClose();
                       }
                     }}
-                    className="ml-auto px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                    className="ml-auto px-6 py-3 bg-error text-white rounded-lg hover:bg-error/90 transition-colors font-medium"
                   >
                     End Game
                   </button>
@@ -353,7 +351,7 @@ export default function AnswerRevealModal({
                     currentIndex === 0 ||
                     (questionCount > 0 && currentIndex >= questionCount)
                   }
-                  className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="px-6 py-3 bg-card-bg border border-indigo/30 text-text-light rounded-lg hover:bg-indigo/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   ← Previous Question
                 </button>
@@ -377,7 +375,7 @@ export default function AnswerRevealModal({
                       }
                     }
                   }}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  className="px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium"
                 >
                   {isLastQuestion ? "🏆 Reveal Winner" : "View Leaderboard"}
                 </button>
@@ -391,7 +389,7 @@ export default function AnswerRevealModal({
                     questionCount === 0 ||
                     currentIndex >= questionCount - 1
                   }
-                  className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="px-6 py-3 bg-card-bg border border-indigo/30 text-text-light rounded-lg hover:bg-indigo/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   Next Question →
                 </button>

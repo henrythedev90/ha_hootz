@@ -7,6 +7,7 @@ import { Presentation, Question, ScoringConfig } from "@/types";
 import { getPresentationById, savePresentation } from "@/lib/storage";
 import { generateId, getDefaultScoringConfig } from "@/lib/utils";
 import QuestionList from "@/components/QuestionList";
+import QuestionEditor from "@/components/QuestionEditor";
 import Modal from "@/components/Modal";
 import Loading from "@/components/Loading";
 import Link from "next/link";
@@ -33,6 +34,9 @@ export default function PresentationEditor() {
     getDefaultScoringConfig()
   );
   const [showStreakBonusInfo, setShowStreakBonusInfo] = useState(false);
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<
+    number | null
+  >(null);
 
   const loadPresentation = useCallback(async () => {
     try {
@@ -84,6 +88,27 @@ export default function PresentationEditor() {
 
     loadPresentation();
   }, [status, session, loadPresentation]);
+
+  // Update selectedQuestionIndex when presentation loads or changes
+  useEffect(() => {
+    if (presentation) {
+      if (presentation.questions.length > 0 && selectedQuestionIndex === null) {
+        setSelectedQuestionIndex(0);
+      } else if (presentation.questions.length === 0) {
+        setSelectedQuestionIndex(null);
+      } else if (
+        selectedQuestionIndex !== null &&
+        selectedQuestionIndex >= presentation.questions.length
+      ) {
+        // If selected index is out of bounds, reset to last question or null
+        setSelectedQuestionIndex(
+          presentation.questions.length > 0
+            ? presentation.questions.length - 1
+            : null
+        );
+      }
+    }
+  }, [presentation?.questions.length, presentation?.id, selectedQuestionIndex]);
 
   const handleSave = async () => {
     if (!presentation) return;
@@ -282,53 +307,134 @@ export default function PresentationEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Link
-            href="/"
-            className="text-blue-600 dark:text-blue-400 hover:underline mb-4 inline-block"
-          >
-            ← Back to Dashboard
-          </Link>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Presentation Title *
-            </label>
+    <div className="min-h-screen bg-[#0B1020] text-[#E5E7EB]">
+      {/* Header */}
+      <div className="border-b border-[#6366F1]/20 bg-[#1A1F35]/50 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="p-2 hover:bg-[#6366F1]/10 rounded-lg transition-colors"
+            >
+              <span className="text-[#E5E7EB]">←</span>
+            </Link>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-lg"
-              placeholder="Enter presentation title..."
+              className="bg-transparent text-2xl font-semibold outline-none border-b-2 border-transparent hover:border-[#6366F1]/30 focus:border-[#6366F1] transition-colors px-2 text-[#E5E7EB]"
+              placeholder="New Presentation"
             />
           </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              rows={3}
-              placeholder="Enter a description (optional)..."
-            />
+          <div className="flex gap-2 items-center">
+            <span className="text-sm text-[#E5E7EB]/60">Autosaved</span>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-2 bg-indigo hover:bg-indigo/90 text-white rounded-lg flex items-center gap-2 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
           </div>
+        </div>
+      </div>
 
+      {/* Main Content - Two Panel Layout */}
+      <div className="flex h-[calc(100vh-73px)]">
+        {/* Left Panel - Question List Navigation */}
+        <div className="w-80 border-r border-[#6366F1]/20 bg-[#1A1F35]/30 p-4 overflow-y-auto">
           <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              const newQuestion: Question = {
+                id: generateId(),
+                type: "multiple-choice",
+                text: "New Question",
+                options: [
+                  { id: generateId(), text: "Option A", isCorrect: false },
+                  { id: generateId(), text: "Option B", isCorrect: false },
+                  { id: generateId(), text: "Option C", isCorrect: false },
+                  { id: generateId(), text: "Option D", isCorrect: false },
+                ],
+              };
+              handleQuestionAdd(newQuestion);
+              setSelectedQuestionIndex(presentation.questions.length);
+            }}
+            className="w-full mb-4 px-4 py-3 bg-indigo hover:bg-indigo/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors"
           >
-            {saving ? "Saving..." : "Save Presentation"}
+            <span>+</span>
+            <span>Add Question</span>
           </button>
+
+          <div className="space-y-2">
+            {presentation.questions.map((question, index) => (
+              <div
+                key={question.id}
+                onClick={() => setSelectedQuestionIndex(index)}
+                className={`p-4 rounded-lg cursor-pointer transition-all ${
+                  selectedQuestionIndex === index
+                    ? "bg-[#6366F1] text-white"
+                    : "bg-[#0B1020]/50 hover:bg-[#0B1020] text-[#E5E7EB]/70"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs opacity-60">
+                    Question {index + 1}
+                  </span>
+                </div>
+                <p className="text-sm truncate">
+                  {question.text || "New Question"}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
+        {/* Right Panel - Question Editor */}
+        <div className="flex-1 p-8 overflow-y-auto">
+          <div className="max-w-3xl mx-auto">
+            {selectedQuestionIndex !== null &&
+            presentation.questions[selectedQuestionIndex] ? (
+              <>
+                <div className="mb-8">
+                  <label className="block text-sm text-[#E5E7EB]/60 mb-2">
+                    Question Text
+                  </label>
+                  <QuestionEditor
+                    question={presentation.questions[selectedQuestionIndex]}
+                    onSave={(question) => {
+                      handleQuestionUpdate(question);
+                    }}
+                    onCancel={() => {}}
+                    onDelete={() => {
+                      if (selectedQuestionIndex !== null) {
+                        handleQuestionDelete(
+                          presentation.questions[selectedQuestionIndex].id
+                        );
+                        if (presentation.questions.length > 1) {
+                          setSelectedQuestionIndex(
+                            Math.max(0, selectedQuestionIndex - 1)
+                          );
+                        } else {
+                          setSelectedQuestionIndex(null);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-[#E5E7EB]/60 text-lg mb-4">
+                  No question selected. Add a question to get started!
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Scoring Configuration - Moved to Modal or Collapsible */}
+      <div className="hidden">
         {/* Scoring Configuration */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
           <button
@@ -573,7 +679,7 @@ export default function PresentationEditor() {
               disabled={
                 starting || !presentation || presentation.questions.length === 0
               }
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-success text-white rounded-lg hover:bg-success/90 font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {starting ? "Starting..." : "Start Presentation"}
             </button>
@@ -581,7 +687,7 @@ export default function PresentationEditor() {
               onClick={() => {
                 router.push("/");
               }}
-              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+              className="px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 font-medium transition-colors"
             >
               Go to Dashboard
             </button>
@@ -593,7 +699,7 @@ export default function PresentationEditor() {
                   router.replace(`/presentations/${savedPresentationId}`);
                 }
               }}
-              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-medium transition-colors"
+              className="px-6 py-3 bg-card-bg border border-indigo/30 text-text-light rounded-lg hover:bg-indigo/10 font-medium transition-colors"
             >
               Continue Editing
             </button>

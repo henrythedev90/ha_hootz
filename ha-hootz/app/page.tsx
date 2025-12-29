@@ -88,52 +88,51 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[#0B1020] text-[#E5E7EB]">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-    <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-              Ha Hootz
+        <div className="flex justify-between items-center mb-12">
+          <div>
+            <h1 className="text-5xl font-bold mb-4 bg-linear-to-r from-[#6366F1] to-[#22D3EE] bg-clip-text text-transparent">
+              Ha-Hootz
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Create and manage your trivia game presentations
-            </p>
+            <p className="text-xl text-[#E5E7EB]/70">Live Trivia Made Easy</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-[#E5E7EB]/60">
                 {session.user.name || session.user.email}
               </p>
               <button
                 onClick={handleSignOut}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-sm text-[#22D3EE] hover:text-[#22D3EE]/80 transition-colors"
               >
                 Sign out
               </button>
             </div>
             <Link
               href="/presentations/new"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg shadow-md transition-colors"
+              className="px-8 py-4 bg-indigo hover:bg-indigo/90 text-white rounded-xl flex items-center gap-3 transition-all font-medium text-lg shadow-lg hover:shadow-[0_0_30px_rgba(99,102,241,0.3)]"
             >
-              + New Presentation
+              <span>+</span>
+              <span>Create Presentation</span>
             </Link>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="mb-4 bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] px-4 py-3 rounded-lg">
             {error}
           </div>
         )}
 
         {presentations.length === 0 ? (
-          <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-            <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
+          <div className="text-center py-16 bg-[#1A1F35] rounded-xl border border-[#6366F1]/20">
+            <p className="text-[#E5E7EB]/70 text-lg mb-4">
               No presentations yet. Create your first one to get started!
             </p>
             <Link
               href="/presentations/new"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              className="inline-block px-8 py-4 bg-indigo hover:bg-indigo/90 text-white rounded-xl font-medium transition-colors"
             >
               Create Presentation
             </Link>

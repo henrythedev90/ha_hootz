@@ -118,14 +118,14 @@ export default function JoinPage() {
   if (!isValidSession) {
     return (
       <CenteredLayout>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="bg-[#1A1F35] rounded-2xl border-2 border-[#6366F1]/30 shadow-xl p-8 max-w-md w-full">
+          <h1 className="text-2xl font-bold text-[#E5E7EB] mb-4">
             {isSessionLocked ? "Game Already Started" : "Invalid Session Code"}
           </h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
+          <p className="text-[#E5E7EB]/70 mb-6">{error}</p>
           <button
             onClick={() => router.push("/")}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+            className="w-full px-4 py-2 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-xl transition-colors font-medium"
           >
             Go to Home
           </button>
@@ -137,17 +137,26 @@ export default function JoinPage() {
   return (
     <CenteredLayout>
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 text-center">
+        {/* Logo */}
+        <div className="text-center mb-12">
+          <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-[#6366F1] to-[#22D3EE] bg-clip-text text-transparent">
+            Ha-Hootz
+          </h1>
+          <p className="text-xl text-[#E5E7EB]/70">Join the game!</p>
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-[#1A1F35] rounded-2xl p-8 border-2 border-[#6366F1]/30 shadow-xl">
+          <h1 className="text-3xl font-bold text-[#E5E7EB] mb-2 text-center">
             Join Game
           </h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-8 text-center">
+          <p className="text-[#E5E7EB]/60 mb-8 text-center">
             Session:{" "}
-            <span className="font-mono font-semibold">{sessionCode}</span>
+            <span className="text-[#22D3EE] font-mono font-semibold">{sessionCode}</span>
           </p>
 
           {error && (
-            <div className="mb-6 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-md">
+            <div className="mb-6 bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
@@ -156,9 +165,9 @@ export default function JoinPage() {
             <div>
               <label
                 htmlFor="nickname"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm text-[#E5E7EB]/70 mb-2"
               >
-                Enter your nickname
+                Choose Your Nickname
               </label>
               <input
                 type="text"
@@ -168,9 +177,9 @@ export default function JoinPage() {
                   setNickname(e.target.value);
                   setError(""); // Clear error when user types
                 }}
-                className="w-full px-4 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Enter your nickname"
-                maxLength={50}
+                className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-xl px-6 py-4 text-xl text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-colors"
+                placeholder="Your name"
+                maxLength={20}
                 disabled={submitting}
                 autoFocus
                 required
@@ -180,11 +189,16 @@ export default function JoinPage() {
             <button
               type="submit"
               disabled={submitting || !nickname.trim()}
-              className="w-full px-6 py-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
+              className="w-full py-4 bg-[#6366F1] hover:bg-[#5558E3] disabled:bg-[#6366F1]/30 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center gap-2 transition-colors text-lg font-medium"
             >
-              {submitting ? "Joining..." : "Join Game"}
+              <span>{submitting ? "Joining..." : "Join Game"}</span>
             </button>
           </form>
+
+          {/* Friendly Message */}
+          <p className="text-center mt-8 text-[#E5E7EB]/50">
+            Get ready for an exciting trivia experience! 🎉
+          </p>
         </div>
       </div>
     </CenteredLayout>
