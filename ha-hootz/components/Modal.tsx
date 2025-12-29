@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   isOpen: boolean;
@@ -17,7 +18,9 @@ export default function Modal({
   children,
   size = "md",
 }: ModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   const sizeClasses = {
     sm: "max-w-sm",
@@ -26,14 +29,16 @@ export default function Modal({
     xl: "max-w-xl",
   };
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
       onClick={onClose}
+      style={{ zIndex: 10000, position: "fixed" }}
     >
       <div
         className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full mx-4 ${sizeClasses[size]}`}
         onClick={(e) => e.stopPropagation()}
+        style={{ zIndex: 10001, position: "relative" }}
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -61,5 +66,11 @@ export default function Modal({
       </div>
     </div>
   );
-}
 
+  // Render modal in a portal to ensure it's at the document body level
+  if (typeof window !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
+}

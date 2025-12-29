@@ -311,14 +311,10 @@ export async function updatePlayerStreak(
       playerId,
       newStreak.toString()
     );
-    console.log(
-      `🔥 Player ${playerId} streak updated: ${currentStreak} → ${newStreak}`
-    );
     return newStreak;
   } else {
     // Reset streak on incorrect or unanswered
     await redis.hSet(playerStreaksKey(sessionId), playerId, "0");
-    console.log(`🔥 Player ${playerId} streak reset to 0`);
     return 0;
   }
 }
@@ -333,25 +329,15 @@ function calculateTimeBonus(
   questionDuration: number,
   maxTimeBonus: number
 ): number {
-  console.log("⏱️ Calculating time bonus:", {
-    submissionTime,
-    questionStartTime,
-    questionDuration,
-    maxTimeBonus,
-  });
-
   // questionDuration is in milliseconds, so we need to use it as-is
   const timeRemaining = questionStartTime + questionDuration - submissionTime;
-  console.log("⏱️ Time remaining (ms):", timeRemaining);
 
   if (timeRemaining <= 0) {
-    console.log("⏱️ No time bonus - time expired");
     return 0;
   }
 
   const timeRatio = Math.max(0, Math.min(1, timeRemaining / questionDuration));
   const bonus = Math.round(maxTimeBonus * timeRatio);
-  console.log("⏱️ Time bonus calculated:", { timeRatio, bonus });
   return bonus;
 }
 
@@ -363,12 +349,6 @@ function calculateStreakBonus(
   thresholds: number[],
   bonusValues: number[]
 ): number {
-  console.log("🔥 Calculating streak bonus:", {
-    streak,
-    thresholds,
-    bonusValues,
-  });
-
   if (thresholds.length !== bonusValues.length) {
     console.error(
       "🔥 Streak bonus error: thresholds and values length mismatch"
@@ -381,17 +361,8 @@ function calculateStreakBonus(
   for (let i = thresholds.length - 1; i >= 0; i--) {
     if (streak >= thresholds[i]) {
       bonus = bonusValues[i];
-      console.log(
-        `🔥 Streak bonus awarded: ${bonus} points for streak of ${streak} (threshold: ${thresholds[i]})`
-      );
       break;
     }
-  }
-
-  if (bonus === 0) {
-    console.log(
-      `🔥 No streak bonus - current streak ${streak} doesn't meet any threshold`
-    );
   }
 
   return bonus;
@@ -410,30 +381,11 @@ export async function calculatePlayerScore(
   questionDuration: number,
   scoringConfig: ScoringConfig
 ): Promise<number> {
-  console.log(
-    `💰 Calculating score for player ${playerId}, question ${questionIndex}:`,
-    {
-      playerAnswer,
-      correctAnswer,
-      questionStartTime,
-      questionDuration,
-      scoringConfig: {
-        basePoints: scoringConfig.basePoints,
-        timeBonusEnabled: scoringConfig.timeBonusEnabled,
-        maxTimeBonus: scoringConfig.maxTimeBonus,
-        streakBonusEnabled: scoringConfig.streakBonusEnabled,
-        streakThresholds: scoringConfig.streakThresholds,
-        streakBonusValues: scoringConfig.streakBonusValues,
-      },
-    }
-  );
-
   const isCorrect = playerAnswer === correctAnswer;
   const isUnanswered = playerAnswer === "NO_ANSWER";
 
   // Incorrect or unanswered = 0 points
   if (!isCorrect || isUnanswered) {
-    console.log(`💰 Player ${playerId}: Incorrect or unanswered - 0 points`);
     // Update streak (reset on incorrect/unanswered)
     await updatePlayerStreak(sessionId, playerId, false);
     return 0;
@@ -441,7 +393,6 @@ export async function calculatePlayerScore(
 
   // Correct answer - calculate base score
   let totalScore = scoringConfig.basePoints;
-  console.log(`💰 Player ${playerId}: Base score = ${totalScore}`);
 
   // Add time bonus if enabled
   if (scoringConfig.timeBonusEnabled) {
@@ -449,10 +400,6 @@ export async function calculatePlayerScore(
       sessionId,
       questionIndex,
       playerId
-    );
-
-    console.log(
-      `💰 Player ${playerId}: Submission time = ${submissionTime}, Start time = ${questionStartTime}`
     );
 
     if (submissionTime) {
@@ -463,40 +410,23 @@ export async function calculatePlayerScore(
         scoringConfig.maxTimeBonus
       );
       totalScore += timeBonus;
-      console.log(
-        `💰 Player ${playerId}: Time bonus = ${timeBonus}, Total = ${totalScore}`
-      );
-    } else {
-      console.warn(
-        `💰 Player ${playerId}: No submission timestamp found - skipping time bonus`
-      );
     }
-  } else {
-    console.log(`💰 Player ${playerId}: Time bonus disabled`);
   }
 
   // Update streak and add streak bonus if enabled
   if (scoringConfig.streakBonusEnabled) {
     const newStreak = await updatePlayerStreak(sessionId, playerId, true);
-    console.log(`💰 Player ${playerId}: New streak = ${newStreak}`);
     const streakBonus = calculateStreakBonus(
       newStreak,
       scoringConfig.streakThresholds,
       scoringConfig.streakBonusValues
     );
     totalScore += streakBonus;
-    console.log(
-      `💰 Player ${playerId}: Streak bonus = ${streakBonus}, Total = ${totalScore}`
-    );
   } else {
     // Still update streak even if bonus is disabled (for tracking)
-    const newStreak = await updatePlayerStreak(sessionId, playerId, true);
-    console.log(
-      `💰 Player ${playerId}: Streak updated to ${newStreak} (bonus disabled)`
-    );
+    await updatePlayerStreak(sessionId, playerId, true);
   }
 
-  console.log(`💰 Player ${playerId}: Final score = ${totalScore}`);
   return totalScore;
 }
 

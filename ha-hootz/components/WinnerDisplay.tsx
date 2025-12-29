@@ -19,19 +19,9 @@ export default function WinnerDisplay({
   playerId,
   leaderboard,
 }: WinnerDisplayProps) {
-  console.log("🎯 WinnerDisplay component called with:", {
-    isOpen,
-    playerName,
-    playerId,
-    leaderboardLength: leaderboard.length,
-  });
-
   if (!isOpen) {
-    console.log("❌ WinnerDisplay: isOpen is false, returning null");
     return null;
   }
-
-  console.log("✅ WinnerDisplay: isOpen is true, rendering component");
 
   // Find player's rank and score
   const playerIndex = leaderboard.findIndex((p) => p.playerId === playerId);
@@ -51,13 +41,6 @@ export default function WinnerDisplay({
     leaderboard.length > 1 &&
     leaderboard[0].score > 0 &&
     leaderboard[0].score === leaderboard[1].score;
-
-  console.log("🎯 WinnerDisplay rendering:", {
-    isOpen,
-    playerName,
-    playerId,
-    leaderboardLength: leaderboard.length,
-  });
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black bg-opacity-90 p-4 overflow-y-auto">

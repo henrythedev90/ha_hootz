@@ -100,7 +100,6 @@ export default function GamePage() {
         const validateData = await validateResponse.json();
 
         if (validateData.sessionStatus === "ended") {
-          console.log("❌ Session has ended, showing ended message");
           dispatch(setSessionEnded(true));
           return;
         }
@@ -181,7 +180,6 @@ export default function GamePage() {
     }
 
     if (sessionEnded) {
-      console.log("❌ Session has ended, not connecting socket");
       return;
     }
 
@@ -196,7 +194,6 @@ export default function GamePage() {
     dispatch(setSocket(newSocket));
 
     newSocket.on("connect", () => {
-      console.log("✅ Connected to server");
       dispatch(setConnected(true));
       newSocket.emit("join-session", {
         sessionCode,
@@ -212,7 +209,6 @@ export default function GamePage() {
         playerId?: string;
         playerCount?: number;
       }) => {
-        console.log("✅ Joined session:", data);
         if (data.playerId) {
           dispatch(setPlayerId(data.playerId));
         }
@@ -261,14 +257,12 @@ export default function GamePage() {
     });
 
     newSocket.on("player-joined", (data: { playerCount?: number }) => {
-      console.log("👤 Player joined:", data);
       if (data.playerCount !== undefined) {
         dispatch(setPlayerCount(data.playerCount));
       }
     });
 
     newSocket.on("player-left", (data: { playerCount?: number }) => {
-      console.log("👋 Player left:", data);
       if (data.playerCount !== undefined) {
         dispatch(setPlayerCount(data.playerCount));
       }
@@ -277,7 +271,6 @@ export default function GamePage() {
     newSocket.on(
       "game-started",
       (data: { status: string; questionIndex: number }) => {
-        console.log("🎮 Game started:", data);
         dispatch(
           updateGameState({
             ...data,
@@ -304,7 +297,6 @@ export default function GamePage() {
         questionIndex: number;
         endAt: number;
       }) => {
-        console.log("❓ Question started:", data);
         dispatch(
           updateGameState({
             status: "QUESTION_ACTIVE",
@@ -320,7 +312,6 @@ export default function GamePage() {
     );
 
     newSocket.on("question-ended", (data: any) => {
-      console.log("⏹️ Question ended:", data);
       dispatch(updateGameState({ status: "QUESTION_ENDED" }));
       dispatch(setIsTimerExpired(true));
     });
@@ -341,7 +332,6 @@ export default function GamePage() {
         correctAnswer?: "A" | "B" | "C" | "D";
         isReviewMode?: boolean;
       }) => {
-        console.log("📄 Question navigated:", data);
         const isReviewMode = data.isReviewMode || false;
 
         if (isReviewMode && playerId) {
@@ -393,7 +383,6 @@ export default function GamePage() {
         questionIndex: number;
         correctAnswer: "A" | "B" | "C" | "D";
       }) => {
-        console.log("✅ Answer revealed:", data);
         if (timerIntervalRef.current) {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
@@ -413,9 +402,7 @@ export default function GamePage() {
       "ANSWER_RECEIVED",
       (data: { accepted: boolean; updated?: boolean; reason?: string }) => {
         if (data.accepted) {
-          console.log(
-            data.updated ? "✅ Answer updated" : "✅ Answer submitted"
-          );
+          // Answer accepted
         } else {
           console.error("❌ Answer rejected:", data.reason);
           if (data.reason) {
@@ -426,23 +413,18 @@ export default function GamePage() {
     );
 
     newSocket.on("session-cancelled", (data: { message?: string }) => {
-      console.log("❌ Player: Session cancelled event received:", data);
-      console.log("🎉 Player: Showing thank you modal");
       dispatch(setShowThankYouModal(true));
       dispatch(updateGameState({ status: "QUESTION_ENDED" }));
-      console.log("🔌 Player: Disconnecting socket after session cancellation");
       newSocket.disconnect();
       dispatch(setConnected(false));
     });
 
     newSocket.on("force-disconnect", (data: { reason: string }) => {
-      console.log("🔌 Force disconnect:", data);
       dispatch(setError(data.reason || "Another connection detected"));
       newSocket.disconnect();
     });
 
     newSocket.on("disconnect", () => {
-      console.log("🔌 Disconnected from server");
       dispatch(setConnected(false));
     });
 
@@ -456,13 +438,8 @@ export default function GamePage() {
       (data: {
         leaderboard: Array<{ playerId: string; name: string; score: number }>;
       }) => {
-        console.log("🏆 Player: Winner revealed event received:", data);
-        console.log(
-          "🏆 Player: Setting leaderboard and showing winner display"
-        );
         dispatch(setLeaderboard(data.leaderboard));
         dispatch(setShowWinnerDisplay(true));
-        console.log("🏆 Player: showWinnerDisplay set to true");
       }
     );
 

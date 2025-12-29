@@ -26,16 +26,12 @@ export default function PresentationCard({
       return;
     }
 
-    // Log scoring configuration before starting
-    console.log("🎮 Starting presentation with scoring config:", {
-      presentationId: presentation.id,
-      presentationTitle: presentation.title,
-      hasScoringConfig: !!presentation.scoringConfig,
-      scoringConfig: presentation.scoringConfig || "Using defaults",
+    // Start the presentation
+    const scoringConfig = {
       timeBonusEnabled: presentation.scoringConfig?.timeBonusEnabled ?? false,
       streakBonusEnabled:
         presentation.scoringConfig?.streakBonusEnabled ?? false,
-    });
+    };
 
     try {
       setStarting(true);

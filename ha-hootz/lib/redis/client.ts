@@ -9,10 +9,6 @@ const url: string = process.env.REDIS_URL;
 
 // Log Redis URL in development mode (mask password for security)
 // This will execute when the module is first imported
-if (process.env.NODE_ENV === "development") {
-  const maskedUrl = url.replace(/:([^:@]+)@/, ":****@"); // Mask password
-  console.log("✅ Redis configured - URL:", maskedUrl);
-}
 let redis: RedisClientType;
 let redisPromise: Promise<RedisClientType>;
 
