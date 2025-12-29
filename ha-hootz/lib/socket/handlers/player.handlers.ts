@@ -29,7 +29,6 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
 
   // New join-session event using session code
   socket.on("join-session", async ({ sessionCode, name }) => {
-    console.log(`🔵 Join request: sessionCode=${sessionCode}, name=${name}`);
     try {
       if (!sessionCode || !name || !name.trim()) {
         socket.emit("join-error", {
@@ -122,9 +121,6 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         }
         playerId = existingPlayerId;
         isReconnection = true;
-        console.log(
-          `🔄 Player ${name} reconnecting with existing playerId ${playerId}`
-        );
       } else {
         // New player - check if session is locked/live (prevent new joins)
         if (session.status === "live" || session.status === "ended") {
@@ -243,9 +239,6 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
               answerDistribution,
               playersWithAnswers,
             });
-            console.log(
-              `📊 Broadcasted updated stats after player ${name.trim()} reconnected: ${answerCount} answers for question ${currentQuestionIndex}`
-            );
           } catch (error) {
             console.error(
               "Error broadcasting stats after reconnection:",
@@ -255,16 +248,6 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
           }
         }
       }
-
-      console.log(
-        `✅ Player ${name.trim()} (${playerId}) joined session ${sessionCode}${
-          Object.keys(playerAnswers).length > 0
-            ? ` (reconnected with ${
-                Object.keys(playerAnswers).length
-              } previous answers)`
-            : ""
-        }`
-      );
     } catch (error) {
       console.error("Error joining session:", error);
       const errorMessage =
@@ -381,49 +364,6 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
       // Store submission timestamp for time-based bonus calculation
       // Always update timestamp on each submission (even if answer changed)
       const submissionTime = Date.now();
-      const submissionDate = new Date(submissionTime);
-
-      // Calculate question start time and timing info
-      // Note: endAt is already declared above at line 315
-      const questionDuration = 30000; // Default 30 seconds (should match host's durationMs)
-      const questionStartTime = endAt ? endAt - questionDuration : null;
-      const timeSinceStart = questionStartTime
-        ? submissionTime - questionStartTime
-        : null;
-      const secondsSinceStart = timeSinceStart
-        ? Math.floor(timeSinceStart / 1000)
-        : null;
-      const timeRemaining = endAt ? Math.max(0, endAt - submissionTime) : null;
-      const timeRemainingSeconds = timeRemaining
-        ? Math.floor(timeRemaining / 1000)
-        : null;
-
-      console.log("📝 PLAYER ANSWER SUBMISSION:", {
-        playerId,
-        playerName: socketInfo.name,
-        questionIndex,
-        answer,
-        isUpdate: isUpdate ? "Updated answer" : "First submission",
-        previousAnswer: previousAnswer || "None",
-        submissionTime,
-        submissionTimeFormatted: submissionDate.toISOString(),
-        submissionTimeReadable: submissionDate.toLocaleTimeString(),
-        questionStartTime: questionStartTime
-          ? new Date(questionStartTime).toISOString()
-          : "Unknown",
-        questionEndTime: endAt ? new Date(endAt).toISOString() : "Unknown",
-        questionDuration: `${questionDuration / 1000} seconds`,
-        timeSinceStart: timeSinceStart
-          ? `${secondsSinceStart} seconds (${timeSinceStart}ms)`
-          : "Unknown",
-        timeRemaining: timeRemaining
-          ? `${timeRemainingSeconds} seconds (${timeRemaining}ms)`
-          : "Unknown",
-        timeRatio:
-          timeSinceStart && questionDuration
-            ? (timeSinceStart / questionDuration).toFixed(3)
-            : "Unknown",
-      });
 
       await storeAnswerTimestamp(
         gameId,
@@ -506,10 +446,6 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         // Remove socket mapping
         await redis.del(playerSocketKey(sessionId, playerId));
 
-        console.log(
-          `🚪 Player ${name} (${playerId}) left session ${sessionCode} permanently and cannot rejoin`
-        );
-
         // Get updated player count
         const allPlayers = await redis.hGetAll(playersKey(sessionId));
         let activePlayerCount = 0;
@@ -561,9 +497,6 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         // Only delete if this is still the active socket
         if (storedSocketId === socket.id) {
           await redis.del(playerSocketKey(sessionId, playerId));
-          console.log(
-            `🧹 Cleaned up socket mapping for player ${name} (${playerId}) in session ${sessionCode}`
-          );
 
           // Count only players with active sockets (for accurate player count)
           const allPlayers = await redis.hGetAll(playersKey(sessionId));

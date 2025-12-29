@@ -81,22 +81,6 @@ export async function POST(request: NextRequest) {
       (presentation as unknown as Presentation).scoringConfig ||
       getDefaultScoringConfig();
 
-    console.log("🎮 Starting game session with scoring configuration:", {
-      presentationId: presentationId,
-      presentationTitle: (presentation as any).title,
-      hasScoringConfig: !!(presentation as unknown as Presentation)
-        .scoringConfig,
-      scoringConfig: {
-        basePoints: scoringConfig.basePoints,
-        timeBonusEnabled: scoringConfig.timeBonusEnabled,
-        maxTimeBonus: scoringConfig.maxTimeBonus,
-        streakBonusEnabled: scoringConfig.streakBonusEnabled,
-        streakThresholds: scoringConfig.streakThresholds,
-        streakBonusValues: scoringConfig.streakBonusValues,
-        revealScores: scoringConfig.revealScores,
-      },
-    });
-
     // Initialize game state for Socket.io
     const redis = await redisPromise;
     const initialGameState = {

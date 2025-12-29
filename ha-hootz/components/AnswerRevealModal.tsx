@@ -363,14 +363,7 @@ export default function AnswerRevealModal({
                     if (isLastQuestion) {
                       setWinnerRevealed(true);
                       // Emit winner-revealed event to all players
-                      console.log(
-                        "🏆 Reveal Winner clicked! Leaderboard:",
-                        leaderboard
-                      );
                       if (onRevealWinner) {
-                        console.log(
-                          "🏆 Calling onRevealWinner with leaderboard"
-                        );
                         onRevealWinner(leaderboard);
                       } else {
                         console.warn("⚠️ onRevealWinner callback not provided");

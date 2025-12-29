@@ -85,7 +85,6 @@ export default function HostDashboard() {
 
   // Reset Redux state and set session code when sessionCode changes
   useEffect(() => {
-    console.log("🔄 Session code changed, resetting all state:", sessionCode);
     // Reset all state when sessionCode changes (new session)
     dispatch(resetGameState());
     dispatch(resetHostState());
@@ -136,7 +135,6 @@ export default function HostDashboard() {
         const response = await fetch(`/api/sessions/${sessionCode}/game-state`);
         const data = await response.json();
         if (data.success && data.gameState) {
-          console.log("🔄 Restored game state on mount:", data.gameState);
           // Completely replace game state (don't merge with old state)
           // If status is WAITING, explicitly reset all game flags
           const isWaiting = data.gameState.status === "WAITING";
@@ -366,7 +364,6 @@ export default function HostDashboard() {
     dispatch(setSocket(newSocket));
 
     newSocket.on("connect", () => {
-      console.log("✅ Host connected to server");
       dispatch(setConnected(true));
     });
 
@@ -377,11 +374,9 @@ export default function HostDashboard() {
         players: Array<{ playerId: string; name: string }>;
         gameState?: any;
       }) => {
-        console.log("👑 Host joined session:", data);
         dispatch(setPlayers(data.players || []));
 
         if (data.gameState) {
-          console.log("🔄 Restoring game state:", data.gameState);
           dispatch(setGameState(data.gameState));
 
           if (data.gameState.question) {
@@ -418,7 +413,6 @@ export default function HostDashboard() {
         sessionCode: string;
         playerCount?: number;
       }) => {
-        console.log("👤 Player joined:", data);
         dispatch(addPlayer({ playerId: data.playerId, name: data.name }));
 
         if (data.playerCount !== undefined) {
@@ -472,7 +466,6 @@ export default function HostDashboard() {
         sessionCode: string;
         playerCount?: number;
       }) => {
-        console.log("👋 Player left:", data);
         dispatch(removePlayer(data.playerId));
         if (data.playerCount !== undefined) {
           dispatch(updateStats({ playerCount: data.playerCount }));
@@ -483,7 +476,6 @@ export default function HostDashboard() {
     newSocket.on(
       "game-started",
       (data: { status: string; questionIndex: number }) => {
-        console.log("🎮 Game started:", data);
         dispatch(setShowPlayersModal(true));
         dispatch(
           updateGameState({
@@ -497,7 +489,6 @@ export default function HostDashboard() {
     newSocket.on(
       "question-started",
       (data: { question: Question; questionIndex: number; endAt: number }) => {
-        console.log("❓ Question started:", data);
         dispatch(
           updateGameState({
             status: "QUESTION_ACTIVE",
@@ -511,7 +502,6 @@ export default function HostDashboard() {
     );
 
     newSocket.on("question-ended", (data: { questionIndex: number }) => {
-      console.log("⏹️ Question ended:", data);
       dispatch(updateGameState({ status: "QUESTION_ENDED" }));
     });
 
@@ -524,15 +514,8 @@ export default function HostDashboard() {
         correctAnswer?: "A" | "B" | "C" | "D";
         isReviewMode?: boolean;
       }) => {
-        console.log("📄 Question navigated:", data);
         const isReviewMode = data.isReviewMode || false;
         const answerRevealed = data.answerRevealed || false;
-
-        console.log("🔍 Navigation state:", {
-          isReviewMode,
-          answerRevealed,
-          questionIndex: data.questionIndex,
-        });
 
         // Update game state with review mode flags from server
         // If gameState doesn't exist, we need to set it first
@@ -628,7 +611,6 @@ export default function HostDashboard() {
     );
 
     newSocket.on("session-cancelled", () => {
-      console.log("❌ Session cancelled");
       setTimeout(() => {
         router.push("/");
       }, 2000);
@@ -640,7 +622,6 @@ export default function HostDashboard() {
     });
 
     newSocket.on("disconnect", () => {
-      console.log("🔌 Host disconnected from server");
       dispatch(setConnected(false));
     });
 
@@ -741,25 +722,22 @@ export default function HostDashboard() {
   };
 
   const handleCancelSession = () => {
-    if (!socket) return;
-    dispatch(setShowEndGameModal(true));
-  };
+    // Allow canceling session even if socket is not connected
+    // This helps in cases where connection is lost but user wants to cancel
+    // Close other modals first to ensure EndGameModal is visible
+    dispatch(setShowAnswerRevealModal(false));
+    dispatch(setShowPlayersModal(false));
 
-  // Debug: Log gameState changes for isReviewMode and answerRevealed
-  useEffect(() => {
-    if (gameState) {
-      console.log("🎮 GameState updated:", {
-        questionIndex: gameState.questionIndex,
-        isReviewMode: gameState.isReviewMode,
-        answerRevealed: gameState.answerRevealed,
-        status: gameState.status,
-      });
+    // Force a toggle to ensure re-render even if already true
+    if (showEndGameModal) {
+      dispatch(setShowEndGameModal(false));
+      setTimeout(() => {
+        dispatch(setShowEndGameModal(true));
+      }, 10);
+    } else {
+      dispatch(setShowEndGameModal(true));
     }
-  }, [
-    gameState?.isReviewMode,
-    gameState?.answerRevealed,
-    gameState?.questionIndex,
-  ]);
+  };
 
   // Get current question from gameState or fallback to questions array
   const currentQuestion =
@@ -771,11 +749,13 @@ export default function HostDashboard() {
   const canNavigate = !isQuestionActive && gameState?.status !== "WAITING";
 
   // Ensure modals are closed when game status is WAITING (new session)
+  // But don't close EndGameModal if user is actively trying to cancel
   useEffect(() => {
     if (gameState?.status === "WAITING") {
       dispatch(setShowAnswerRevealModal(false));
       dispatch(setShowPlayersModal(false));
-      dispatch(setShowEndGameModal(false));
+      // Don't auto-close EndGameModal - let user control it
+      // dispatch(setShowEndGameModal(false));
     }
   }, [gameState?.status, dispatch]);
 
@@ -846,6 +826,42 @@ export default function HostDashboard() {
           socket={socket}
           connected={connected}
         />
+        <Modal
+          isOpen={showEndGameModal}
+          onClose={() => {
+            dispatch(setShowEndGameModal(false));
+          }}
+          title="End Game"
+          size="md"
+        >
+          <div className="space-y-4">
+            <p className="text-gray-700 dark:text-gray-300">
+              Are you sure you want to end the game? All players will be
+              disconnected.
+            </p>
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                onClick={() => dispatch(setShowEndGameModal(false))}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (socket && connected) {
+                    socket.emit("CANCEL_SESSION", { sessionCode });
+                  }
+                  dispatch(setShowEndGameModal(false));
+                  dispatch(setShowAnswerRevealModal(false));
+                  router.push("/");
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+              >
+                End Game
+              </button>
+            </div>
+          </div>
+        </Modal>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
           <div className="max-w-6xl mx-auto">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
@@ -917,8 +933,7 @@ export default function HostDashboard() {
                 </button>
                 <button
                   onClick={handleCancelSession}
-                  disabled={!connected}
-                  className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
                 >
                   Cancel Session
                 </button>
@@ -959,16 +974,11 @@ export default function HostDashboard() {
             players={players}
             playerScores={stats.playerScores}
             onRevealWinner={(leaderboard) => {
-              console.log(
-                "🏆 Host: Revealing winner, leaderboard:",
-                leaderboard
-              );
               if (socket) {
                 socket.emit("REVEAL_WINNER", {
                   sessionCode,
                   leaderboard,
                 });
-                console.log("🏆 Host: REVEAL_WINNER event emitted to server");
               }
             }}
             onEndGame={() => {
@@ -992,8 +1002,7 @@ export default function HostDashboard() {
               </div>
               <button
                 onClick={handleCancelSession}
-                disabled={!connected}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
               >
                 Cancel Session
               </button>
@@ -1066,15 +1075,6 @@ export default function HostDashboard() {
                       isQuestionActive ||
                       gameState?.isReviewMode === true ||
                       gameState?.answerRevealed === true;
-                    console.log("🔘 Start Question button disabled check:", {
-                      disabled,
-                      connected,
-                      hasCurrentQuestion: !!currentQuestion,
-                      isQuestionActive,
-                      isReviewMode: gameState?.isReviewMode,
-                      answerRevealed: gameState?.answerRevealed,
-                      questionIndex: gameState?.questionIndex,
-                    });
                     return disabled;
                   })()}
                   className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
@@ -1211,7 +1211,9 @@ export default function HostDashboard() {
 
       <Modal
         isOpen={showEndGameModal}
-        onClose={() => dispatch(setShowEndGameModal(false))}
+        onClose={() => {
+          dispatch(setShowEndGameModal(false));
+        }}
         title="End Game"
         size="md"
       >
@@ -1229,18 +1231,15 @@ export default function HostDashboard() {
             </button>
             <button
               onClick={() => {
-                console.log(
-                  "🛑 Host: End Game button clicked, emitting CANCEL_SESSION"
-                );
-                if (socket) {
+                if (socket && connected) {
                   socket.emit("CANCEL_SESSION", { sessionCode });
-                  console.log(
-                    "✅ Host: CANCEL_SESSION event emitted for session",
-                    sessionCode
-                  );
                 }
+                // Even if socket is not connected, we should still navigate away
+                // The session will be cleaned up on the server side
                 dispatch(setShowEndGameModal(false));
                 dispatch(setShowAnswerRevealModal(false));
+                // Navigate back to dashboard after canceling
+                router.push("/");
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
             >

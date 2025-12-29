@@ -76,7 +76,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
       // Join the session room
       socket.join(sessionCode);
-      console.log(`👑 Host ${userId} joined session ${sessionCode}`);
 
       // Get current players
       const redis = await getRedis();
@@ -173,7 +172,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
 
       // Broadcast to room using session code
       io.to(sessionCode).emit("game-started", state);
-      console.log(`🎮 Game started for session ${sessionCode}`);
     } catch (error) {
       console.error("Error starting game:", error);
       socket.emit("error", { message: "Failed to start game" });
@@ -215,14 +213,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         const startTime = Date.now();
         const endAt = startTime + question.durationMs;
 
-        console.log("⏰ Question started:", {
-          sessionId,
-          questionIndex: questionIndex ?? 0,
-          startTime,
-          duration: question.durationMs,
-          endAt,
-        });
-
         // Update question in Redis with actual start time
         await setQuestion(sessionId, questionIndex ?? 0, {
           text: question.text,
@@ -255,9 +245,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
           questionIndex: gameState.questionIndex,
           endAt,
         });
-        console.log(
-          `❓ Question ${gameState.questionIndex} started for session ${sessionCode}`
-        );
       } catch (error) {
         console.error("Error starting question:", error);
         socket.emit("error", { message: "Failed to start question" });
@@ -297,18 +284,11 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         message: "The host has cancelled this session",
       };
       io.to(sessionCode).emit("session-cancelled", cancelMessage);
-      console.log(
-        `📢 Broadcasting session-cancelled to room ${sessionCode} (${
-          io.sockets.adapter.rooms.get(sessionCode)?.size || 0
-        } sockets)`
-      );
 
       // Notify host
       socket.emit("session-cancelled", {
         sessionCode,
       });
-
-      console.log(`❌ Session ${sessionCode} cancelled by host`);
     } catch (error) {
       console.error("Error cancelling session:", error);
       socket.emit("error", { message: "Failed to cancel session" });
@@ -353,9 +333,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
             playerId,
             "NO_ANSWER"
           );
-          console.log(
-            `❌ Marked player ${playerId} as NO_ANSWER for question ${questionIndex}`
-          );
         }
       }
 
@@ -365,16 +342,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       const scoringConfig =
         gameState.scoringConfig || getDefaultScoringConfig();
 
-      console.log("📊 Scoring config retrieved:", {
-        hasConfig: !!gameState.scoringConfig,
-        config: scoringConfig,
-      });
-      console.log("📊 Question details:", {
-        correctAnswer: question.correct,
-        startTime: question.startTime,
-        duration: question.duration,
-      });
-
       // Calculate and store scores for all players
       const scores = await calculateQuestionScores(
         sessionId,
@@ -383,13 +350,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         question.startTime,
         question.duration,
         scoringConfig
-      );
-
-      console.log(
-        `💰 Scores calculated for question ${questionIndex}:`,
-        Array.from(scores.entries())
-          .map(([playerId, score]) => `${playerId}: ${score}`)
-          .join(", ")
       );
 
       // Update game state to show answer is revealed and question is ended
@@ -413,10 +373,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       io.to(sessionCode).emit("question-ended", {
         questionIndex,
       });
-
-      console.log(
-        `✅ Answer revealed for question ${questionIndex} in session ${sessionCode}`
-      );
     } catch (error) {
       console.error("Error revealing answer:", error);
       socket.emit("error", { message: "Failed to reveal answer" });
@@ -481,12 +437,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       // This applies whether navigating forward or backward to an answered question
       const isReviewMode = hasAnswers;
 
-      console.log(
-        `🔍 NAVIGATE_QUESTION: questionIndex=${questionIndex}, hasAnswers=${hasAnswers}, isReviewMode=${isReviewMode}, answerCount=${
-          Object.keys(answers).length
-        }`
-      );
-
       // Update game state (preserve scoringConfig and other properties)
       const newState = {
         ...gameState, // Preserve existing properties like scoringConfig
@@ -525,10 +475,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         correctAnswer: isReviewMode ? question.correct : undefined,
         isReviewMode: isReviewMode, // Flag to indicate this is review mode
       });
-
-      console.log(
-        `📄 Navigated to question ${questionIndex} in session ${sessionCode}`
-      );
     } catch (error) {
       console.error("Error navigating question:", error);
       socket.emit("error", { message: "Failed to navigate question" });
@@ -566,9 +512,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
             playerId,
             "NO_ANSWER"
           );
-          console.log(
-            `❌ Marked player ${playerId} as NO_ANSWER for question ${questionIndex}`
-          );
         }
       }
 
@@ -578,20 +521,9 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       const scoringConfig =
         gameState.scoringConfig || getDefaultScoringConfig();
 
-      console.log("📊 END_QUESTION - Scoring config retrieved:", {
-        hasConfig: !!gameState.scoringConfig,
-        config: scoringConfig,
-      });
-
       // Get question to calculate scores
       const question = await getQuestion(sessionId, questionIndex);
       if (question) {
-        console.log("📊 END_QUESTION - Question details:", {
-          correctAnswer: question.correct,
-          startTime: question.startTime,
-          duration: question.duration,
-        });
-
         // Calculate and store scores for all players
         const scores = await calculateQuestionScores(
           sessionId,
@@ -600,13 +532,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
           question.startTime,
           question.duration,
           scoringConfig
-        );
-
-        console.log(
-          `💰 Scores calculated for question ${questionIndex}:`,
-          Array.from(scores.entries())
-            .map(([playerId, score]) => `${playerId}: ${score}`)
-            .join(", ")
         );
       } else {
         console.warn(
@@ -627,10 +552,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       io.to(sessionCode).emit("question-ended", {
         questionIndex,
       });
-
-      console.log(
-        `⏹️ Question ${questionIndex} ended in session ${sessionCode}`
-      );
     } catch (error) {
       console.error("Error ending question:", error);
       socket.emit("error", { message: "Failed to end question" });
@@ -649,10 +570,6 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       io.to(sessionCode).emit("winner-revealed", {
         leaderboard,
       });
-
-      console.log(
-        `🏆 Winner revealed for session ${sessionCode} to all players`
-      );
     } catch (error) {
       console.error("Error revealing winner:", error);
       socket.emit("error", { message: "Failed to reveal winner" });
@@ -662,6 +579,5 @@ export function registerHostHandlers(io: Server, socket: Socket) {
   // Clean up host data on disconnect
   socket.on("disconnect", () => {
     hostData.delete(socket.id);
-    console.log(`👑 Host disconnected: ${socket.id}`);
   });
 }
