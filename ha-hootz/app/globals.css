@@ -14,6 +14,7 @@
   --success: #22c55e;
   --error: #ef4444;
   --text-light: #e5e7eb;
+  --card-bg: #1a1f35;
 
   --card: #0b1020;
   --card-foreground: #e5e7eb;
@@ -139,7 +140,7 @@
   --color-success: var(--success);
   --color-error: var(--error);
   --color-text-light: var(--text-light);
-  --color-card-bg: var(--card);
+  --color-card-bg: var(--card-bg);
 }
 
 @layer base {
