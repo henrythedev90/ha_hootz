@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Play, Edit, Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface PresentationCardProps {
   presentation: Presentation;
@@ -69,7 +70,15 @@ export default function PresentationCard({
   };
 
   return (
-    <div className="bg-card-bg rounded-xl p-6 border border-indigo/20 hover:border-indigo/40 transition-all cursor-pointer group hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(99,102,241,0.2)]">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{
+        y: -8,
+        boxShadow: "0 10px 40px rgba(99, 102, 241, 0.2)",
+      }}
+      className="bg-card-bg rounded-xl p-6 border border-indigo/20 hover:border-indigo/40 transition-all cursor-pointer group"
+    >
       <h3 className="text-xl font-semibold mb-2 text-text-light group-hover:text-cyan transition-colors">
         {presentation.title}
       </h3>
@@ -80,7 +89,9 @@ export default function PresentationCard({
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleStartPresentation}
           disabled={starting || presentation.questions.length === 0}
           className="flex-1 px-4 py-2 bg-indigo hover:bg-indigo/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
@@ -92,20 +103,24 @@ export default function PresentationCard({
         >
           <Play className="w-4 h-4" />
           <span>{starting ? "Starting..." : "Host"}</span>
-        </button>
-        <Link
-          href={`/presentations/${presentation.id}`}
-          className="px-4 py-2 bg-card-bg hover:bg-[#252B44] border border-indigo/30 text-text-light rounded-lg transition-colors flex items-center justify-center"
-        >
-          <Edit className="w-4 h-4" />
-        </Link>
-        <button
+        </motion.button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Link
+            href={`/presentations/${presentation.id}`}
+            className="px-4 py-2 bg-card-bg hover:bg-[#252B44] border border-indigo/30 text-text-light rounded-lg transition-colors flex items-center justify-center"
+          >
+            <Edit className="w-4 h-4" />
+          </Link>
+        </motion.div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => onDelete(presentation.id)}
           className="px-4 py-2 bg-card-bg hover:bg-error/10 border border-error/30 text-error rounded-lg transition-colors flex items-center justify-center"
         >
           <Trash2 className="w-4 h-4" />
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -9,6 +9,8 @@ import PresentationCard from "@/components/PresentationCard";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import Loading from "@/components/Loading";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { Plus } from "lucide-react";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -113,12 +115,18 @@ export default function Home() {
                   Sign out
                 </button>
               </div>
-              <Link
-                href="/presentations/new"
-                className="px-8 py-4 bg-indigo hover:bg-indigo/90 text-white rounded-xl flex items-center gap-3 transition-all shadow-lg hover:shadow-indigo/30"
+              <motion.button
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: "0 0 30px rgba(99, 102, 241, 0.3)",
+                }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push("/presentations/new")}
+                className="px-8 py-4 bg-indigo hover:bg-indigo/90 text-white rounded-xl flex items-center gap-3 transition-all"
               >
-                <span className="text-lg">+ Create Presentation</span>
-              </Link>
+                <Plus className="w-6 h-6" />
+                <span className="text-lg">Create Presentation</span>
+              </motion.button>
             </div>
           </div>
         </div>
@@ -134,12 +142,17 @@ export default function Home() {
             <p className="text-text-light/60 text-lg mb-4">
               No presentations yet. Create your first one to get started!
             </p>
-            <Link
-              href="/presentations/new"
-              className="inline-block px-8 py-4 bg-indigo hover:bg-indigo/90 text-white rounded-xl font-medium transition-all shadow-lg hover:shadow-indigo/30"
+            <motion.button
+              whileHover={{
+                scale: 1.02,
+                boxShadow: "0 0 30px rgba(99, 102, 241, 0.3)",
+              }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push("/presentations/new")}
+              className="px-8 py-4 bg-indigo hover:bg-indigo/90 text-white rounded-xl font-medium transition-all"
             >
               Create Presentation
-            </Link>
+            </motion.button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
