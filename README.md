@@ -1,6 +1,6 @@
 # Ha Hootz - Trivia Game Creator
 
-A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB Atlas, Redis, and NextAuth.js.
+A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScript, MongoDB Atlas, Redis, Socket.io, Redux Toolkit, NextAuth.js v5, and Tailwind CSS v4.
 
 ## Features
 
