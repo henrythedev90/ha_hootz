@@ -132,6 +132,16 @@ export default function HostDashboard() {
 
   // Timer countdown effect
   useEffect(() => {
+    // Don't run timer if answer is revealed (review mode or answer already revealed)
+    if (gameState?.answerRevealed) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setTimeRemaining(0);
+      return;
+    }
+
     if (gameState?.status === "QUESTION_ACTIVE" && gameState.endAt) {
       const updateTimer = () => {
         const remaining = Math.max(
@@ -165,6 +175,7 @@ export default function HostDashboard() {
   }, [
     gameState?.status,
     gameState?.endAt,
+    gameState?.answerRevealed,
     socket,
     sessionCode,
     gameState?.questionIndex,
@@ -449,27 +460,74 @@ export default function HostDashboard() {
 
     newSocket.on(
       "question-navigated",
-      (data: { questionIndex: number; question: Question }) => {
+      async (data: { questionIndex: number; question: Question }) => {
         console.log("📄 Question navigated:", data);
+
+        // Check if this question has been answered before (previous question)
+        let hasAnswers = false;
+        try {
+          const response = await fetch(
+            `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
+          );
+          const statsData = await response.json();
+          if (statsData.success) {
+            hasAnswers =
+              (statsData.answerCount || 0) > 0 ||
+              (statsData.playersWithAnswers?.length || 0) > 0;
+          }
+        } catch (error) {
+          console.error("Error checking if question has answers:", error);
+        }
+
         setGameState((prev) =>
           prev
             ? {
                 ...prev,
                 questionIndex: data.questionIndex,
                 question: data.question,
-                status: "IN_PROGRESS",
-                answerRevealed: false,
+                status: hasAnswers ? "QUESTION_ENDED" : "IN_PROGRESS",
+                answerRevealed: hasAnswers, // If question has answers, it's been answered
                 endAt: undefined,
               }
             : null
         );
-        // Reset stats for the new question
-        setStats((prev) => ({
-          ...prev,
-          answerCount: 0,
-          answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
-          playersWithAnswers: [],
-        }));
+
+        // Fetch stats for the navigated question
+        if (hasAnswers) {
+          try {
+            const response = await fetch(
+              `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
+            );
+            const statsData = await response.json();
+            if (statsData.success) {
+              setStats({
+                playerCount: statsData.playerCount,
+                answerCount: statsData.answerCount || 0,
+                answerDistribution: statsData.answerDistribution || {
+                  A: 0,
+                  B: 0,
+                  C: 0,
+                  D: 0,
+                },
+                playersWithAnswers: statsData.playersWithAnswers || [],
+                playerScores: statsData.playerScores || {},
+              });
+            }
+          } catch (error) {
+            console.error(
+              "Error fetching stats for navigated question:",
+              error
+            );
+          }
+        } else {
+          // Reset stats for the new question
+          setStats((prev) => ({
+            ...prev,
+            answerCount: 0,
+            answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
+            playersWithAnswers: [],
+          }));
+        }
         // Close the answer reveal modal when navigating to a new question
         setShowAnswerRevealModal(false);
       }
@@ -728,14 +786,24 @@ export default function HostDashboard() {
                       No players joined yet
                     </p>
                   ) : (
-                    <ul className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto text-center">
+                    <ul
+                      className={`grid gap-2 max-h-64 overflow-y-auto pt-[50px] ${
+                        players.length > 6 ? "grid-cols-2" : "grid-cols-1"
+                      }`}
+                    >
                       {players.map((player) => (
                         <li
                           key={player.playerId}
-                          className="w-full px-[50px] text-gray-700 dark:text-gray-300 flex items-center"
+                          className={`w-full text-gray-700 dark:text-gray-300 flex items-center ${
+                            players.length > 6
+                              ? "justify-center px-2"
+                              : "justify-center px-[50px]"
+                          }`}
                         >
-                          <span className="w-6 shrink-0">👤</span>
-                          <span className="ml-2 flex-1 text-center">
+                          <span className="w-6 shrink-0 flex items-center justify-center">
+                            👤
+                          </span>
+                          <span className="ml-2 text-center truncate min-w-0 flex-1">
                             {player.name}
                           </span>
                         </li>
@@ -745,7 +813,7 @@ export default function HostDashboard() {
                 </div>
               </div>
 
-              <div className="mt-6 flex gap-4">
+              <div className="mt-6 flex justify-center gap-4">
                 <button
                   onClick={handleStartGame}
                   disabled={!connected || players.length === 0}
@@ -851,7 +919,7 @@ export default function HostDashboard() {
               )}
 
               {/* Timer Display */}
-              {isQuestionActive && (
+              {isQuestionActive && !gameState?.answerRevealed && (
                 <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                   <div className="text-center">
                     <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
@@ -904,9 +972,17 @@ export default function HostDashboard() {
                     !connected ||
                     !currentQuestion ||
                     isQuestionActive ||
-                    gameState?.answerRevealed
+                    gameState?.answerRevealed ||
+                    stats.answerCount > 0 ||
+                    (stats.playersWithAnswers?.length || 0) > 0
                   }
                   className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  title={
+                    stats.answerCount > 0 ||
+                    (stats.playersWithAnswers?.length || 0) > 0
+                      ? "This question has already been answered"
+                      : undefined
+                  }
                 >
                   Start Question
                 </button>

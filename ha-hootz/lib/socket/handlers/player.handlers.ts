@@ -11,7 +11,6 @@ import {
 import {
   getSessionIdFromCode,
   getSession,
-  addPlayer as addPlayerToSession,
   getAnswerCount,
   getAnswerDistribution,
   storeAnswerTimestamp,
@@ -317,6 +316,16 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         socket.emit("ANSWER_RECEIVED", {
           accepted: false,
           reason: "This is not the current active question",
+        });
+        return;
+      }
+
+      // Check if question is in review mode (navigated to a previous question)
+      // If answer is already revealed, this is review mode - don't allow new submissions
+      if (gameState.answerRevealed && gameState.status === "QUESTION_ENDED") {
+        socket.emit("ANSWER_RECEIVED", {
+          accepted: false,
+          reason: "This question is in review mode. Answers cannot be changed.",
         });
         return;
       }

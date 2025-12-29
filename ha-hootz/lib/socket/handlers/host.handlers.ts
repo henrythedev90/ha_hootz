@@ -442,10 +442,22 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         return;
       }
 
+      // Check if this question has already been answered (previous question)
+      // If current question index is greater than the navigated index, it's a previous question
+      const currentQuestionIndex = gameState.questionIndex ?? 0;
+      const isPreviousQuestion = questionIndex < currentQuestionIndex;
+
+      // Check if answers exist for this question (indicates it was already answered)
+      const answers = await redis.hGetAll(answersKey(sessionId, questionIndex));
+      const hasAnswers = Object.keys(answers).length > 0;
+
+      // If navigating to a previous question that has been answered, show it in review mode
+      const isReviewMode = isPreviousQuestion && hasAnswers;
+
       // Update game state (preserve scoringConfig and other properties)
       const newState = {
         ...gameState, // Preserve existing properties like scoringConfig
-        status: "IN_PROGRESS",
+        status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
         questionIndex,
         questionCount: session.questionCount,
         question: {
@@ -456,7 +468,8 @@ export function registerHostHandlers(io: Server, socket: Socket) {
           D: question.D,
           correct: question.correct,
         },
-        answerRevealed: false,
+        answerRevealed: isReviewMode, // Show answer if it's a previous question
+        correctAnswer: isReviewMode ? question.correct : undefined,
       };
 
       await redis.set(gameStateKey(sessionId), JSON.stringify(newState));
@@ -465,6 +478,9 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       io.to(sessionCode).emit("question-navigated", {
         questionIndex,
         question: newState.question,
+        answerRevealed: isReviewMode,
+        correctAnswer: isReviewMode ? question.correct : undefined,
+        isReviewMode: isReviewMode, // Flag to indicate this is review mode
       });
 
       // Notify host

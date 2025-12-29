@@ -44,6 +44,13 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - **Smart Answer Reveal**: Button only enabled when all connected players have submitted
   - **Timer Control**: Timer automatically stops (set to 0) when answer is revealed
   - **Question Navigation**: Navigate between questions with automatic state reset
+    - **Previous Question Review Mode**: When navigating to a previously answered question:
+      - Question is displayed in review mode (read-only)
+      - Correct answer is automatically revealed
+      - Players see their previous answer highlighted
+      - Players cannot change their answers in review mode
+      - "Start Question" button is disabled for answered questions
+      - Question status is set to "QUESTION_ENDED" (no timer, no active submission)
   - **Comprehensive Scoring System**:
     - Configurable base points per question
     - Time-based bonuses (awarded for fast answers)
@@ -76,6 +83,12 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - **Real-Time Updates**: Instant response to game-started, question-started, and question-ended events
   - **Resilient**: Handles refreshes and reconnects with answer restoration (can still submit after refresh if question is active)
   - **Automatic Answer Marking**: Players who don't answer when question ends are marked as "NO_ANSWER"
+  - **Review Mode**: When host navigates to a previous question:
+    - Question is displayed in read-only review mode
+    - Correct answer is automatically revealed
+    - Player's previous answer is restored and highlighted
+    - Answer buttons are disabled (cannot change answers)
+    - Question status shows as ended (no timer)
 
 - **User Authentication**
 
@@ -91,6 +104,11 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js, MongoDB At
   - Live answer distribution visualization
   - **Leaderboard Display**: Shows all players with their scores, sorted by rank
   - Question navigation (previous/next) with automatic state reset
+    - **Previous Question Review**: Navigating to a previously answered question:
+      - Automatically detects if question has been answered
+      - Loads answer distribution and player responses
+      - Disables "Start Question" button (tooltip explains why)
+      - Sets question to review mode for players
   - Answer reveal modal with distribution charts and leaderboard
   - **Reveal Winner**: Button on last question to announce winner to all players
   - **End Game**: Confirmation modal to end game session, disconnects all players
@@ -365,6 +383,7 @@ ha-hootz/
 - `GET /api/sessions/[sessionCode]/host` - Get host name for a session
 - `GET /api/sessions/[sessionCode]/players` - Get list of active players in session
 - `GET /api/sessions/[sessionCode]/stats` - Get game statistics (player count, answer count, distribution, players with answers)
+- `GET /api/sessions/[sessionCode]/player-answer` - Get a player's answer for a specific question (used for review mode)
 - `GET /api/qr/[sessionCode]` - Generate QR code for session join URL
 
 ### Socket.io Events
@@ -378,6 +397,9 @@ ha-hootz/
   - Automatically marks unanswered players as "NO_ANSWER"
   - Calculates and stores scores based on scoring configuration
 - `NAVIGATE_QUESTION` - Navigate to a different question (requires `sessionCode`, `questionIndex`)
+  - Automatically detects if navigating to a previously answered question
+  - Sets question to review mode if it has been answered
+  - Includes `isReviewMode`, `answerRevealed`, and `correctAnswer` flags in broadcast
 - `END_QUESTION` - End the current question early (requires `sessionCode`, `questionIndex`)
   - Automatically marks unanswered players as "NO_ANSWER"
   - Calculates and stores scores based on scoring configuration
@@ -401,7 +423,10 @@ ha-hootz/
 - `game-started` - Game has started (includes `status`, `questionIndex`)
 - `question-started` - Question is active (includes `question`, `questionIndex`, `endAt`)
 - `question-ended` - Question time expired (includes `questionIndex`)
-- `question-navigated` - Question navigation occurred (includes `questionIndex`, `question`)
+- `question-navigated` - Question navigation occurred (includes `questionIndex`, `question`, `isReviewMode`, `answerRevealed`, `correctAnswer`)
+  - `isReviewMode`: Boolean indicating if question is in review mode (previously answered)
+  - `answerRevealed`: Boolean indicating if correct answer should be shown
+  - `correctAnswer`: The correct answer option (A, B, C, or D) if in review mode
 - `player-joined` - Player joined session (includes `playerId`, `name`, `playerCount`)
 - `player-left` - Player left session (includes `playerId`, `playerCount`)
 - `answer-stats-updated` - Answer statistics updated (includes `questionIndex`, `answerCount`, `answerDistribution`, `playersWithAnswers`, `playerScores`)
@@ -417,7 +442,9 @@ ha-hootz/
 - `game-started` - Game has started (includes `status`, `questionIndex`)
 - `question-started` - New question is active (includes `question`, `questionIndex`, `endAt`)
 - `question-ended` - Question time expired (includes `questionIndex`)
-- `question-navigated` - Question navigation occurred (includes `questionIndex`, `question`)
+- `question-navigated` - Question navigation occurred (includes `questionIndex`, `question`, `isReviewMode`, `answerRevealed`, `correctAnswer`)
+  - In review mode, players' previous answers are restored and displayed
+  - Answer buttons are disabled in review mode
 - `answer-revealed` - Correct answer revealed (includes `questionIndex`, `correctAnswer`)
 - `winner-revealed` - Winner announced (includes `leaderboard` with player scores)
 - `session-cancelled` - Host cancelled the session (includes `message`)
