@@ -90,6 +90,18 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       const stateStr = await redis.get(gameStateKey(sessionId));
       let gameState = stateStr ? JSON.parse(stateStr) : { status: "WAITING" };
 
+      // If status is WAITING, explicitly reset all game flags for a fresh session
+      if (gameState.status === "WAITING") {
+        gameState = {
+          ...gameState,
+          answerRevealed: false,
+          correctAnswer: undefined,
+          isReviewMode: false,
+          question: undefined,
+          endAt: undefined,
+        };
+      }
+
       // If there's an active question, fetch the question details
       if (
         gameState.status === "QUESTION_ACTIVE" &&
@@ -149,6 +161,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         ...existingState, // Preserve existing properties like scoringConfig
         status: "IN_PROGRESS",
         questionIndex: 0,
+        // Explicitly reset game state flags when starting a new game
+        answerRevealed: false,
+        correctAnswer: undefined,
+        isReviewMode: false,
+        question: undefined,
+        endAt: undefined,
       };
 
       await redis.set(gameStateKey(sessionId), JSON.stringify(state));

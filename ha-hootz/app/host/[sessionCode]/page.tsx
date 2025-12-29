@@ -43,6 +43,7 @@ import {
   setShowPlayersModal,
   setShowAnswerRevealModal,
   setShowEndGameModal,
+  resetUiState,
 } from "@/store/slices/uiSlice";
 import type { Question } from "@/store/slices/gameSlice";
 
@@ -84,9 +85,16 @@ export default function HostDashboard() {
 
   // Reset Redux state and set session code when sessionCode changes
   useEffect(() => {
+    console.log("🔄 Session code changed, resetting all state:", sessionCode);
     // Reset all state when sessionCode changes (new session)
     dispatch(resetGameState());
     dispatch(resetHostState());
+    dispatch(resetUiState()); // Reset all modals and UI state
+
+    // Explicitly close all modals as a safety measure
+    dispatch(setShowAnswerRevealModal(false));
+    dispatch(setShowPlayersModal(false));
+    dispatch(setShowEndGameModal(false));
 
     if (sessionCode) {
       dispatch(setSessionCode(sessionCode));
@@ -130,20 +138,34 @@ export default function HostDashboard() {
         if (data.success && data.gameState) {
           console.log("🔄 Restored game state on mount:", data.gameState);
           // Completely replace game state (don't merge with old state)
+          // If status is WAITING, explicitly reset all game flags
+          const isWaiting = data.gameState.status === "WAITING";
           dispatch(
             setGameState({
               status: data.gameState.status || "WAITING",
               sessionId: data.gameState.sessionId,
               questionIndex: data.gameState.questionIndex ?? 0,
               questionCount: questionCount || data.gameState.questionCount || 0,
-              question: data.gameState.question,
-              endAt: data.gameState.endAt,
-              answerRevealed: data.gameState.answerRevealed || false,
-              correctAnswer: data.gameState.correctAnswer,
-              isReviewMode: data.gameState.isReviewMode || false,
+              question: isWaiting ? undefined : data.gameState.question,
+              endAt: isWaiting ? undefined : data.gameState.endAt,
+              answerRevealed: isWaiting
+                ? false
+                : data.gameState.answerRevealed || false,
+              correctAnswer: isWaiting
+                ? undefined
+                : data.gameState.correctAnswer,
+              isReviewMode: isWaiting
+                ? false
+                : data.gameState.isReviewMode || false,
               scoringConfig: data.gameState.scoringConfig,
             })
           );
+          // Explicitly close all modals when fetching game state for a new session
+          if (isWaiting) {
+            dispatch(setShowAnswerRevealModal(false));
+            dispatch(setShowPlayersModal(false));
+            dispatch(setShowEndGameModal(false));
+          }
         } else {
           // If no game state exists, initialize with WAITING state
           dispatch(
@@ -153,6 +175,10 @@ export default function HostDashboard() {
               questionCount: questionCount || 0,
             })
           );
+          // Close all modals for new sessions
+          dispatch(setShowAnswerRevealModal(false));
+          dispatch(setShowPlayersModal(false));
+          dispatch(setShowEndGameModal(false));
         }
       } catch (error) {
         console.error("Error fetching game state:", error);
@@ -164,6 +190,10 @@ export default function HostDashboard() {
             questionCount: questionCount || 0,
           })
         );
+        // Close all modals on error
+        dispatch(setShowAnswerRevealModal(false));
+        dispatch(setShowPlayersModal(false));
+        dispatch(setShowEndGameModal(false));
       }
     };
 
@@ -740,12 +770,33 @@ export default function HostDashboard() {
   const isQuestionEnded = gameState?.status === "QUESTION_ENDED";
   const canNavigate = !isQuestionActive && gameState?.status !== "WAITING";
 
-  // Automatically open AnswerRevealModal when question ends
+  // Ensure modals are closed when game status is WAITING (new session)
   useEffect(() => {
-    if (isQuestionEnded && currentQuestion) {
+    if (gameState?.status === "WAITING") {
+      dispatch(setShowAnswerRevealModal(false));
+      dispatch(setShowPlayersModal(false));
+      dispatch(setShowEndGameModal(false));
+    }
+  }, [gameState?.status, dispatch]);
+
+  // Automatically open AnswerRevealModal when question ends
+  // Only open if game is not in WAITING state (new session) and question is not in review mode
+  useEffect(() => {
+    if (
+      isQuestionEnded &&
+      currentQuestion &&
+      gameState?.status !== "WAITING" &&
+      !gameState?.isReviewMode
+    ) {
       dispatch(setShowAnswerRevealModal(true));
     }
-  }, [isQuestionEnded, currentQuestion, dispatch]);
+  }, [
+    isQuestionEnded,
+    currentQuestion,
+    gameState?.status,
+    gameState?.isReviewMode,
+    dispatch,
+  ]);
 
   if (status === "loading") {
     return <Loading />;
@@ -889,33 +940,43 @@ export default function HostDashboard() {
         socket={socket}
         connected={connected}
       />
-      <AnswerRevealModal
-        isOpen={showAnswerRevealModal}
-        onClose={() => dispatch(setShowAnswerRevealModal(false))}
-        question={currentQuestion || null}
-        answerDistribution={stats.answerDistribution}
-        currentIndex={currentIndex}
-        questionCount={questionCount}
-        onPrevious={handlePreviousQuestion}
-        onNext={handleNextQuestion}
-        canNavigate={canNavigate}
-        connected={connected || false}
-        players={players}
-        playerScores={stats.playerScores}
-        onRevealWinner={(leaderboard) => {
-          console.log("🏆 Host: Revealing winner, leaderboard:", leaderboard);
-          if (socket) {
-            socket.emit("REVEAL_WINNER", {
-              sessionCode,
-              leaderboard,
-            });
-            console.log("🏆 Host: REVEAL_WINNER event emitted to server");
-          }
-        }}
-        onEndGame={() => {
-          dispatch(setShowEndGameModal(true));
-        }}
-      />
+      {(() => {
+        // Check if game is in WAITING state (new session) - use string comparison to avoid TypeScript narrowing issues
+        const statusStr = String(gameState?.status || "");
+        const isWaiting = statusStr === "WAITING" || !gameState?.status;
+        return (
+          <AnswerRevealModal
+            isOpen={showAnswerRevealModal && !isWaiting}
+            onClose={() => dispatch(setShowAnswerRevealModal(false))}
+            question={isWaiting ? null : currentQuestion || null}
+            answerDistribution={stats.answerDistribution}
+            currentIndex={currentIndex}
+            questionCount={questionCount}
+            onPrevious={handlePreviousQuestion}
+            onNext={handleNextQuestion}
+            canNavigate={canNavigate}
+            connected={connected || false}
+            players={players}
+            playerScores={stats.playerScores}
+            onRevealWinner={(leaderboard) => {
+              console.log(
+                "🏆 Host: Revealing winner, leaderboard:",
+                leaderboard
+              );
+              if (socket) {
+                socket.emit("REVEAL_WINNER", {
+                  sessionCode,
+                  leaderboard,
+                });
+                console.log("🏆 Host: REVEAL_WINNER event emitted to server");
+              }
+            }}
+            onEndGame={() => {
+              dispatch(setShowEndGameModal(true));
+            }}
+          />
+        );
+      })()}
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
