@@ -495,35 +495,23 @@ export default function HostDashboard() {
         isReviewMode?: boolean;
       }) => {
         console.log("📄 Question navigated:", data);
+        const isReviewMode = data.isReviewMode || false;
 
-        let hasAnswers = false;
-        try {
-          const response = await fetch(
-            `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
-          );
-          const statsData = await response.json();
-          if (statsData.success) {
-            hasAnswers =
-              (statsData.answerCount || 0) > 0 ||
-              (statsData.playersWithAnswers?.length || 0) > 0;
-          }
-        } catch (error) {
-          console.error("Error checking if question has answers:", error);
-        }
-
+        // Update game state with review mode flags from server
         dispatch(
           updateGameState({
             questionIndex: data.questionIndex,
             question: data.question,
-            status: hasAnswers ? "QUESTION_ENDED" : "IN_PROGRESS",
-            answerRevealed: hasAnswers || data.answerRevealed,
+            status: isReviewMode ? "QUESTION_ENDED" : "IN_PROGRESS",
+            answerRevealed: data.answerRevealed || false,
             correctAnswer: data.correctAnswer,
-            isReviewMode: data.isReviewMode,
+            isReviewMode: isReviewMode,
             endAt: undefined,
           })
         );
 
-        if (hasAnswers) {
+        // If in review mode, fetch stats to show player answers
+        if (isReviewMode) {
           try {
             const response = await fetch(
               `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
@@ -552,6 +540,7 @@ export default function HostDashboard() {
             );
           }
         } else {
+          // Reset stats for new questions
           dispatch(
             updateStats({
               answerCount: 0,

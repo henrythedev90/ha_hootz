@@ -470,6 +470,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         },
         answerRevealed: isReviewMode, // Show answer if it's a previous question
         correctAnswer: isReviewMode ? question.correct : undefined,
+        isReviewMode: isReviewMode, // Store review mode flag in Redis
       };
 
       await redis.set(gameStateKey(sessionId), JSON.stringify(newState));
@@ -483,10 +484,13 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         isReviewMode: isReviewMode, // Flag to indicate this is review mode
       });
 
-      // Notify host
+      // Notify host with the same data structure
       socket.emit("question-navigated", {
         questionIndex,
         question: newState.question,
+        answerRevealed: isReviewMode,
+        correctAnswer: isReviewMode ? question.correct : undefined,
+        isReviewMode: isReviewMode, // Flag to indicate this is review mode
       });
 
       console.log(
