@@ -20,6 +20,7 @@ import {
   setAnswerRevealed,
   setCorrectAnswer,
   setReviewMode,
+  resetGameState,
 } from "@/store/slices/gameSlice";
 import {
   setQuestions,
@@ -31,6 +32,7 @@ import {
   setTimeRemaining,
   setSessionStatus,
   setLeaderboard,
+  resetHostState,
 } from "@/store/slices/hostSlice";
 import {
   setSocket,
@@ -80,8 +82,12 @@ export default function HostDashboard() {
     statsRef.current = stats;
   }, [stats]);
 
-  // Set session code in Redux
+  // Reset Redux state and set session code when sessionCode changes
   useEffect(() => {
+    // Reset all state when sessionCode changes (new session)
+    dispatch(resetGameState());
+    dispatch(resetHostState());
+
     if (sessionCode) {
       dispatch(setSessionCode(sessionCode));
       dispatch(setSocketSessionCode(sessionCode));
@@ -123,15 +129,41 @@ export default function HostDashboard() {
         const data = await response.json();
         if (data.success && data.gameState) {
           console.log("🔄 Restored game state on mount:", data.gameState);
+          // Completely replace game state (don't merge with old state)
           dispatch(
             setGameState({
-              ...data.gameState,
-              questionCount: questionCount || data.gameState.questionCount,
+              status: data.gameState.status || "WAITING",
+              sessionId: data.gameState.sessionId,
+              questionIndex: data.gameState.questionIndex ?? 0,
+              questionCount: questionCount || data.gameState.questionCount || 0,
+              question: data.gameState.question,
+              endAt: data.gameState.endAt,
+              answerRevealed: data.gameState.answerRevealed || false,
+              correctAnswer: data.gameState.correctAnswer,
+              isReviewMode: data.gameState.isReviewMode || false,
+              scoringConfig: data.gameState.scoringConfig,
+            })
+          );
+        } else {
+          // If no game state exists, initialize with WAITING state
+          dispatch(
+            setGameState({
+              status: "WAITING",
+              questionIndex: 0,
+              questionCount: questionCount || 0,
             })
           );
         }
       } catch (error) {
         console.error("Error fetching game state:", error);
+        // Initialize with WAITING state on error
+        dispatch(
+          setGameState({
+            status: "WAITING",
+            questionIndex: 0,
+            questionCount: questionCount || 0,
+          })
+        );
       }
     };
 
@@ -944,15 +976,12 @@ export default function HostDashboard() {
                     !connected ||
                     !currentQuestion ||
                     isQuestionActive ||
-                    gameState?.answerRevealed ||
-                    stats.answerCount > 0 ||
-                    (stats.playersWithAnswers?.length || 0) > 0
+                    (gameState?.isReviewMode && gameState?.answerRevealed)
                   }
                   className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   title={
-                    stats.answerCount > 0 ||
-                    (stats.playersWithAnswers?.length || 0) > 0
-                      ? "This question has already been answered"
+                    gameState?.isReviewMode && gameState?.answerRevealed
+                      ? "This question has already been answered in review mode"
                       : undefined
                   }
                 >
