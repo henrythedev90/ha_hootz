@@ -38,7 +38,6 @@ import {
   setIsExitModalOpen,
   setSessionEnded,
   setError,
-  clearError,
 } from "@/store/slices/uiSlice";
 
 export default function GamePage() {
