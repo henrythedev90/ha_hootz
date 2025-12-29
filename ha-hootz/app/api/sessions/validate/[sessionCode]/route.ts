@@ -4,6 +4,7 @@ import {
   getSessionIdFromCode,
   getSession,
 } from "@/lib/redis/triviaRedis";
+import { getSession as getAuthSession } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
@@ -11,6 +12,8 @@ export async function GET(
 ) {
   try {
     const { sessionCode } = await params;
+    const searchParams = request.nextUrl.searchParams;
+    const isHostCheck = searchParams.get("hostCheck") === "true";
 
     // Validate format
     if (!/^\d{6}$/.test(sessionCode)) {
@@ -46,7 +49,33 @@ export async function GET(
       );
     }
 
-    // Check if session is locked/live (prevent new joins)
+    // If this is a host check, verify the user is the host
+    if (isHostCheck) {
+      const authSession = await getAuthSession();
+      if (!authSession?.user?.id) {
+        return NextResponse.json(
+          { isValid: false, error: "Unauthorized" },
+          { status: 401 }
+        );
+      }
+
+      if (session.hostId !== authSession.user.id) {
+        return NextResponse.json(
+          { isValid: false, error: "Forbidden - Not the host" },
+          { status: 403 }
+        );
+      }
+
+      // Host can always validate their own session, even if live or ended
+      return NextResponse.json({
+        isValid: true,
+        sessionId,
+        sessionStatus: session.status,
+        hostId: session.hostId,
+      });
+    }
+
+    // For player joins, check if session is locked/live (prevent new joins)
     if (session.status === "live" || session.status === "ended") {
       return NextResponse.json(
         {
@@ -62,6 +91,7 @@ export async function GET(
       isValid: true,
       sessionId,
       sessionStatus: session.status,
+      hostId: session.hostId,
     });
   } catch (error: any) {
     console.error("Error validating session code:", error);
