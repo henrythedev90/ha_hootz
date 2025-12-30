@@ -77,6 +77,7 @@ export default function HostDashboard() {
 
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameStateRef = useRef(gameState);
   const statsRef = useRef(stats);
 
@@ -91,6 +92,12 @@ export default function HostDashboard() {
 
   // Reset Redux state and set session code when sessionCode changes
   useEffect(() => {
+    // Clear any pending redirects from previous session
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+
     // Reset all state when sessionCode changes (new session)
     dispatch(resetGameState());
     dispatch(resetHostState());
@@ -617,8 +624,22 @@ export default function HostDashboard() {
     );
 
     newSocket.on("session-cancelled", () => {
-      setTimeout(() => {
-        router.push("/");
+      // Clear any existing redirect timeout
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+
+      // Store the current sessionCode to verify we're still on the cancelled session
+      const cancelledSessionCode = sessionCode;
+
+      // Set redirect timeout - only redirect if we're still on the cancelled session
+      redirectTimeoutRef.current = setTimeout(() => {
+        // Double-check we're still on the cancelled session before redirecting
+        // This prevents redirecting if user has already navigated to a new session
+        if (params.sessionCode === cancelledSessionCode) {
+          router.push("/");
+        }
+        redirectTimeoutRef.current = null;
       }, 2000);
     });
 
@@ -635,10 +656,15 @@ export default function HostDashboard() {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
+      // Clear any pending redirects when cleaning up
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+        redirectTimeoutRef.current = null;
+      }
       newSocket.removeAllListeners();
       newSocket.disconnect();
     };
-  }, [sessionCode, router, dispatch]);
+  }, [sessionCode, router, dispatch, params.sessionCode]);
 
   // Emit host-join when socket is connected and session is ready
   useEffect(() => {

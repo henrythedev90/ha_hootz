@@ -108,6 +108,7 @@ export default function PlayersListModal({
 
   // Countdown timer - automatically close after countdown
   // Uses timestamp-based approach for accurate timing
+  // Continues running even when confirmation modal is open
   useEffect(() => {
     if (!isOpen) {
       // Clean up if modal is closed
@@ -121,9 +122,15 @@ export default function PlayersListModal({
     }
 
     // Reset closed flag and initialize when modal opens
-    hasClosedRef.current = false;
-    countdownDurationRef.current = 5;
-    setCountdown(5);
+    if (!countdownStartTimeRef.current) {
+      hasClosedRef.current = false;
+      countdownDurationRef.current = 5;
+      setCountdown(5);
+
+      // Record start time when countdown begins
+      const startTime = Date.now();
+      countdownStartTimeRef.current = startTime;
+    }
 
     // Clear any existing interval
     if (countdownIntervalRef.current) {
@@ -131,9 +138,6 @@ export default function PlayersListModal({
       countdownIntervalRef.current = null;
     }
 
-    // Record start time when countdown begins
-    const startTime = Date.now();
-    countdownStartTimeRef.current = startTime;
     const durationMs = 5000; // 5 seconds in milliseconds
 
     // Update countdown based on elapsed time (more accurate than interval-based)
@@ -158,6 +162,8 @@ export default function PlayersListModal({
             clearInterval(countdownIntervalRef.current);
             countdownIntervalRef.current = null;
           }
+          // Close confirmation modal if open, then close main modal
+          setShowCancelConfirm(false);
           onCloseRef.current();
         }
       }
@@ -321,6 +327,7 @@ export default function PlayersListModal({
         itemName="session"
         description="Are you sure you want to cancel this session? All players will be disconnected and the game will end."
         playerMode={false}
+        countdown={countdown}
       />
     </div>
   );
