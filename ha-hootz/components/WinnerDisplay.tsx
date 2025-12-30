@@ -64,44 +64,44 @@ export default function WinnerDisplay({
         )}
 
         {/* Player's Rank Display */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 mb-6">
+        <div className="bg-card-bg rounded-2xl shadow-2xl p-8 mb-6">
           <div className="text-center">
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-4xl font-bold text-text-light mb-6">
               Your Final Rank
             </h2>
             <div
               className={`inline-flex items-center justify-center w-32 h-32 rounded-full text-6xl font-bold mb-4 ${
                 isWinner
-                  ? "bg-linear-to-br from-yellow-400 to-yellow-600 text-yellow-900 shadow-lg scale-110 animate-pulse"
+                  ? "bg-gradient-to-br from-cyan to-indigo text-white shadow-lg scale-110 animate-pulse"
                   : isSecond
-                  ? "bg-linear-to-br from-gray-300 to-gray-500 text-gray-800 shadow-lg"
+                  ? "bg-gradient-to-br from-card-bg to-deep-navy text-text-light shadow-lg border border-indigo/30"
                   : isThird
-                  ? "bg-linear-to-br from-orange-400 to-orange-600 text-orange-900 shadow-lg"
-                  : "bg-linear-to-br from-blue-400 to-blue-600 text-white shadow-lg"
+                  ? "bg-gradient-to-br from-cyan/50 to-indigo/50 text-text-light shadow-lg border border-cyan/30"
+                  : "bg-gradient-to-br from-indigo to-cyan text-white shadow-lg"
               }`}
             >
               {isWinner ? "👑" : `#${playerRank}`}
             </div>
-            <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-3xl font-bold text-text-light mb-2">
               {playerName}
             </h3>
-            <p className="text-2xl text-blue-600 dark:text-blue-400 font-semibold mb-4">
+            <p className="text-2xl text-indigo font-semibold mb-4">
               {playerScore} points
             </p>
-            <p className="text-lg text-gray-600 dark:text-gray-400">
+            <p className="text-lg text-text-light/70">
               Out of {totalPlayers} {totalPlayers === 1 ? "player" : "players"}
             </p>
           </div>
         </div>
 
         {/* Full Leaderboard */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
-          <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+        <div className="bg-card-bg rounded-2xl shadow-2xl p-8">
+          <h3 className="text-3xl font-bold text-text-light mb-6 text-center">
             Final Leaderboard
           </h3>
           <div className="space-y-4">
             {leaderboard.length === 0 ? (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+              <p className="text-center text-text-light/50 py-8">
                 No players
               </p>
             ) : (
@@ -115,14 +115,14 @@ export default function WinnerDisplay({
                     key={player.playerId}
                     className={`p-6 rounded-xl border-2 transition-all ${
                       isPlayer
-                        ? "bg-blue-100 dark:bg-blue-900/50 border-blue-500 dark:border-blue-400 shadow-xl scale-105 ring-4 ring-blue-300 dark:ring-blue-600"
+                        ? "bg-indigo/20 border-indigo shadow-xl scale-105 ring-4 ring-indigo/30"
                         : isTopThree
                         ? rank === 1
-                          ? "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-500 dark:border-yellow-500"
+                          ? "bg-cyan/20 border-cyan"
                           : rank === 2
-                          ? "bg-gray-100 dark:bg-gray-700 border-gray-400 dark:border-gray-400"
-                          : "bg-orange-100 dark:bg-orange-900/30 border-orange-500 dark:border-orange-500"
-                        : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                          ? "bg-card-bg border-indigo/30"
+                          : "bg-cyan/10 border-cyan/50"
+                        : "bg-deep-navy border-indigo/30"
                     }`}
                   >
                     <div className="flex items-center gap-4">
@@ -130,11 +130,11 @@ export default function WinnerDisplay({
                         className={`text-3xl font-bold ${
                           isTopThree
                             ? rank === 1
-                              ? "text-yellow-600 dark:text-yellow-400"
+                              ? "text-cyan"
                               : rank === 2
-                              ? "text-gray-600 dark:text-gray-400"
-                              : "text-orange-600 dark:text-orange-400"
-                            : "text-gray-500 dark:text-gray-400"
+                              ? "text-text-light/50"
+                              : "text-cyan/70"
+                            : "text-text-light/50"
                         }`}
                       >
                         {rank === 1 ? "👑" : `#${rank}`}
@@ -142,13 +142,13 @@ export default function WinnerDisplay({
                       <span
                         className={`flex-1 text-xl font-semibold ${
                           isPlayer
-                            ? "text-blue-900 dark:text-blue-100"
-                            : "text-gray-900 dark:text-white"
+                            ? "text-indigo"
+                            : "text-text-light"
                         }`}
                       >
                         {player.name}
                         {isPlayer && (
-                          <span className="ml-2 text-blue-600 dark:text-blue-400">
+                          <span className="ml-2 text-indigo/70">
                             (You)
                           </span>
                         )}
@@ -156,8 +156,8 @@ export default function WinnerDisplay({
                       <span
                         className={`text-2xl font-bold ${
                           isPlayer
-                            ? "text-blue-700 dark:text-blue-300"
-                            : "text-blue-600 dark:text-blue-400"
+                            ? "text-indigo"
+                            : "text-indigo/80"
                         }`}
                       >
                         {player.score} pts

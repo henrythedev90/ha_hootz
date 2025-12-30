@@ -187,23 +187,23 @@ export default function PlayersListModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-card-bg rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-8">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <h1 className="text-3xl font-bold text-text-light mb-2">
                 Players Joined
               </h1>
-              <p className="text-gray-600 dark:text-gray-300">
+              <p className="text-text-light/70">
                 Session Code:{" "}
                 <span className="font-mono font-semibold">{sessionCode}</span>
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <p className="text-2xl font-bold text-indigo">
                 {players.length}
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-text-light/50">
                 {players.length === 1 ? "Player" : "Players"}
               </p>
             </div>
@@ -211,17 +211,17 @@ export default function PlayersListModal({
 
           {loading ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-text-light/50">
                 Loading players...
               </p>
             </div>
           ) : error && !players.length ? (
             <div className="text-center py-12">
-              <p className="text-red-500 dark:text-red-400">{error}</p>
+              <p className="text-error">{error}</p>
             </div>
           ) : players.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400 text-lg">
+              <p className="text-text-light/50 text-lg">
                 No players have joined yet. Waiting for players...
               </p>
             </div>
@@ -230,17 +230,17 @@ export default function PlayersListModal({
               {players.map((player) => (
                 <div
                   key={player.playerId}
-                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
+                  className="bg-deep-navy rounded-lg p-4 border border-indigo/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    <div className="w-10 h-10 bg-indigo rounded-full flex items-center justify-center text-white font-semibold">
                       {player.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <p className="text-sm font-medium text-text-light truncate">
                         {player.name}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      <p className="text-xs text-text-light/50 truncate">
                         Player ID: {player.playerId.slice(0, 8)}...
                       </p>
                     </div>
@@ -250,29 +250,29 @@ export default function PlayersListModal({
             </div>
           )}
 
-          <div className="flex flex-col items-center space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col items-center space-y-4 pt-6 border-t border-indigo/30">
             <div className="text-center mb-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+              <p className="text-sm text-text-light/70 mb-1">
                 Starting automatically in
               </p>
-              <p className="text-4xl font-bold text-orange-600 dark:text-orange-400">
+              <p className="text-4xl font-bold text-cyan">
                 {countdown}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-text-light/50 mt-1">
                 {countdown === 1 ? "second" : "seconds"}
               </p>
             </div>
             <div className="flex space-x-4 w-full max-w-md">
               <button
                 onClick={onClose}
-                className="flex-1 px-6 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors font-medium"
+                className="flex-1 px-6 py-3 bg-deep-navy text-text-light rounded-md hover:bg-deep-navy/80 transition-colors font-medium border border-indigo/30"
               >
                 Cancel
               </button>
               <button
                 onClick={handleStartNow}
                 disabled={players.length === 0}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
+                className="flex-1 px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
               >
                 Start Now
               </button>

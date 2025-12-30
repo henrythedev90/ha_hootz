@@ -490,40 +490,40 @@ export default function GamePage() {
     return (
       <>
         <CenteredLayout>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
+          <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center">
             <h1 className="text-2xl font-bold mb-4">
               {isGoodbye ? (
-                <span className="text-blue-600 dark:text-blue-400">
+                <span className="text-indigo">
                   Goodbye!
                 </span>
               ) : isCancelled ? (
-                <span className="text-red-600 dark:text-red-400">
+                <span className="text-error">
                   Session Cancelled
                 </span>
               ) : (
-                <span className="text-red-600 dark:text-red-400">Error</span>
+                <span className="text-error">Error</span>
               )}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-text-light/70 mb-6">
               {displayMessage}
             </p>
             {isGoodbye ? (
               <div className="space-y-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-text-light/50">
                   Thanks for playing! You can close this page.
                 </p>
                 {playerName && (
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                  <div className="pt-4 border-t border-indigo/30">
+                    <p className="text-sm text-text-light/70 mb-3">
                       Hey {playerName}! Did you enjoy playing?
                     </p>
                     <button
                       onClick={() => (window.location.href = "/auth/signup")}
-                      className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                      className="w-full px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors font-medium shadow-md"
                     >
                       Create Your Own Ha-Hootz Account
                     </button>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <p className="text-xs text-text-light/50 mt-2">
                       Host your own trivia games and create engaging
                       presentations!
                     </p>
@@ -532,21 +532,21 @@ export default function GamePage() {
               </div>
             ) : isCancelled ? (
               <div className="space-y-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-text-light/50">
                   The host has ended this session. You can close this page.
                 </p>
                 {playerName && (
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                  <div className="pt-4 border-t border-indigo/30">
+                    <p className="text-sm text-text-light/70 mb-3">
                       Hey {playerName}! Did you enjoy playing?
                     </p>
                     <button
                       onClick={() => (window.location.href = "/auth/signup")}
-                      className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                      className="w-full px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors font-medium shadow-md"
                     >
                       Create Your Own Ha-Hootz Account
                     </button>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <p className="text-xs text-text-light/50 mt-2">
                       Host your own trivia games and create engaging
                       presentations!
                     </p>
@@ -594,11 +594,11 @@ export default function GamePage() {
     return (
       <>
         <CenteredLayout>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
+          <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center">
             <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
               Game Session Ended
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-text-light/70 mb-6">
               This game session has ended. You can close this page.
             </p>
             {hostName && (
@@ -761,9 +761,9 @@ export default function GamePage() {
     const showAnswerButtons =
       isQuestionActive || gameState.status === "QUESTION_ENDED";
     const getTimerColor = () => {
-      if (timeRemaining <= 5) return "text-red-600 dark:text-red-400";
-      if (timeRemaining <= 10) return "text-orange-600 dark:text-orange-400";
-      return "text-blue-600 dark:text-blue-400";
+      if (timeRemaining <= 5) return "text-error";
+      if (timeRemaining <= 10) return "text-cyan";
+      return "text-indigo";
     };
 
     const getAnswerButtonClass = (option: "A" | "B" | "C" | "D") => {
@@ -783,26 +783,26 @@ export default function GamePage() {
         !isCorrect;
 
       if (isDisabled && !gameState.answerRevealed) {
-        return `${baseClass} bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`;
+        return `${baseClass} bg-card-bg text-text-light/50 cursor-not-allowed border border-indigo/30`;
       }
 
       if (isCorrect) {
-        return `${baseClass} bg-green-600 dark:bg-green-700 text-white shadow-lg border-4 border-green-400`;
+        return `${baseClass} bg-success text-white shadow-lg border-4 border-success/50`;
       }
 
       if (isIncorrect) {
-        return `${baseClass} bg-red-600 dark:bg-red-700 text-white`;
+        return `${baseClass} bg-error text-white`;
       }
 
       if (isSelected && !gameState.answerRevealed) {
-        return `${baseClass} bg-green-600 dark:bg-green-700 text-white shadow-lg transform scale-105`;
+        return `${baseClass} bg-success text-white shadow-lg transform scale-105`;
       }
 
       if (isDisabled) {
-        return `${baseClass} bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed`;
+        return `${baseClass} bg-card-bg text-text-light/50 cursor-not-allowed border border-indigo/30`;
       }
 
-      return `${baseClass} bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95`;
+      return `${baseClass} bg-indigo text-white hover:bg-indigo/90 active:scale-95`;
     };
 
     return (
@@ -837,7 +837,7 @@ export default function GamePage() {
                 >
                   {timeRemaining}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                <div className="text-sm text-text-light/50 mt-2">
                   Seconds Remaining
                 </div>
               </div>
@@ -845,14 +845,14 @@ export default function GamePage() {
 
             {playerName && (
               <div className="text-center mb-4">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-3xl font-bold text-text-light">
                   {playerName}
                 </h1>
               </div>
             )}
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
+            <div className="bg-card-bg rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
+              <h2 className="text-2xl font-bold text-text-light text-center">
                 {gameState.question.text}
               </h2>
             </div>
@@ -890,7 +890,7 @@ export default function GamePage() {
                   <p className="text-lg text-gray-700 dark:text-gray-200 mb-2">
                     Waiting for host to start the question...
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-text-light/50">
                     Answer buttons will appear when the question begins
                   </p>
                 </div>

@@ -789,20 +789,20 @@ export default function HostDashboard() {
   if (sessionStatus === "ended") {
     return (
       <CenteredLayout>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-4">
+        <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-cyan mb-4">
             Game Has Ended
           </h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
+          <p className="text-text-light/70 mb-4">
             This game has already ended.
           </p>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-text-light/50 mb-6">
             We apologize, but you cannot access the host dashboard for a game
             that has already ended.
           </p>
           <button
             onClick={() => router.push("/")}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+            className="w-full px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors font-medium"
           >
             Return to Dashboard
           </button>
@@ -835,14 +835,14 @@ export default function HostDashboard() {
           size="md"
         >
           <div className="space-y-4">
-            <p className="text-gray-700 dark:text-gray-300">
+            <p className="text-text-light/70">
               Are you sure you want to end the game? All players will be
               disconnected.
             </p>
             <div className="flex justify-end gap-3 pt-4">
               <button
                 onClick={() => dispatch(setShowEndGameModal(false))}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+                className="px-4 py-2 bg-deep-navy text-text-light rounded-md hover:bg-deep-navy/80 transition-colors font-medium border border-indigo/30"
               >
                 Cancel
               </button>
@@ -855,27 +855,27 @@ export default function HostDashboard() {
                   dispatch(setShowAnswerRevealModal(false));
                   router.push("/");
                 }}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                className="px-4 py-2 bg-error text-white rounded-md hover:bg-error/90 transition-colors font-medium"
               >
                 End Game
               </button>
             </div>
           </div>
         </Modal>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="min-h-screen bg-deep-navy p-4">
           <div className="max-w-6xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+            <div className="bg-card-bg rounded-lg shadow-md p-6 mb-6">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <h1 className="text-3xl font-bold text-text-light">
                     Host Dashboard
                   </h1>
-                  <p className="text-gray-600 dark:text-gray-300">
+                  <p className="text-text-light/70">
                     Session: {sessionCode}
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-text-light/50">
                     Status: {connected ? "🟢 Connected" : "🔴 Disconnected"}
                   </div>
                 </div>
@@ -887,12 +887,12 @@ export default function HostDashboard() {
                   joinUrl={`/join/${sessionCode}`}
                 />
 
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                  <h3 className="text-lg text-center font-semibold text-gray-900 dark:text-white mb-4">
+                <div className="bg-card-bg rounded-lg shadow-md p-6">
+                  <h3 className="text-lg text-center font-semibold text-text-light mb-4">
                     Players ({players.length})
                   </h3>
                   {players.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400 text-center">
+                    <p className="text-text-light/50 text-center">
                       No players joined yet
                     </p>
                   ) : (
@@ -904,7 +904,7 @@ export default function HostDashboard() {
                       {players.map((player) => (
                         <li
                           key={player.playerId}
-                          className={`w-full text-gray-700 dark:text-gray-300 flex items-center ${
+                          className={`w-full text-text-light flex items-center ${
                             players.length > 6
                               ? "justify-center px-2"
                               : "justify-center px-[50px]"
@@ -927,13 +927,13 @@ export default function HostDashboard() {
                 <button
                   onClick={handleStartGame}
                   disabled={!connected || players.length === 0}
-                  className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="px-6 py-3 bg-success text-white rounded-md hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   Start Game
                 </button>
                 <button
                   onClick={handleCancelSession}
-                  className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                  className="px-6 py-3 bg-error text-white rounded-md hover:bg-error/90 transition-colors font-medium"
                 >
                   Cancel Session
                 </button>
@@ -987,22 +987,22 @@ export default function HostDashboard() {
           />
         );
       })()}
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="min-h-screen bg-deep-navy p-4">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
+          <div className="bg-card-bg rounded-lg shadow-md p-4 mb-4">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-2xl font-bold text-text-light">
                   Live Game Session
                 </h1>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-text-light/70">
                   Session: {sessionCode} •{" "}
                   {connected ? "🟢 Connected" : "🔴 Disconnected"}
                 </p>
               </div>
               <button
                 onClick={handleCancelSession}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-error text-white rounded-md hover:bg-error/90 transition-colors text-sm font-medium"
               >
                 Cancel Session
               </button>
@@ -1010,24 +1010,24 @@ export default function HostDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card-bg rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold text-text-light mb-4">
                 Question Control
               </h2>
 
               {currentQuestion && (
-                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                <div className="mb-4 text-sm text-text-light/70">
                   Question {currentIndex + 1} of {questionCount}
                 </div>
               )}
 
               {isQuestionActive && !gameState?.answerRevealed && (
-                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                <div className="mb-6 p-4 bg-indigo/20 rounded-lg">
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                    <div className="text-4xl font-bold text-indigo mb-2">
                       {timeRemaining}s
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-sm text-text-light/70">
                       Time Remaining
                     </div>
                   </div>
@@ -1036,7 +1036,7 @@ export default function HostDashboard() {
 
               {currentQuestion ? (
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <h3 className="text-lg font-semibold text-text-light mb-4">
                     {currentQuestion.text}
                   </h3>
                   <div className="space-y-3">
@@ -1044,13 +1044,13 @@ export default function HostDashboard() {
                       return (
                         <div
                           key={option}
-                          className="p-3 rounded-lg border-2 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                          className="p-3 rounded-lg border-2 bg-deep-navy border-indigo/30"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-700 dark:text-gray-300">
+                            <span className="font-bold text-text-light">
                               {option}:
                             </span>
-                            <span className="text-gray-900 dark:text-white">
+                            <span className="text-text-light">
                               {currentQuestion[option]}
                             </span>
                           </div>
@@ -1060,7 +1060,7 @@ export default function HostDashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="text-gray-500 dark:text-gray-400">
+                <div className="text-text-light/50">
                   No question loaded
                 </div>
               )}
@@ -1077,7 +1077,7 @@ export default function HostDashboard() {
                       gameState?.answerRevealed === true;
                     return disabled;
                   })()}
-                  className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="w-full px-4 py-3 bg-success text-white rounded-md hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   title={
                     gameState?.isReviewMode || gameState?.answerRevealed
                       ? "This question has already been answered"
@@ -1101,7 +1101,7 @@ export default function HostDashboard() {
                       (stats.playerCount === 0 ||
                         stats.answerCount < stats.playerCount))
                   }
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="w-full px-4 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   {stats.playerCount === 0
                     ? "Reveal Answer (No Players)"
@@ -1114,7 +1114,7 @@ export default function HostDashboard() {
                   <button
                     onClick={handleEndQuestion}
                     disabled={!connected}
-                    className="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    className="w-full px-4 py-2 bg-cyan text-white rounded-md hover:bg-cyan/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
                     End Question
                   </button>
@@ -1122,50 +1122,50 @@ export default function HostDashboard() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card-bg rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold text-text-light mb-4">
                 Live Monitoring
               </h2>
 
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+              <div className="mb-6 p-4 bg-indigo/20 rounded-lg">
+                <div className="text-3xl font-bold text-indigo mb-1">
                   {stats.playerCount}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm text-text-light/70">
                   Connected Players
                 </div>
               </div>
 
               {isQuestionActive || isQuestionEnded ? (
                 <div className="mb-6">
-                  <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                    <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
+                  <div className="p-4 bg-success/20 rounded-lg">
+                    <div className="text-3xl font-bold text-success mb-1">
                       {stats.answerCount}
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-sm text-text-light/70">
                       Answers Submitted
                     </div>
                   </div>
                   {gameState?.answerRevealed && (
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-center">
-                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                    <div className="mt-4 p-3 bg-indigo/20 rounded-lg text-center">
+                      <p className="text-sm text-indigo">
                         Click "View Answer Reveal" to see detailed results
                       </p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+                <div className="text-text-light/50 text-center py-8">
                   Start a question to see live stats
                 </div>
               )}
 
               <div className="mt-6">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                <h4 className="text-sm font-semibold text-text-light mb-3">
                   Players
                 </h4>
                 {players.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  <p className="text-text-light/50 text-sm">
                     No players joined
                   </p>
                 ) : (
@@ -1183,16 +1183,16 @@ export default function HostDashboard() {
                         return (
                           <li
                             key={player.playerId}
-                            className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                            className="text-sm text-text-light flex items-center gap-2"
                           >
                             <span>👤</span>
                             <span className="flex-1">{player.name}</span>
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">
+                            <span className="font-semibold text-indigo">
                               {player.score} pts
                             </span>
                             {hasSubmitted && (
                               <span
-                                className="text-yellow-500"
+                                className="text-cyan"
                                 title="Answer submitted"
                               >
                                 💡
@@ -1218,14 +1218,14 @@ export default function HostDashboard() {
         size="md"
       >
         <div className="space-y-4">
-          <p className="text-gray-700 dark:text-gray-300">
+          <p className="text-text-light/70">
             Are you sure you want to end the game? All players will be
             disconnected.
           </p>
           <div className="flex justify-end gap-3 pt-4">
             <button
               onClick={() => dispatch(setShowEndGameModal(false))}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+              className="px-4 py-2 bg-deep-navy text-text-light rounded-md hover:bg-deep-navy/80 transition-colors font-medium border border-indigo/30"
             >
               Cancel
             </button>
@@ -1241,7 +1241,7 @@ export default function HostDashboard() {
                 // Navigate back to dashboard after canceling
                 router.push("/");
               }}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+              className="px-4 py-2 bg-error text-white rounded-md hover:bg-error/90 transition-colors font-medium"
             >
               End Game
             </button>

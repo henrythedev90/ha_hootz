@@ -36,17 +36,17 @@ export default function Modal({
       style={{ zIndex: 10000, position: "fixed" }}
     >
       <div
-        className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full mx-4 ${sizeClasses[size]}`}
+        className={`bg-card-bg rounded-lg shadow-xl p-6 w-full mx-4 ${sizeClasses[size]}`}
         onClick={(e) => e.stopPropagation()}
         style={{ zIndex: 10001, position: "relative" }}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-text-light">
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="text-text-light/50 hover:text-text-light transition-colors"
             aria-label="Close modal"
           >
             <svg

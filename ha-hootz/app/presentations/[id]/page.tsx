@@ -293,16 +293,16 @@ export default function PresentationEditor() {
           </Link>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-card-bg rounded-lg shadow-md p-6 mb-6">
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-text-light mb-2">
               Presentation Title *
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-lg"
+              className="w-full px-4 py-2 border border-indigo/30 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo bg-card-bg text-text-light text-lg"
               placeholder="Enter presentation title..."
             />
           </div>

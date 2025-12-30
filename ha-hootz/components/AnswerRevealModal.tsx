@@ -84,12 +84,12 @@ export default function AnswerRevealModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-card-bg rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-3xl font-bold text-text-light mb-2">
                 {showLeaderboard
                   ? winnerRevealed
                     ? "🏆 Winner!"
@@ -97,14 +97,14 @@ export default function AnswerRevealModal({
                   : "Answer Revealed"}
               </h2>
               {!showLeaderboard && (
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-text-light/70">
                   Question {currentIndex + 1} of {questionCount}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="text-text-light/50 hover:text-text-light transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -128,14 +128,14 @@ export default function AnswerRevealModal({
             <div className="mb-6">
               {winnerRevealed && winner && (
                 <div className="mb-8 text-center">
-                  <div className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-600 dark:from-yellow-500 dark:via-yellow-600 dark:to-yellow-700 rounded-lg p-8 shadow-lg border-4 border-yellow-300 dark:border-yellow-500">
+                  <div className="bg-gradient-to-r from-cyan via-indigo to-cyan rounded-lg p-8 shadow-lg border-4 border-cyan/50">
                     <div className="text-6xl mb-4">🏆</div>
                     {isTie ? (
                       <>
                         <h3 className="text-3xl font-bold text-white mb-2">
                           It's a Tie!
                         </h3>
-                        <p className="text-xl text-yellow-100 mb-4">
+                        <p className="text-xl text-white/90 mb-4">
                           Multiple winners with {winner.score} points!
                         </p>
                       </>
@@ -144,10 +144,10 @@ export default function AnswerRevealModal({
                         <h3 className="text-3xl font-bold text-white mb-2">
                           Congratulations!
                         </h3>
-                        <p className="text-2xl text-yellow-100 mb-2">
+                        <p className="text-2xl text-white/90 mb-2">
                           {winner.name}
                         </p>
-                        <p className="text-xl text-yellow-100">
+                        <p className="text-xl text-white/90">
                           Wins with {winner.score} points!
                         </p>
                       </>
@@ -157,7 +157,7 @@ export default function AnswerRevealModal({
               )}
               <div className="space-y-3">
                 {leaderboard.length === 0 ? (
-                  <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  <p className="text-center text-text-light/50 py-8">
                     No players yet
                   </p>
                 ) : (
@@ -170,28 +170,28 @@ export default function AnswerRevealModal({
                         key={player.playerId}
                         className={`p-4 rounded-lg border-2 transition-all ${
                           isWinner
-                            ? "bg-yellow-200 dark:bg-yellow-800 border-yellow-500 dark:border-yellow-400 shadow-lg scale-105"
+                            ? "bg-cyan/20 border-cyan shadow-lg scale-105"
                             : isTopThree
                             ? rank === 1
-                              ? "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-500 dark:border-yellow-500"
+                              ? "bg-cyan/20 border-cyan"
                               : rank === 2
-                              ? "bg-gray-100 dark:bg-gray-700 border-gray-400 dark:border-gray-400"
-                              : "bg-orange-100 dark:bg-orange-900/30 border-orange-500 dark:border-orange-500"
-                            : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                              ? "bg-card-bg border-indigo/30"
+                              : "bg-cyan/10 border-cyan/50"
+                            : "bg-deep-navy border-indigo/30"
                         }`}
                       >
                         <div className="flex items-center gap-4">
                           <div
                             className={`text-2xl font-bold ${
                               isWinner
-                                ? "text-yellow-700 dark:text-yellow-300"
+                                ? "text-cyan"
                                 : isTopThree
                                 ? rank === 1
-                                  ? "text-yellow-600 dark:text-yellow-400"
+                                  ? "text-cyan"
                                   : rank === 2
-                                  ? "text-gray-600 dark:text-gray-400"
-                                  : "text-orange-600 dark:text-orange-400"
-                                : "text-gray-500 dark:text-gray-400"
+                                  ? "text-text-light/50"
+                                  : "text-cyan/70"
+                                : "text-text-light/50"
                             }`}
                           >
                             {isWinner ? "👑" : `#${rank}`}
@@ -199,13 +199,13 @@ export default function AnswerRevealModal({
                           <span
                             className={`flex-1 text-lg font-semibold ${
                               isWinner
-                                ? "text-yellow-900 dark:text-yellow-100"
-                                : "text-gray-900 dark:text-white"
+                                ? "text-cyan"
+                                : "text-text-light"
                             }`}
                           >
                             {player.name}
                             {isWinner && (
-                              <span className="ml-2 text-yellow-600 dark:text-yellow-400">
+                              <span className="ml-2 text-cyan/70">
                                 - Winner!
                               </span>
                             )}
@@ -213,8 +213,8 @@ export default function AnswerRevealModal({
                           <span
                             className={`text-xl font-bold ${
                               isWinner
-                                ? "text-yellow-700 dark:text-yellow-300"
-                                : "text-blue-600 dark:text-blue-400"
+                                ? "text-cyan"
+                                : "text-indigo"
                             }`}
                           >
                             {player.score} pts
@@ -230,7 +230,7 @@ export default function AnswerRevealModal({
             <>
               {/* Question */}
               <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-xl font-semibold text-text-light mb-4">
                   {question.text}
                 </h3>
 
@@ -243,19 +243,19 @@ export default function AnswerRevealModal({
                         key={option}
                         className={`p-4 rounded-lg border-2 ${
                           isCorrect
-                            ? "bg-green-100 dark:bg-green-900/30 border-green-500 dark:border-green-500"
-                            : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                            ? "bg-success/20 border-success"
+                            : "bg-deep-navy border-indigo/30"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <span className="font-bold text-gray-700 dark:text-gray-300">
+                          <span className="font-bold text-text-light">
                             {option}:
                           </span>
-                          <span className="text-gray-900 dark:text-white flex-1">
+                          <span className="text-text-light flex-1">
                             {question[option]}
                           </span>
                           {isCorrect && (
-                            <span className="text-green-600 dark:text-green-400 font-semibold">
+                            <span className="text-success font-semibold">
                               ✓ Correct
                             </span>
                           )}
@@ -268,7 +268,7 @@ export default function AnswerRevealModal({
 
               {/* Answer Distribution */}
               <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                <h4 className="text-lg font-semibold text-text-light mb-4">
                   Answer Distribution
                 </h4>
                 <div className="space-y-3">
@@ -288,21 +288,21 @@ export default function AnswerRevealModal({
                           <span
                             className={`font-medium ${
                               isCorrect
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-gray-700 dark:text-gray-300"
+                                ? "text-success"
+                                : "text-text-light"
                             }`}
                           >
                             {option}
                             {isCorrect && " (Correct)"}
                           </span>
-                          <span className="text-gray-600 dark:text-gray-400">
+                          <span className="text-text-light/50">
                             {count} ({percentage}%)
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div className="w-full bg-deep-navy rounded-full h-3">
                           <div
                             className={`h-3 rounded-full transition-all ${
-                              isCorrect ? "bg-green-600" : "bg-blue-600"
+                              isCorrect ? "bg-success" : "bg-indigo"
                             }`}
                             style={{ width: `${percentage}%` }}
                           />
@@ -316,13 +316,13 @@ export default function AnswerRevealModal({
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center pt-6 border-t border-indigo/30">
             {showLeaderboard ? (
               <div className="flex gap-3 w-full">
                 <button
                   onClick={() => setShowLeaderboard(false)}
                   disabled={winnerRevealed}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   ← Back to Answer
                 </button>
@@ -335,7 +335,7 @@ export default function AnswerRevealModal({
                         onClose();
                       }
                     }}
-                    className="ml-auto px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                    className="ml-auto px-6 py-3 bg-error text-white rounded-md hover:bg-error/90 transition-colors font-medium"
                   >
                     End Game
                   </button>
@@ -353,7 +353,7 @@ export default function AnswerRevealModal({
                     currentIndex === 0 ||
                     (questionCount > 0 && currentIndex >= questionCount)
                   }
-                  className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="px-6 py-3 bg-deep-navy text-text-light rounded-md hover:bg-deep-navy/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium border border-indigo/30"
                 >
                   ← Previous Question
                 </button>
@@ -370,7 +370,7 @@ export default function AnswerRevealModal({
                       }
                     }
                   }}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  className="px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors font-medium"
                 >
                   {isLastQuestion ? "🏆 Reveal Winner" : "View Leaderboard"}
                 </button>
@@ -384,7 +384,7 @@ export default function AnswerRevealModal({
                     questionCount === 0 ||
                     currentIndex >= questionCount - 1
                   }
-                  className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="px-6 py-3 bg-deep-navy text-text-light rounded-md hover:bg-deep-navy/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium border border-indigo/30"
                 >
                   Next Question →
                 </button>
