@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email address").min(1, "Email is required"),
@@ -159,228 +160,240 @@ export default function AuthPage() {
     <div className="min-h-screen bg-deep-navy flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-text-light">
+          <div className="flex items-center justify-center mb-6">
+            <ToggleSwitch
+              active={isSignUp}
+              onToggle={toggleMode}
+              leftLabel="Sign In"
+              rightLabel="Sign Up"
+            />
+          </div>
+          <h1 className="mt-6 text-center text-3xl font-extrabold bg-linear-to-r from-indigo to-cyan bg-clip-text text-transparent">
             {isSignUp ? "Create your account" : "Sign in to Ha Hootz"}
-          </h2>
-          <p className="mt-2 text-center text-sm text-text-light/70">
-            {isSignUp ? "Already have an account? " : "Don't have an account? "}
-            <button
-              onClick={toggleMode}
-              className="font-medium text-cyan hover:text-cyan/80 transition-colors"
-            >
-              {isSignUp ? "Sign in" : "Create an account"}
-            </button>
-          </p>
+          </h1>
         </div>
 
-        {isSignUp ? (
-          <Form {...signUpForm}>
-            <form
-              className="mt-8 space-y-6"
-              onSubmit={signUpForm.handleSubmit(onSignUp)}
-            >
-              {error && (
-                <div className="bg-error/10 border border-error/30 text-error px-4 py-3 rounded-lg">
-                  {error}
-                </div>
-              )}
-              <div className="space-y-4">
-                <FormField
-                  control={signUpForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name (optional)</FormLabel>
-                      <FormControl>
-                        <Input type="text" placeholder="Your name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signUpForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email address</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          autoComplete="email"
-                          placeholder="Email address"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signUpForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            type={showPassword ? "text" : "password"}
-                            autoComplete="new-password"
-                            placeholder="Password (min 6 characters)"
-                            {...field}
-                            className="pr-10"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-light/60 hover:text-text-light z-20 transition-colors"
-                            aria-label={
-                              showPassword ? "Hide password" : "Show password"
-                            }
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-5 w-5" />
-                            ) : (
-                              <Eye className="h-5 w-5" />
-                            )}
-                          </button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signUpForm.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            type={showConfirmPassword ? "text" : "password"}
-                            autoComplete="new-password"
-                            placeholder="Confirm password"
-                            {...field}
-                            className="pr-10"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setShowConfirmPassword(!showConfirmPassword)
-                            }
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-light/60 hover:text-text-light z-20 transition-colors"
-                            aria-label={
-                              showConfirmPassword
-                                ? "Hide password"
-                                : "Show password"
-                            }
-                          >
-                            {showConfirmPassword ? (
-                              <EyeOff className="h-5 w-5" />
-                            ) : (
-                              <Eye className="h-5 w-5" />
-                            )}
-                          </button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo hover:bg-indigo/90 text-white"
+        <div className="min-h-[500px] bg-card-bg border border-indigo/20 rounded-xl p-8 shadow-lg shadow-indigo/10 flex flex-col">
+          {isSignUp ? (
+            <Form {...signUpForm}>
+              <form
+                className="mt-8 space-y-6 flex flex-col flex-1"
+                onSubmit={signUpForm.handleSubmit(onSignUp)}
               >
-                {loading ? "Creating account..." : "Create account"}
-              </Button>
-            </form>
-          </Form>
-        ) : (
-          <Form {...signInForm}>
-            <form
-              className="mt-8 space-y-6"
-              onSubmit={signInForm.handleSubmit(onSignIn)}
-            >
-              {error && (
-                <div className="bg-error/10 border border-error/30 text-error px-4 py-3 rounded-lg">
-                  {error}
-                </div>
-              )}
-              <div className="space-y-4">
-                <FormField
-                  control={signInForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="sr-only">Email address</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          autoComplete="email"
-                          placeholder="Email address"
-                          {...field}
-                          className="rounded-t-md rounded-b-none"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signInForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="sr-only">Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
+                {error && (
+                  <div className="bg-error/10 border border-error/30 text-error px-4 py-3 rounded-lg">
+                    {error}
+                  </div>
+                )}
+                <div className="space-y-4">
+                  <FormField
+                    control={signUpForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name (optional)</FormLabel>
+                        <FormControl>
                           <Input
-                            type={showPassword ? "text" : "password"}
-                            autoComplete="current-password"
-                            placeholder="Password"
+                            type="text"
+                            placeholder="Your name"
+                            className="h-10"
                             {...field}
-                            className="rounded-b-md rounded-t-none pr-10"
                           />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-light/60 hover:text-text-light z-20 transition-colors"
-                            aria-label={
-                              showPassword ? "Hide password" : "Show password"
-                            }
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-5 w-5" />
-                            ) : (
-                              <Eye className="h-5 w-5" />
-                            )}
-                          </button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signUpForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email address</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            autoComplete="email"
+                            placeholder="Email address"
+                            className="h-10"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signUpForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              autoComplete="new-password"
+                              placeholder="Password (min 6 characters)"
+                              {...field}
+                              className="h-10 pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute inset-y-0 right-0 h-full text-text-light/60 hover:text-text-light z-20"
+                              aria-label={
+                                showPassword ? "Hide password" : "Show password"
+                              }
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-5 w-5" />
+                              ) : (
+                                <Eye className="h-5 w-5" />
+                              )}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signUpForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              autoComplete="new-password"
+                              placeholder="Confirm password"
+                              {...field}
+                              className="h-10 pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                              }
+                              className="absolute inset-y-0 right-0 h-full text-text-light/60 hover:text-text-light z-20"
+                              aria-label={
+                                showConfirmPassword
+                                  ? "Hide password"
+                                  : "Show password"
+                              }
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-5 w-5" />
+                              ) : (
+                                <Eye className="h-5 w-5" />
+                              )}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo hover:bg-indigo/90 text-white"
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-indigo hover:bg-indigo/90 text-white mt-auto"
+                >
+                  {loading ? "Creating account..." : "Create account"}
+                </Button>
+              </form>
+            </Form>
+          ) : (
+            <Form {...signInForm}>
+              <form
+                className="mt-8 space-y-6 flex flex-col flex-1"
+                onSubmit={signInForm.handleSubmit(onSignIn)}
               >
-                {loading ? "Signing in..." : "Sign in"}
-              </Button>
-            </form>
-          </Form>
-        )}
+                {error && (
+                  <div className="bg-error/10 border border-error/30 text-error px-4 py-3 rounded-lg">
+                    {error}
+                  </div>
+                )}
+                <div className="space-y-4">
+                  <FormField
+                    control={signInForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="sr-only">Email address</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            autoComplete="email"
+                            placeholder="Email address"
+                            {...field}
+                            className="rounded-t-md rounded-b-none"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signInForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="sr-only">Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              autoComplete="current-password"
+                              placeholder="Password"
+                              {...field}
+                              className="rounded-b-md rounded-t-none pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute inset-y-0 right-0 h-full text-text-light/60 hover:text-text-light z-20"
+                              aria-label={
+                                showPassword ? "Hide password" : "Show password"
+                              }
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-5 w-5" />
+                              ) : (
+                                <Eye className="h-5 w-5" />
+                              )}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-indigo hover:bg-indigo/90 text-white mt-auto"
+                >
+                  {loading ? "Signing in..." : "Sign in"}
+                </Button>
+              </form>
+            </Form>
+          )}
+        </div>
       </div>
     </div>
   );
 }
-
