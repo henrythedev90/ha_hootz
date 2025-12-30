@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Socket } from "socket.io-client";
+import DeleteConfirmationModal from "./DeleteConfirmationModal";
 
 interface Player {
   playerId: string;
@@ -23,10 +25,12 @@ export default function PlayersListModal({
   socket,
   connected,
 }: PlayersListModalProps) {
+  const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState<number>(5);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownStartTimeRef = useRef<number | null>(null);
   const countdownDurationRef = useRef<number>(5); // 5 seconds
@@ -179,8 +183,42 @@ export default function PlayersListModal({
     hasClosedRef.current = true;
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
     }
     onClose();
+  };
+
+  const handleCancel = () => {
+    // Show confirmation modal instead of immediately canceling
+    setShowCancelConfirm(true);
+  };
+
+  const handleConfirmCancel = () => {
+    if (hasClosedRef.current) return;
+    hasClosedRef.current = true;
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    countdownStartTimeRef.current = null;
+
+    // Close confirmation modal
+    setShowCancelConfirm(false);
+
+    // Emit CANCEL_SESSION to end the game and notify all players
+    if (socket && connected) {
+      socket.emit("CANCEL_SESSION", { sessionCode });
+    }
+
+    // Close the modal
+    onClose();
+
+    // Navigate host back to dashboard
+    // The socket handler will also trigger session-cancelled event
+    // which will redirect, but we'll do it here too for immediate feedback
+    setTimeout(() => {
+      router.push("/");
+    }, 500);
   };
 
   if (!isOpen) return null;
@@ -200,9 +238,7 @@ export default function PlayersListModal({
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-indigo">
-                {players.length}
-              </p>
+              <p className="text-2xl font-bold text-indigo">{players.length}</p>
               <p className="text-sm text-text-light/50">
                 {players.length === 1 ? "Player" : "Players"}
               </p>
@@ -211,9 +247,7 @@ export default function PlayersListModal({
 
           {loading ? (
             <div className="text-center py-12">
-              <p className="text-text-light/50">
-                Loading players...
-              </p>
+              <p className="text-text-light/50">Loading players...</p>
             </div>
           ) : error && !players.length ? (
             <div className="text-center py-12">
@@ -255,16 +289,14 @@ export default function PlayersListModal({
               <p className="text-sm text-text-light/70 mb-1">
                 Starting automatically in
               </p>
-              <p className="text-4xl font-bold text-cyan">
-                {countdown}
-              </p>
+              <p className="text-4xl font-bold text-cyan">{countdown}</p>
               <p className="text-xs text-text-light/50 mt-1">
                 {countdown === 1 ? "second" : "seconds"}
               </p>
             </div>
             <div className="flex space-x-4 w-full max-w-md">
               <button
-                onClick={onClose}
+                onClick={handleCancel}
                 className="flex-1 px-6 py-3 bg-deep-navy text-text-light rounded-md hover:bg-deep-navy/80 transition-colors font-medium border border-indigo/30"
               >
                 Cancel
@@ -280,6 +312,16 @@ export default function PlayersListModal({
           </div>
         </div>
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={handleConfirmCancel}
+        title="Cancel Session"
+        itemName="session"
+        description="Are you sure you want to cancel this session? All players will be disconnected and the game will end."
+        playerMode={false}
+      />
     </div>
   );
 }
