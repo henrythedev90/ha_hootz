@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
+import { motion } from "framer-motion";
+import { Users, Trophy, Play, Eye, X, BarChart3 } from "lucide-react";
 import SessionQRCode from "@/components/SessionQRCode";
 import Loading from "@/components/Loading";
 import CenteredLayout from "@/components/CenteredLayout";
@@ -68,6 +70,10 @@ export default function HostDashboard() {
     (state) => state.ui.showAnswerRevealModal
   );
   const showEndGameModal = useAppSelector((state) => state.ui.showEndGameModal);
+
+  const [activeTab, setActiveTab] = useState<
+    "players" | "stats" | "leaderboard"
+  >("players");
 
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -790,9 +796,7 @@ export default function HostDashboard() {
     return (
       <CenteredLayout>
         <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-cyan mb-4">
-            Game Has Ended
-          </h1>
+          <h1 className="text-2xl font-bold text-cyan mb-4">Game Has Ended</h1>
           <p className="text-text-light/70 mb-4">
             This game has already ended.
           </p>
@@ -870,9 +874,7 @@ export default function HostDashboard() {
                   <h1 className="text-3xl font-bold text-text-light">
                     Host Dashboard
                   </h1>
-                  <p className="text-text-light/70">
-                    Session: {sessionCode}
-                  </p>
+                  <p className="text-text-light/70">Session: {sessionCode}</p>
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-text-light/50">
@@ -987,221 +989,358 @@ export default function HostDashboard() {
           />
         );
       })()}
-      <div className="min-h-screen bg-deep-navy p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-card-bg rounded-lg shadow-md p-4 mb-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold text-text-light">
-                  Live Game Session
-                </h1>
-                <p className="text-text-light/70">
-                  Session: {sessionCode} •{" "}
+      <div className="min-h-screen bg-deep-navy">
+        {/* Header */}
+        <div className="border-b border-indigo/20 bg-card-bg/50 px-6 py-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold mb-1 text-text-light">
+                Live Game Session
+              </h1>
+              <div className="flex gap-4 text-sm text-text-light/60">
+                <span>
+                  Session Code:{" "}
+                  <span className="text-cyan font-mono">{sessionCode}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  {players.length} Players
+                </span>
+                <span className={connected ? "text-success" : "text-error"}>
                   {connected ? "🟢 Connected" : "🔴 Disconnected"}
-                </p>
+                </span>
               </div>
-              <button
-                onClick={handleCancelSession}
-                className="px-4 py-2 bg-error text-white rounded-md hover:bg-error/90 transition-colors text-sm font-medium"
-              >
-                Cancel Session
-              </button>
             </div>
+            <button
+              onClick={handleCancelSession}
+              className="px-4 py-2 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <X className="w-4 h-4" />
+              <span>End Game</span>
+            </button>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card-bg rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-text-light mb-4">
-                Question Control
-              </h2>
-
-              {currentQuestion && (
-                <div className="mb-4 text-sm text-text-light/70">
-                  Question {currentIndex + 1} of {questionCount}
-                </div>
-              )}
-
-              {isQuestionActive && !gameState?.answerRevealed && (
-                <div className="mb-6 p-4 bg-indigo/20 rounded-lg">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-indigo mb-2">
-                      {timeRemaining}s
-                    </div>
-                    <div className="text-sm text-text-light/70">
-                      Time Remaining
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentQuestion ? (
+        <div className="max-w-7xl mx-auto p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Question Display */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Current Question */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-card-bg rounded-xl p-8 border border-indigo/20"
+              >
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-text-light mb-4">
-                    {currentQuestion.text}
-                  </h3>
-                  <div className="space-y-3">
-                    {(["A", "B", "C", "D"] as const).map((option) => {
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-text-light/60">
+                      Question {currentIndex + 1} of {questionCount}
+                    </span>
+                    {isQuestionActive && !gameState?.answerRevealed && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl font-bold text-cyan">
+                          {timeRemaining}s
+                        </span>
+                        <div className="w-32 h-2 bg-deep-navy rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: "100%" }}
+                            animate={{
+                              width: `${
+                                gameState?.endAt
+                                  ? Math.max(
+                                      0,
+                                      ((gameState.endAt - Date.now()) / 30000) *
+                                        100
+                                    )
+                                  : 0
+                              }%`,
+                            }}
+                            className="h-full bg-linear-to-r from-cyan to-indigo"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <h2 className="text-3xl font-semibold text-text-light">
+                    {currentQuestion?.text || "No question loaded"}
+                  </h2>
+                </div>
+
+                {currentQuestion && (
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    {(["A", "B", "C", "D"] as const).map((option, index) => {
+                      const isCorrect =
+                        gameState?.answerRevealed &&
+                        gameState?.correctAnswer === option;
+                      const distribution =
+                        stats.answerDistribution[option] || 0;
+                      const total = Object.values(
+                        stats.answerDistribution
+                      ).reduce((a, b) => a + b, 0);
+                      const percentage =
+                        total > 0
+                          ? Math.round((distribution / total) * 100)
+                          : 0;
+
                       return (
                         <div
                           key={option}
-                          className="p-3 rounded-lg border-2 bg-deep-navy border-indigo/30"
+                          className={`p-6 rounded-lg border-2 transition-all ${
+                            isCorrect
+                              ? "bg-success/20 border-success"
+                              : "bg-deep-navy/50 border-indigo/30"
+                          }`}
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-text-light">
-                              {option}:
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-text-light">
+                              {option}
                             </span>
-                            <span className="text-text-light">
-                              {currentQuestion[option]}
-                            </span>
+                            {gameState?.answerRevealed && (
+                              <span className="text-sm text-text-light/60">
+                                {percentage}%
+                              </span>
+                            )}
                           </div>
+                          <p className="text-text-light">
+                            {currentQuestion[option]}
+                          </p>
+                          {gameState?.answerRevealed && (
+                            <div className="mt-3 h-2 bg-deep-navy/50 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${percentage}%` }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
+                                className={`h-full ${
+                                  isCorrect ? "bg-success" : "bg-indigo"
+                                }`}
+                              />
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              ) : (
-                <div className="text-text-light/50">
-                  No question loaded
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <button
-                  onClick={handleStartQuestion}
-                  disabled={(() => {
-                    const disabled =
-                      !connected ||
-                      !currentQuestion ||
-                      isQuestionActive ||
-                      gameState?.isReviewMode === true ||
-                      gameState?.answerRevealed === true;
-                    return disabled;
-                  })()}
-                  className="w-full px-4 py-3 bg-success text-white rounded-md hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  title={
-                    gameState?.isReviewMode || gameState?.answerRevealed
-                      ? "This question has already been answered"
-                      : undefined
-                  }
-                >
-                  Start Question
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!gameState?.answerRevealed) {
-                      handleRevealAnswer();
-                    } else {
-                      dispatch(setShowAnswerRevealModal(true));
-                    }
-                  }}
-                  disabled={
-                    !connected ||
-                    (!gameState?.answerRevealed &&
-                      (stats.playerCount === 0 ||
-                        stats.answerCount < stats.playerCount))
-                  }
-                  className="w-full px-4 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  {stats.playerCount === 0
-                    ? "Reveal Answer (No Players)"
-                    : stats.answerCount < stats.playerCount
-                    ? `Reveal Answer (${stats.answerCount}/${stats.playerCount} answered)`
-                    : "Reveal Answer"}
-                </button>
-
-                {isQuestionActive && (
-                  <button
-                    onClick={handleEndQuestion}
-                    disabled={!connected}
-                    className="w-full px-4 py-2 bg-cyan text-white rounded-md hover:bg-cyan/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  >
-                    End Question
-                  </button>
                 )}
-              </div>
-            </div>
 
-            <div className="bg-card-bg rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-text-light mb-4">
-                Live Monitoring
-              </h2>
-
-              <div className="mb-6 p-4 bg-indigo/20 rounded-lg">
-                <div className="text-3xl font-bold text-indigo mb-1">
-                  {stats.playerCount}
-                </div>
-                <div className="text-sm text-text-light/70">
-                  Connected Players
-                </div>
-              </div>
-
-              {isQuestionActive || isQuestionEnded ? (
-                <div className="mb-6">
-                  <div className="p-4 bg-success/20 rounded-lg">
-                    <div className="text-3xl font-bold text-success mb-1">
-                      {stats.answerCount}
-                    </div>
-                    <div className="text-sm text-text-light/70">
-                      Answers Submitted
-                    </div>
-                  </div>
+                {/* Control Buttons */}
+                <div className="flex gap-3">
+                  {!isQuestionActive && !gameState?.answerRevealed && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleStartQuestion}
+                      disabled={(() => {
+                        const disabled =
+                          !connected ||
+                          !currentQuestion ||
+                          gameState?.isReviewMode === true ||
+                          gameState?.answerRevealed === true;
+                        return disabled;
+                      })()}
+                      className="flex-1 px-6 py-3 bg-indigo hover:bg-indigo/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Play className="w-5 h-5" />
+                      <span>Start Question</span>
+                    </motion.button>
+                  )}
+                  {isQuestionActive && !gameState?.answerRevealed && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        if (!gameState?.answerRevealed) {
+                          handleRevealAnswer();
+                        } else {
+                          dispatch(setShowAnswerRevealModal(true));
+                        }
+                      }}
+                      disabled={
+                        !connected ||
+                        stats.playerCount === 0 ||
+                        stats.answerCount < stats.playerCount
+                      }
+                      className="flex-1 px-6 py-3 bg-cyan hover:bg-cyan/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Eye className="w-5 h-5" />
+                      <span>Reveal Answer</span>
+                    </motion.button>
+                  )}
                   {gameState?.answerRevealed && (
-                    <div className="mt-4 p-3 bg-indigo/20 rounded-lg text-center">
-                      <p className="text-sm text-indigo">
-                        Click "View Answer Reveal" to see detailed results
-                      </p>
-                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => dispatch(setShowAnswerRevealModal(true))}
+                      className="flex-1 px-6 py-3 bg-success hover:bg-success/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Trophy className="w-5 h-5" />
+                      <span>Show Leaderboard</span>
+                    </motion.button>
                   )}
                 </div>
-              ) : (
-                <div className="text-text-light/50 text-center py-8">
-                  Start a question to see live stats
-                </div>
-              )}
+              </motion.div>
+            </div>
 
-              <div className="mt-6">
-                <h4 className="text-sm font-semibold text-text-light mb-3">
-                  Players
-                </h4>
-                {players.length === 0 ? (
-                  <p className="text-text-light/50 text-sm">
-                    No players joined
-                  </p>
-                ) : (
-                  <ul className="space-y-2 max-h-48 overflow-y-auto">
-                    {players
-                      .map((player) => ({
-                        ...player,
-                        score: stats.playerScores?.[player.playerId] || 0,
-                      }))
-                      .sort((a, b) => b.score - a.score)
-                      .map((player) => {
+            {/* Right Column - Stats/Players/Leaderboard */}
+            <div className="space-y-6">
+              {/* Tabs */}
+              <div className="bg-card-bg rounded-xl p-2 border border-indigo/20">
+                <div className="flex gap-2">
+                  {(["players", "stats", "leaderboard"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`flex-1 py-2 px-4 rounded-lg transition-colors capitalize ${
+                        activeTab === tab
+                          ? "bg-indigo text-white"
+                          : "text-text-light/60 hover:text-text-light"
+                      }`}
+                    >
+                      {tab === "stats" ? (
+                        <BarChart3 className="w-4 h-4 inline mr-1" />
+                      ) : tab === "leaderboard" ? (
+                        <Trophy className="w-4 h-4 inline mr-1" />
+                      ) : (
+                        <Users className="w-4 h-4 inline mr-1" />
+                      )}
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="bg-card-bg rounded-xl p-6 border border-indigo/20">
+                {activeTab === "players" && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold mb-4 text-text-light">
+                      Players ({players.length})
+                    </h3>
+                    {players.length === 0 ? (
+                      <p className="text-text-light/50 text-sm">
+                        No players joined
+                      </p>
+                    ) : (
+                      players.map((player) => {
                         const hasSubmitted =
                           stats.playersWithAnswers?.includes(player.playerId) ||
                           false;
+                        const correctCount = Object.values(
+                          stats.playerScores || {}
+                        ).filter((score, idx) => {
+                          // This is a simplified check - you might want to track this properly
+                          return score > 0;
+                        }).length;
                         return (
-                          <li
+                          <div
                             key={player.playerId}
-                            className="text-sm text-text-light flex items-center gap-2"
+                            className="flex items-center justify-between p-3 bg-deep-navy/50 rounded-lg"
                           >
-                            <span>👤</span>
-                            <span className="flex-1">{player.name}</span>
-                            <span className="font-semibold text-indigo">
-                              {player.score} pts
+                            <span className="text-text-light">
+                              {player.name}
                             </span>
-                            {hasSubmitted && (
-                              <span
-                                className="text-cyan"
-                                title="Answer submitted"
-                              >
-                                💡
-                              </span>
-                            )}
-                          </li>
+                            <div className="flex items-center gap-3 text-sm">
+                              {hasSubmitted && (
+                                <span
+                                  className="text-cyan"
+                                  title="Answer submitted"
+                                >
+                                  💡
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         );
-                      })}
-                  </ul>
+                      })
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "leaderboard" && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold mb-4 text-text-light">
+                      Leaderboard
+                    </h3>
+                    {players.length === 0 ? (
+                      <p className="text-text-light/50 text-sm">
+                        No players yet
+                      </p>
+                    ) : (
+                      players
+                        .map((player) => ({
+                          ...player,
+                          score: stats.playerScores?.[player.playerId] || 0,
+                        }))
+                        .sort((a, b) => b.score - a.score)
+                        .map((player, index) => (
+                          <motion.div
+                            key={player.playerId}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="flex items-center gap-3 p-3 bg-deep-navy/50 rounded-lg"
+                          >
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                                index === 0
+                                  ? "bg-cyan text-deep-navy"
+                                  : index === 1
+                                  ? "bg-text-light/30 text-text-light"
+                                  : index === 2
+                                  ? "bg-cyan/50 text-cyan"
+                                  : "bg-indigo/20 text-indigo"
+                              }`}
+                            >
+                              {index + 1}
+                            </div>
+                            <span className="flex-1 text-text-light">
+                              {player.name}
+                            </span>
+                            <span className="font-semibold text-cyan">
+                              {player.score}
+                            </span>
+                          </motion.div>
+                        ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "stats" && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold mb-4 text-text-light">
+                      Live Stats
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="p-4 bg-deep-navy/50 rounded-lg">
+                        <div className="text-sm text-text-light/60 mb-1">
+                          Total Answers
+                        </div>
+                        <div className="text-2xl font-bold text-cyan">
+                          {stats.answerCount}
+                        </div>
+                      </div>
+                      <div className="p-4 bg-deep-navy/50 rounded-lg">
+                        <div className="text-sm text-text-light/60 mb-1">
+                          Connected Players
+                        </div>
+                        <div className="text-2xl font-bold text-indigo">
+                          {stats.playerCount}
+                        </div>
+                      </div>
+                      {gameState?.answerRevealed &&
+                        gameState?.correctAnswer && (
+                          <div className="p-4 bg-deep-navy/50 rounded-lg">
+                            <div className="text-sm text-text-light/60 mb-1">
+                              Correct Answers
+                            </div>
+                            <div className="text-2xl font-bold text-success">
+                              {stats.answerDistribution[
+                                gameState.correctAnswer
+                              ] || 0}
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

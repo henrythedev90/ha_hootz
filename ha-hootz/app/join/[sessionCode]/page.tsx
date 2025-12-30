@@ -186,7 +186,7 @@ export default function JoinPage() {
           <motion.h1
             initial={{ y: -20 }}
             animate={{ y: 0 }}
-            className="text-6xl font-bold mb-4 bg-gradient-to-r from-indigo to-cyan bg-clip-text text-transparent"
+            className="text-6xl font-bold mb-4 bg-linear-to-r from-indigo to-cyan bg-clip-text text-transparent"
           >
             Ha-Hootz
           </motion.h1>
