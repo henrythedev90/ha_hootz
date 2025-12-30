@@ -57,7 +57,7 @@ export default function HostDashboard() {
 
   // Redux state
   const dispatch = useAppDispatch();
-  const gameState = useAppSelector((state) => state.game.gameState);
+  const gameState = useAppSelector((state) => state.game?.gameState ?? null);
   const questions = useAppSelector((state) => state.host.questions);
   const players = useAppSelector((state) => state.host.players);
   const stats = useAppSelector((state) => state.host.stats);
@@ -1333,9 +1333,11 @@ export default function HostDashboard() {
                               Correct Answers
                             </div>
                             <div className="text-2xl font-bold text-success">
-                              {stats.answerDistribution[
-                                gameState.correctAnswer
-                              ] || 0}
+                              {gameState.correctAnswer
+                                ? stats.answerDistribution[
+                                    gameState.correctAnswer
+                                  ] || 0
+                                : 0}
                             </div>
                           </div>
                         )}

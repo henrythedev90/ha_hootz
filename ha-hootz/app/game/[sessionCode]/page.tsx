@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, X } from "lucide-react";
 import Loading from "@/components/Loading";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import CenteredLayout from "@/components/CenteredLayout";
@@ -48,7 +50,7 @@ export default function GamePage() {
 
   // Redux state
   const dispatch = useAppDispatch();
-  const gameState = useAppSelector((state) => state.game.gameState);
+  const gameState = useAppSelector((state) => state.game?.gameState ?? null);
   const playerId = useAppSelector((state) => state.player.playerId);
   const hostName = useAppSelector((state) => state.player.hostName);
   const playerCount = useAppSelector((state) => state.player.playerCount);
@@ -489,24 +491,22 @@ export default function GamePage() {
     const displayMessage = isGoodbye ? error.replace("GOODBYE: ", "") : error;
     return (
       <>
-        <CenteredLayout>
-          <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center">
+        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-8 max-w-md w-full text-center"
+          >
             <h1 className="text-2xl font-bold mb-4">
               {isGoodbye ? (
-                <span className="text-indigo">
-                  Goodbye!
-                </span>
+                <span className="text-indigo">Goodbye!</span>
               ) : isCancelled ? (
-                <span className="text-error">
-                  Session Cancelled
-                </span>
+                <span className="text-error">Session Cancelled</span>
               ) : (
                 <span className="text-error">Error</span>
               )}
             </h1>
-            <p className="text-text-light/70 mb-6">
-              {displayMessage}
-            </p>
+            <p className="text-text-light/70 mb-6">{displayMessage}</p>
             {isGoodbye ? (
               <div className="space-y-4">
                 <p className="text-sm text-text-light/50">
@@ -519,7 +519,7 @@ export default function GamePage() {
                     </p>
                     <button
                       onClick={() => (window.location.href = "/auth/signup")}
-                      className="w-full px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors font-medium shadow-md"
+                      className="w-full px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md"
                     >
                       Create Your Own Ha-Hootz Account
                     </button>
@@ -542,7 +542,7 @@ export default function GamePage() {
                     </p>
                     <button
                       onClick={() => (window.location.href = "/auth/signup")}
-                      className="w-full px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors font-medium shadow-md"
+                      className="w-full px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md"
                     >
                       Create Your Own Ha-Hootz Account
                     </button>
@@ -554,12 +554,12 @@ export default function GamePage() {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-text-light/50">
                 Please check your connection and try again.
               </p>
             )}
-          </div>
-        </CenteredLayout>
+          </motion.div>
+        </div>
 
         <DeleteConfirmationModal
           isOpen={isExitModalOpen}
@@ -669,57 +669,55 @@ export default function GamePage() {
   if (gameState.status === "WAITING") {
     return (
       <>
-        <CenteredLayout relative>
+        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-4">
           <button
             onClick={handleExitGame}
-            className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+            className="absolute top-4 right-4 w-10 h-10 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
             title="Exit Game"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
 
-          <div className="w-full max-w-md">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md"
+          >
+            <div className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-8 text-center">
+              <motion.h1
+                initial={{ y: -20 }}
+                animate={{ y: 0 }}
+                className="text-4xl font-bold mb-4 bg-linear-to-r from-indigo to-cyan bg-clip-text text-transparent"
+              >
                 Welcome to Ha-Hootz!
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300 mb-6 text-lg">
+              </motion.h1>
+              <p className="text-text-light/70 mb-6 text-lg">
                 You're all set! We're waiting for{" "}
                 {hostName ? (
-                  <span className="font-semibold text-blue-600 dark:text-blue-400">
-                    {hostName}
-                  </span>
+                  <span className="font-semibold text-cyan">{hostName}</span>
                 ) : (
                   "the host"
                 )}{" "}
                 to start the presentation.
               </p>
               {playerCount > 0 && (
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="pt-4 border-t border-indigo/30"
+                >
+                  <p className="text-text-light/50 text-sm mb-1">
                     Players in lobby
                   </p>
-                  <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
+                  <p className="text-3xl font-semibold text-cyan">
                     {playerCount} {playerCount === 1 ? "player" : "players"}
                   </p>
-                </div>
+                </motion.div>
               )}
             </div>
-          </div>
-        </CenteredLayout>
+          </motion.div>
+        </div>
 
         <DeleteConfirmationModal
           playerMode={true}
@@ -760,134 +758,181 @@ export default function GamePage() {
     const isQuestionActive = gameState.status === "QUESTION_ACTIVE";
     const showAnswerButtons =
       isQuestionActive || gameState.status === "QUESTION_ENDED";
-    const getTimerColor = () => {
-      if (timeRemaining <= 5) return "text-error";
-      if (timeRemaining <= 10) return "text-cyan";
-      return "text-indigo";
-    };
+    const isLocked = isTimerExpired || gameState.status === "QUESTION_ENDED";
+    const questionIndex = gameState.questionIndex ?? 0;
+    const questionCount = gameState.questionCount ?? 0;
 
-    const getAnswerButtonClass = (option: "A" | "B" | "C" | "D") => {
-      const baseClass =
-        "w-full px-6 py-6 text-left rounded-lg transition-all font-medium text-lg";
-      const isSelected = selectedAnswer === option;
-      const isDisabled =
-        isTimerExpired || gameState.status === "QUESTION_ENDED";
-      const isCorrect =
-        gameState.status === "QUESTION_ENDED" &&
-        gameState.answerRevealed &&
-        gameState.correctAnswer === option;
-      const isIncorrect =
-        gameState.status === "QUESTION_ENDED" &&
-        gameState.answerRevealed &&
-        isSelected &&
-        !isCorrect;
-
-      if (isDisabled && !gameState.answerRevealed) {
-        return `${baseClass} bg-card-bg text-text-light/50 cursor-not-allowed border border-indigo/30`;
-      }
-
-      if (isCorrect) {
-        return `${baseClass} bg-success text-white shadow-lg border-4 border-success/50`;
-      }
-
-      if (isIncorrect) {
-        return `${baseClass} bg-error text-white`;
-      }
-
-      if (isSelected && !gameState.answerRevealed) {
-        return `${baseClass} bg-success text-white shadow-lg transform scale-105`;
-      }
-
-      if (isDisabled) {
-        return `${baseClass} bg-card-bg text-text-light/50 cursor-not-allowed border border-indigo/30`;
-      }
-
-      return `${baseClass} bg-indigo text-white hover:bg-indigo/90 active:scale-95`;
-    };
+    // Calculate timer percentage (assuming 30 second timer)
+    const timerPercentage = gameState.endAt
+      ? Math.max(0, ((gameState.endAt - Date.now()) / 30000) * 100)
+      : 0;
 
     return (
       <>
-        <CenteredLayout relative flexCol>
+        <div className="min-h-screen bg-deep-navy text-text-light flex flex-col p-4 md:p-8">
+          {/* Exit Button */}
           <button
             onClick={handleExitGame}
-            className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+            className="absolute top-4 right-4 w-10 h-10 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
             title="Exit Game"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
 
-          <div className="max-w-md mx-auto w-full flex flex-col flex-1">
-            {isQuestionActive && (
-              <div className="text-center mb-6">
-                <div
-                  className={`text-6xl font-bold ${getTimerColor()} transition-colors`}
-                >
-                  {timeRemaining}
+          {/* Timer */}
+          {isQuestionActive && (
+            <div className="mb-8">
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-text-light/60">
+                    Question {questionIndex + 1} of {questionCount}
+                  </span>
+                  <span
+                    className={`text-2xl font-bold ${
+                      timeRemaining <= 5
+                        ? "text-error"
+                        : timeRemaining <= 10
+                        ? "text-cyan"
+                        : "text-indigo"
+                    } transition-colors`}
+                  >
+                    {timeRemaining}s
+                  </span>
                 </div>
-                <div className="text-sm text-text-light/50 mt-2">
-                  Seconds Remaining
+                <div className="relative h-3 bg-card-bg rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: "100%" }}
+                    animate={{
+                      width: `${timerPercentage}%`,
+                      backgroundColor:
+                        timeRemaining <= 5
+                          ? "#EF4444"
+                          : timeRemaining <= 10
+                          ? "#22D3EE"
+                          : "#6366F1",
+                    }}
+                    className="h-full rounded-full"
+                  />
+                  {timeRemaining <= 10 && (
+                    <motion.div
+                      animate={{ opacity: [1, 0.5, 1] }}
+                      transition={{ repeat: Infinity, duration: 0.5 }}
+                      className="absolute inset-0 bg-error/20"
+                    />
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
+          {/* Question */}
+          <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full">
             {playerName && (
-              <div className="text-center mb-4">
-                <h1 className="text-3xl font-bold text-text-light">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center mb-6"
+              >
+                <h1 className="text-2xl md:text-3xl font-bold text-text-light">
                   {playerName}
                 </h1>
-              </div>
+              </motion.div>
             )}
 
-            <div className="bg-card-bg rounded-lg shadow-md p-6 mb-6 flex-1 flex items-center">
-              <h2 className="text-2xl font-bold text-text-light text-center">
-                {gameState.question.text}
-              </h2>
-            </div>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl md:text-5xl font-bold text-center mb-12 text-text-light"
+            >
+              {gameState.question.text}
+            </motion.h1>
 
+            {/* Answer Buttons */}
             {showAnswerButtons ? (
-              <div className="space-y-4 mb-4">
-                {(["A", "B", "C", "D"] as const).map((option) => {
-                  const showCorrectIndicator =
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(["A", "B", "C", "D"] as const).map((option, index) => {
+                  const isSelected = selectedAnswer === option;
+                  const isCorrectAnswer =
                     gameState.answerRevealed &&
-                    gameState.correctAnswer === option &&
-                    gameState.status === "QUESTION_ENDED";
+                    gameState.correctAnswer === option;
+                  const showCorrect =
+                    gameState.answerRevealed && isCorrectAnswer;
+                  const showWrong =
+                    gameState.answerRevealed && isSelected && !isCorrectAnswer;
 
                   return (
-                    <button
+                    <motion.button
                       key={option}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={!isLocked ? { scale: 1.03 } : {}}
+                      whileTap={!isLocked ? { scale: 0.97 } : {}}
                       onClick={() => handleAnswerSelect(option)}
-                      disabled={
-                        gameState.status === "QUESTION_ENDED" ||
-                        gameState.answerRevealed
-                      }
-                      className={getAnswerButtonClass(option)}
+                      disabled={isLocked}
+                      className={`relative p-6 md:p-8 rounded-2xl border-3 transition-all text-left ${
+                        showCorrect
+                          ? "bg-success/20 border-success shadow-[0_0_30px_rgba(34,197,94,0.3)]"
+                          : showWrong
+                          ? "bg-error/20 border-error shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+                          : isSelected
+                          ? "bg-indigo/20 border-indigo shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                          : "bg-card-bg border-indigo/30 hover:border-indigo/60 hover:bg-card-bg/80"
+                      } ${
+                        isLocked && !isSelected && !showCorrect
+                          ? "opacity-50"
+                          : ""
+                      }`}
                     >
-                      <span className="font-bold mr-3">{option}:</span>
-                      {gameState.question![option]}
-                      {showCorrectIndicator && (
-                        <span className="ml-auto"> ✓ Correct</span>
+                      <div className="flex items-start gap-4">
+                        <div
+                          className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl ${
+                            showCorrect
+                              ? "bg-success text-white"
+                              : showWrong
+                              ? "bg-error text-white"
+                              : isSelected
+                              ? "bg-indigo text-white"
+                              : "bg-deep-navy text-text-light/60"
+                          }`}
+                        >
+                          {showCorrect ? (
+                            <Check className="w-6 h-6" />
+                          ) : showWrong ? (
+                            <X className="w-6 h-6" />
+                          ) : (
+                            option
+                          )}
+                        </div>
+                        <div className="flex-1 pt-2">
+                          <p
+                            className={`text-lg md:text-2xl text-text-light ${
+                              showCorrect || showWrong ? "font-semibold" : ""
+                            }`}
+                          >
+                            {gameState.question?.[option] || ""}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Lock Indicator */}
+                      {isSelected && isLocked && !gameState.answerRevealed && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="absolute top-4 right-4 bg-cyan text-deep-navy px-3 py-1 rounded-full text-sm font-medium"
+                        >
+                          Locked ✓
+                        </motion.div>
                       )}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
             ) : (
               <div className="text-center py-8 mb-4">
-                <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-6">
-                  <p className="text-lg text-gray-700 dark:text-gray-200 mb-2">
+                <div className="bg-card-bg border border-indigo/30 rounded-lg p-6">
+                  <p className="text-lg text-text-light mb-2">
                     Waiting for host to start the question...
                   </p>
                   <p className="text-sm text-text-light/50">
@@ -897,25 +942,99 @@ export default function GamePage() {
               </div>
             )}
 
-            {isTimerExpired && !gameState.answerRevealed && (
-              <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-                Time's up! Your answer has been submitted.
-              </div>
-            )}
-            {gameState.answerRevealed && (
-              <div className="text-center text-sm text-green-600 dark:text-green-400 font-semibold">
-                The correct answer has been revealed!
-              </div>
-            )}
-            {gameState.status === "IN_PROGRESS" &&
-              !gameState.answerRevealed &&
-              !isTimerExpired && (
-                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-                  Waiting for host to start the question...
-                </div>
+            {/* Result Messages */}
+            <AnimatePresence>
+              {isTimerExpired && !gameState.answerRevealed && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="mt-8 text-center"
+                >
+                  <div className="bg-card-bg border border-indigo/30 rounded-2xl p-6">
+                    <p className="text-text-light/70">
+                      Time's up! Your answer has been submitted.
+                    </p>
+                  </div>
+                </motion.div>
               )}
+
+              {gameState.answerRevealed && selectedAnswer && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className={`mt-8 p-6 rounded-2xl text-center ${
+                    selectedAnswer === gameState.correctAnswer
+                      ? "bg-success/20 border-2 border-success"
+                      : "bg-error/20 border-2 border-error"
+                  }`}
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", duration: 0.5 }}
+                  >
+                    {selectedAnswer === gameState.correctAnswer ? (
+                      <div>
+                        <div className="text-6xl mb-3">🎉</div>
+                        <h2 className="text-3xl font-bold text-success mb-2">
+                          Correct!
+                        </h2>
+                        <p className="text-text-light/70">Great job!</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="text-6xl mb-3">😔</div>
+                        <h2 className="text-3xl font-bold text-error mb-2">
+                          Wrong Answer
+                        </h2>
+                        <p className="text-text-light/70">
+                          Correct answer: {gameState.correctAnswer}
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {gameState.answerRevealed && !selectedAnswer && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="mt-8 text-center"
+                >
+                  <div className="bg-card-bg border border-indigo/30 rounded-2xl p-6">
+                    <p className="text-text-light/70">
+                      The correct answer has been revealed!
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Waiting State */}
+            {isLocked && !gameState.answerRevealed && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-8 text-center"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 2,
+                    ease: "linear",
+                  }}
+                  className="w-12 h-12 border-4 border-indigo border-t-transparent rounded-full mx-auto mb-4"
+                />
+                <p className="text-text-light/70">Waiting for results...</p>
+              </motion.div>
+            )}
           </div>
-        </CenteredLayout>
+        </div>
 
         <DeleteConfirmationModal
           playerMode={true}
@@ -949,43 +1068,34 @@ export default function GamePage() {
   // Fallback: Game in progress but no question active yet
   return (
     <>
-      <CenteredLayout relative>
+      <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-4">
         <button
           onClick={handleExitGame}
-          className="absolute top-4 right-4 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+          className="absolute top-4 right-4 w-10 h-10 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
           title="Exit Game"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          <X className="w-5 h-5" />
         </button>
 
-        <div className="w-full max-w-md">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md"
+        >
+          <div className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-8 text-center">
+            <h2 className="text-xl font-semibold text-text-light mb-4">
               {gameState.status === "QUESTION_ENDED"
                 ? "Question ended"
                 : "Game in progress..."}
             </h2>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-text-light/70">
               {gameState.status === "QUESTION_ENDED"
                 ? "Waiting for next question."
                 : "Waiting for the host to start the first question."}
             </p>
           </div>
-        </div>
-      </CenteredLayout>
+        </motion.div>
+      </div>
 
       <GameWelcomeModal
         isOpen={showWelcomeModal}
