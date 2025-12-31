@@ -45,7 +45,7 @@ export default function LeaderboardModal({
       title={winnerRevealed ? "🏆 Winner!" : "Leaderboard"}
       size="4xl"
     >
-      <div className="space-y-6">
+      <div className="space-y-6 mt-1">
         {winnerRevealed && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: -20 }}
@@ -87,7 +87,7 @@ export default function LeaderboardModal({
             </div>
           </motion.div>
         )}
-        <div className="space-y-3">
+        <motion.div className="space-y-3" layout>
           {players.length === 0 ? (
             <p className="text-center text-text-light/50 py-8">
               No players yet
@@ -98,34 +98,37 @@ export default function LeaderboardModal({
                 const rank = index + 1;
                 const isTopThree = rank <= 3;
                 const isWinner = winnerRevealed && rank === 1 && !isTie;
+                const isFirst = rank === 1;
                 return (
                   <motion.div
                     key={player.playerId}
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    layout
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{
+                      opacity: 1,
+                      scale: isFirst ? 1.05 : 1,
+                    }}
+                    exit={{ opacity: 0, scale: 0.8 }}
                     transition={{
-                      delay: index * 0.05,
-                      duration: 0.3,
-                      ease: "easeOut",
+                      type: "spring",
+                      stiffness: 350,
+                      damping: 25,
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       isWinner
-                        ? "bg-cyan/20 border-cyan shadow-lg"
+                        ? "bg-cyan/20 border-cyan shadow-lg ring-4 ring-cyan/50"
                         : isTopThree
                         ? rank === 1
-                          ? "bg-cyan/20 border-cyan"
+                          ? "bg-cyan/20 border-cyan ring-2 ring-cyan/30"
                           : rank === 2
                           ? "bg-card-bg border-indigo/30"
                           : "bg-cyan/10 border-cyan/50"
                         : "bg-deep-navy border-indigo/30"
                     }`}
-                    style={{
-                      transform: isWinner ? "scale(1.02)" : undefined,
-                    }}
                   >
                     <div className="flex items-center gap-4">
-                      <div
+                      <motion.div
+                        layout
                         className={`text-2xl font-bold ${
                           isWinner
                             ? "text-cyan"
@@ -138,32 +141,52 @@ export default function LeaderboardModal({
                             : "text-text-light/50"
                         }`}
                       >
-                        {isWinner ? "👑" : `#${rank}`}
-                      </div>
-                      <span
-                        className={`flex-1 text-lg font-semibold ${
-                          isWinner ? "text-cyan" : "text-text-light"
-                        }`}
-                      >
-                        {player.name}
-                        {isWinner && (
-                          <span className="ml-2 text-cyan/70">- Winner!</span>
-                        )}
-                      </span>
-                      <span
+                        {isTopThree && !isWinner
+                          ? ["🥇", "🥈", "🥉"][index]
+                          : isWinner
+                          ? "👑"
+                          : `#${rank}`}
+                      </motion.div>
+                      <motion.div layout className="flex-1">
+                        <motion.span
+                          layout
+                          className={`text-lg font-semibold ${
+                            isWinner ? "text-cyan" : "text-text-light"
+                          }`}
+                        >
+                          {player.name}
+                          {isWinner && (
+                            <span className="ml-2 text-cyan/70">- Winner!</span>
+                          )}
+                        </motion.span>
+                      </motion.div>
+                      <motion.span
+                        layout
                         className={`text-xl font-bold ${
                           isWinner ? "text-cyan" : "text-indigo"
                         }`}
                       >
                         {player.score} pts
-                      </span>
+                      </motion.span>
                     </div>
+                    {isFirst && winnerRevealed && !isTie && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="mt-2 pt-2 border-t border-cyan/30 text-center"
+                      >
+                        <span className="text-cyan font-bold text-sm">
+                          ⭐ LEADER ⭐
+                        </span>
+                      </motion.div>
+                    )}
                   </motion.div>
                 );
               })}
             </AnimatePresence>
           )}
-        </div>
+        </motion.div>
         {winnerRevealed && (
           <div className="flex justify-end pt-4 border-t border-indigo/30">
             <motion.button
@@ -180,4 +203,3 @@ export default function LeaderboardModal({
     </Modal>
   );
 }
-

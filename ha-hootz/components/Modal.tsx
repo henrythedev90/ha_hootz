@@ -9,6 +9,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  padding?: string;
 }
 
 export default function Modal({
@@ -17,6 +18,7 @@ export default function Modal({
   title,
   children,
   size = "md",
+  padding = "px-6 pb-6",
 }: ModalProps) {
   if (!isOpen) {
     return null;
@@ -43,10 +45,8 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
         style={{ zIndex: 10001, position: "relative" }}
       >
-        <div className="flex justify-between items-center mb-4 p-6 pb-4 flex-shrink-0">
-          <h2 className="text-2xl font-bold text-text-light">
-            {title}
-          </h2>
+        <div className="flex justify-between items-center mb-4 p-6 pb-4 shrink-0">
+          <h2 className="text-2xl font-bold text-text-light">{title}</h2>
           <button
             onClick={onClose}
             className="text-text-light/50 hover:text-text-light transition-colors"
@@ -65,7 +65,7 @@ export default function Modal({
             </svg>
           </button>
         </div>
-        <div className="px-6 pb-6 overflow-y-auto flex-1 min-h-0">
+        <div className={`${padding} overflow-y-auto flex-1 min-h-0`}>
           {children}
         </div>
       </div>
