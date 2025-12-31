@@ -186,7 +186,7 @@ export default function LobbyView({
                 </div>
               ) : (
                 <AnimatePresence>
-                  {players.map((player, index) => (
+                  {[...players].reverse().map((player, index) => (
                     <motion.div
                       key={player.playerId}
                       initial={{ opacity: 0, x: 50, scale: 0.9 }}
@@ -226,4 +226,3 @@ export default function LobbyView({
     </div>
   );
 }
-
