@@ -55,7 +55,8 @@ export default function QuestionDisplay({
   onRevealWinner,
   onViewLeaderboard,
 }: QuestionDisplayProps) {
-  const isLastQuestion = questionCount > 0 && questionIndex >= questionCount - 1;
+  const isLastQuestion =
+    questionCount > 0 && questionIndex >= questionCount - 1;
 
   return (
     <motion.div
@@ -103,7 +104,8 @@ export default function QuestionDisplay({
               (a, b) => a + b,
               0
             );
-            const percentage = total > 0 ? Math.round((distribution / total) * 100) : 0;
+            const percentage =
+              total > 0 ? Math.round((distribution / total) * 100) : 0;
 
             return (
               <div
@@ -115,7 +117,9 @@ export default function QuestionDisplay({
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-text-light">{option}</span>
+                  <span className="font-semibold text-text-light">
+                    {option}
+                  </span>
                   {answerRevealed && (
                     <span className="text-sm text-text-light/60">
                       {percentage}%
@@ -129,7 +133,9 @@ export default function QuestionDisplay({
                       initial={{ width: 0 }}
                       animate={{ width: `${percentage}%` }}
                       transition={{ duration: 0.8, ease: "easeOut" }}
-                      className={`h-full ${isCorrect ? "bg-success" : "bg-indigo"}`}
+                      className={`h-full ${
+                        isCorrect ? "bg-success" : "bg-indigo"
+                      }`}
                     />
                   </div>
                 )}
@@ -147,12 +153,7 @@ export default function QuestionDisplay({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={onStartQuestion}
-              disabled={
-                !connected ||
-                !question ||
-                isReviewMode === true ||
-                answerRevealed === true
-              }
+              disabled={!connected || !question || isReviewMode}
               className="flex-1 px-6 py-3 bg-indigo hover:bg-indigo/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Play className="w-5 h-5" />
@@ -225,4 +226,3 @@ export default function QuestionDisplay({
     </motion.div>
   );
 }
-
