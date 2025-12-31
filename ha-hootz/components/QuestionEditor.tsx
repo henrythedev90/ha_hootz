@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Question, AnswerOption } from "@/types";
 import { generateId } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, Plus } from "lucide-react";
 
 interface QuestionEditorProps {
   question: Question;
@@ -71,28 +71,28 @@ export default function QuestionEditor({
   };
 
   return (
-    <div className="bg-[#0B1020]/50 rounded-lg p-6 mb-4 border border-[#6366F1]/20">
-      <div className="mb-4">
-        <label className="block text-sm text-[#E5E7EB]/80 mb-2">
-          Question Text
-        </label>
-        <textarea
-          value={editedQuestion.text}
-          onChange={(e) =>
-            setEditedQuestion({ ...editedQuestion, text: e.target.value })
-          }
-          className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-4 py-3 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all resize-none"
-          rows={3}
-          placeholder="Enter your question..."
-        />
-      </div>
+    <div className="flex-1 p-8 overflow-y-auto">
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-8">
+          <label className="block text-sm text-[#E5E7EB]/60 mb-2">
+            Question Text
+          </label>
+          <textarea
+            value={editedQuestion.text}
+            onChange={(e) =>
+              setEditedQuestion({ ...editedQuestion, text: e.target.value })
+            }
+            className="w-full bg-[#1A1F35] border border-[#6366F1]/30 rounded-lg px-3 py-2 text-base text-[#E5E7EB] focus:outline-none focus:border-[#6366F1] transition-colors resize-none"
+            rows={2}
+            placeholder="Enter your question..."
+          />
+        </div>
 
-      <div className="mb-4">
-        <label className="block text-sm text-[#E5E7EB]/80 mb-3">
-          Answer Options
-        </label>
-        <div className="space-y-3 mb-3">
-          {editedQuestion.options.map((option) => (
+        <div className="space-y-4 mb-8">
+          <label className="block text-sm text-[#E5E7EB]/60 mb-2">
+            Answer Options
+          </label>
+          {editedQuestion.options.map((option, index) => (
             <div key={option.id} className="flex gap-3 items-center">
               <input
                 type="radio"
@@ -110,8 +110,8 @@ export default function QuestionEditor({
                 onChange={(e) =>
                   handleUpdateOption(option.id, { text: e.target.value })
                 }
-                className="flex-1 bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-4 py-3 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all"
-                placeholder="Enter option text..."
+                className="flex-1 bg-[#1A1F35] border border-[#6366F1]/30 rounded-lg px-4 py-3 text-[#E5E7EB] focus:outline-none focus:border-[#6366F1] transition-colors"
+                placeholder={`Option ${String.fromCharCode(65 + index)}`}
               />
               <button
                 onClick={() => handleDeleteOption(option.id)}
@@ -122,56 +122,59 @@ export default function QuestionEditor({
               </button>
             </div>
           ))}
+          <div className="flex gap-2 pt-2">
+            <input
+              type="text"
+              value={newOptionText}
+              onChange={(e) => setNewOptionText(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleAddOption()}
+              className="flex-1 bg-[#1A1F35] border border-[#6366F1]/30 rounded-lg px-4 py-3 text-[#E5E7EB] focus:outline-none focus:border-[#6366F1] transition-colors"
+              placeholder={`Option ${String.fromCharCode(
+                65 + editedQuestion.options.length
+              )}`}
+            />
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleAddOption}
+              className="px-4 py-3 bg-[#22C55E] hover:bg-[#1DB954] text-white rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Option</span>
+            </motion.button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newOptionText}
-            onChange={(e) => setNewOptionText(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleAddOption()}
-            className="flex-1 bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-4 py-3 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all"
-            placeholder="Add new option..."
-          />
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAddOption}
-            className="px-4 py-2 bg-[#22C55E] hover:bg-[#1DB954] text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            Add Option
-          </motion.button>
-        </div>
-      </div>
 
-      <div className="flex gap-2 justify-end">
-        {onDelete && (
+        <div className="flex gap-3 justify-end">
+          {onDelete && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onDelete}
+              className="px-6 py-3 bg-[#EF4444]/10 hover:bg-[#EF4444]/20 border border-[#EF4444]/30 text-[#EF4444] rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete Question</span>
+            </motion.button>
+          )}
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onDelete}
-            className="px-4 py-2 bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onCancel}
+            className="px-6 py-3 bg-[#1A1F35] hover:bg-[#0B1020] text-[#E5E7EB] rounded-lg transition-colors border border-[#6366F1]/20 flex items-center gap-2"
           >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete Question</span>
+            <X className="w-4 h-4" />
+            <span>Cancel</span>
           </motion.button>
-        )}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onCancel}
-          className="px-4 py-2 bg-[#1A1F35] hover:bg-[#0B1020] text-[#E5E7EB] rounded-lg text-sm font-medium transition-colors border border-[#6366F1]/20 flex items-center gap-2"
-        >
-          <X className="w-4 h-4" />
-          <span>Cancel</span>
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleSave}
-          className="px-4 py-2 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          Save Question
-        </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleSave}
+            className="px-6 py-3 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-lg transition-colors"
+          >
+            Save Question
+          </motion.button>
+        </div>
       </div>
     </div>
   );

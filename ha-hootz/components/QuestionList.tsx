@@ -2,7 +2,7 @@
 
 import { Question } from "@/types";
 import QuestionEditor from "./QuestionEditor";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 
@@ -11,6 +11,7 @@ interface QuestionListProps {
   onUpdate: (question: Question) => void;
   onDelete: (questionId: string) => void;
   onAdd: (question: Question) => void;
+  editQuestionId?: string | null;
 }
 
 export default function QuestionList({
@@ -18,9 +19,18 @@ export default function QuestionList({
   onUpdate,
   onDelete,
   onAdd,
+  editQuestionId,
 }: QuestionListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+
+  // Sync with external editQuestionId prop
+  useEffect(() => {
+    if (editQuestionId) {
+      setEditingId(editQuestionId);
+      setIsAdding(false);
+    }
+  }, [editQuestionId]);
 
   const handleEdit = (question: Question) => {
     setEditingId(question.id);
