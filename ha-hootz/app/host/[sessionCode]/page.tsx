@@ -233,12 +233,19 @@ export default function HostDashboard() {
         dispatch(setTimeRemaining(remaining));
 
         if (remaining === 0) {
-          // Auto-end question when timer expires
-          if (socket) {
-            socket.emit("END_QUESTION", {
+          // Auto-reveal answer when timer expires
+          if (socket && !gameState.answerRevealed) {
+            socket.emit("REVEAL_ANSWER", {
               sessionCode,
               questionIndex: gameState.questionIndex,
             });
+            dispatch(
+              updateGameState({
+                answerRevealed: true,
+                correctAnswer: gameState.question?.correct,
+                status: "QUESTION_ENDED",
+              })
+            );
           }
         }
       };
