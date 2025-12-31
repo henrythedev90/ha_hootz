@@ -317,8 +317,12 @@ export default function PresentationEditor() {
           <PresentationDetailsForm
             title={title}
             description={description}
+            questionDuration={scoringConfig.questionDuration || 30}
             onTitleChange={setTitle}
             onDescriptionChange={setDescription}
+            onQuestionDurationChange={(duration) =>
+              setScoringConfig({ ...scoringConfig, questionDuration: duration })
+            }
           />
 
           <ScoringConfigurationPanel

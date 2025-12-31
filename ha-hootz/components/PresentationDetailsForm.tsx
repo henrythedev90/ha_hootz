@@ -1,19 +1,24 @@
 "use client";
 
 import { motion } from "framer-motion";
+import QuestionTimerDurationSelector from "./QuestionTimerDurationSelector";
 
 interface PresentationDetailsFormProps {
   title: string;
   description: string;
+  questionDuration: number;
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
+  onQuestionDurationChange: (duration: number) => void;
 }
 
 export default function PresentationDetailsForm({
   title,
   description,
+  questionDuration,
   onTitleChange,
   onDescriptionChange,
+  onQuestionDurationChange,
 }: PresentationDetailsFormProps) {
   return (
     <motion.div
@@ -46,8 +51,11 @@ export default function PresentationDetailsForm({
             placeholder="Enter a description (optional)..."
           />
         </div>
+        <QuestionTimerDurationSelector
+          duration={questionDuration}
+          onDurationChange={onQuestionDurationChange}
+        />
       </div>
     </motion.div>
   );
 }
-

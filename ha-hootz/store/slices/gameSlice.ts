@@ -28,6 +28,7 @@ export interface GameState {
   isReviewMode?: boolean;
   scoringConfig?: {
     basePoints?: number;
+    questionDuration?: number; // Duration in seconds: 10, 20, or 30
     timeBonusEnabled?: boolean;
     timeBonusThreshold?: number;
     timeBonusPoints?: number;

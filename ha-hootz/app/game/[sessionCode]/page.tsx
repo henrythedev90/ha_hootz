@@ -762,9 +762,13 @@ export default function GamePage() {
     const questionIndex = gameState.questionIndex ?? 0;
     const questionCount = gameState.questionCount ?? 0;
 
-    // Calculate timer percentage (assuming 30 second timer)
+    // Calculate timer percentage using actual question duration
+    const questionDuration =
+      (gameState.scoringConfig as any)?.questionDuration
+        ? ((gameState.scoringConfig as any).questionDuration * 1000)
+        : 30000; // Default to 30 seconds
     const timerPercentage = gameState.endAt
-      ? Math.max(0, ((gameState.endAt - Date.now()) / 30000) * 100)
+      ? Math.max(0, ((gameState.endAt - Date.now()) / questionDuration) * 100)
       : 0;
 
     return (
