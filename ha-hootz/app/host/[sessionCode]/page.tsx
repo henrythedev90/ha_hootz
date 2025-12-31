@@ -3,13 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import { motion } from "framer-motion";
-import { Users, Trophy, Play, Eye, X, BarChart3 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Users,
+  Trophy,
+  Play,
+  Eye,
+  X,
+  BarChart3,
+  Copy,
+  Check,
+  QrCode,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import SessionQRCode from "@/components/SessionQRCode";
 import Loading from "@/components/Loading";
 import CenteredLayout from "@/components/CenteredLayout";
 import PlayersListModal from "@/components/PlayersListModal";
-import AnswerRevealModal from "@/components/AnswerRevealModal";
 import Modal from "@/components/Modal";
 import { useSession } from "next-auth/react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -43,7 +54,6 @@ import {
 } from "@/store/slices/socketSlice";
 import {
   setShowPlayersModal,
-  setShowAnswerRevealModal,
   setShowEndGameModal,
   resetUiState,
 } from "@/store/slices/uiSlice";
@@ -66,14 +76,14 @@ export default function HostDashboard() {
   const socket = useAppSelector((state) => state.socket.socket);
   const connected = useAppSelector((state) => state.socket.connected);
   const showPlayersModal = useAppSelector((state) => state.ui.showPlayersModal);
-  const showAnswerRevealModal = useAppSelector(
-    (state) => state.ui.showAnswerRevealModal
-  );
   const showEndGameModal = useAppSelector((state) => state.ui.showEndGameModal);
 
   const [activeTab, setActiveTab] = useState<
     "players" | "stats" | "leaderboard"
   >("players");
+  const [copied, setCopied] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [winnerRevealed, setWinnerRevealed] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -104,7 +114,6 @@ export default function HostDashboard() {
     dispatch(resetUiState()); // Reset all modals and UI state
 
     // Explicitly close all modals as a safety measure
-    dispatch(setShowAnswerRevealModal(false));
     dispatch(setShowPlayersModal(false));
     dispatch(setShowEndGameModal(false));
 
@@ -173,7 +182,6 @@ export default function HostDashboard() {
           );
           // Explicitly close all modals when fetching game state for a new session
           if (isWaiting) {
-            dispatch(setShowAnswerRevealModal(false));
             dispatch(setShowPlayersModal(false));
             dispatch(setShowEndGameModal(false));
           }
@@ -187,7 +195,6 @@ export default function HostDashboard() {
             })
           );
           // Close all modals for new sessions
-          dispatch(setShowAnswerRevealModal(false));
           dispatch(setShowPlayersModal(false));
           dispatch(setShowEndGameModal(false));
         }
@@ -202,7 +209,6 @@ export default function HostDashboard() {
           })
         );
         // Close all modals on error
-        dispatch(setShowAnswerRevealModal(false));
         dispatch(setShowPlayersModal(false));
         dispatch(setShowEndGameModal(false));
       }
@@ -596,7 +602,6 @@ export default function HostDashboard() {
             })
           );
         }
-        dispatch(setShowAnswerRevealModal(false));
       }
     );
 
@@ -720,7 +725,6 @@ export default function HostDashboard() {
         status: "QUESTION_ENDED",
       })
     );
-    dispatch(setShowAnswerRevealModal(true));
   };
 
   const handleNextQuestion = () => {
@@ -757,7 +761,6 @@ export default function HostDashboard() {
     // Allow canceling session even if socket is not connected
     // This helps in cases where connection is lost but user wants to cancel
     // Close other modals first to ensure EndGameModal is visible
-    dispatch(setShowAnswerRevealModal(false));
     dispatch(setShowPlayersModal(false));
 
     // Force a toggle to ensure re-render even if already true
@@ -769,6 +772,37 @@ export default function HostDashboard() {
     } else {
       dispatch(setShowEndGameModal(true));
     }
+  };
+
+  const handleCopyLink = () => {
+    const fullUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/join/${sessionCode}`
+        : `/join/${sessionCode}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRevealWinner = () => {
+    // Prepare leaderboard data
+    const leaderboard = players
+      .map((player) => ({
+        ...player,
+        score: stats.playerScores?.[player.playerId] || 0,
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    // Emit REVEAL_WINNER event to all players
+    if (socket) {
+      socket.emit("REVEAL_WINNER", {
+        sessionCode,
+        leaderboard,
+      });
+    }
+
+    setShowLeaderboard(true);
+    setWinnerRevealed(true);
   };
 
   // Get current question from gameState or fallback to questions array
@@ -784,31 +818,11 @@ export default function HostDashboard() {
   // But don't close EndGameModal if user is actively trying to cancel
   useEffect(() => {
     if (gameState?.status === "WAITING") {
-      dispatch(setShowAnswerRevealModal(false));
       dispatch(setShowPlayersModal(false));
       // Don't auto-close EndGameModal - let user control it
       // dispatch(setShowEndGameModal(false));
     }
   }, [gameState?.status, dispatch]);
-
-  // Automatically open AnswerRevealModal when question ends
-  // Only open if game is not in WAITING state (new session) and question is not in review mode
-  useEffect(() => {
-    if (
-      isQuestionEnded &&
-      currentQuestion &&
-      gameState?.status !== "WAITING" &&
-      !gameState?.isReviewMode
-    ) {
-      dispatch(setShowAnswerRevealModal(true));
-    }
-  }, [
-    isQuestionEnded,
-    currentQuestion,
-    gameState?.status,
-    gameState?.isReviewMode,
-    dispatch,
-  ]);
 
   if (status === "loading") {
     return <Loading />;
@@ -882,7 +896,6 @@ export default function HostDashboard() {
                     socket.emit("CANCEL_SESSION", { sessionCode });
                   }
                   dispatch(setShowEndGameModal(false));
-                  dispatch(setShowAnswerRevealModal(false));
                   router.push("/");
                 }}
                 className="px-4 py-2 bg-error text-white rounded-md hover:bg-error/90 transition-colors font-medium"
@@ -892,80 +905,199 @@ export default function HostDashboard() {
             </div>
           </div>
         </Modal>
-        <div className="min-h-screen bg-deep-navy p-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-card-bg rounded-lg shadow-md p-6 mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-text-light">
-                    Host Dashboard
-                  </h1>
-                  <p className="text-text-light/70">Session: {sessionCode}</p>
+        <div className="min-h-screen bg-[#0B1020] text-[#E5E7EB] p-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-2">
+                <h1 className="text-4xl font-bold text-[#E5E7EB]">
+                  Host Dashboard
+                </h1>
+                <div
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
+                    connected
+                      ? "bg-[#22C55E]/20 text-[#22C55E] border-[#22C55E]/30"
+                      : "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30"
+                  }`}
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      connected ? "bg-[#22C55E] animate-pulse" : "bg-[#EF4444]"
+                    }`}
+                  />
+                  <span>{connected ? "Connected" : "Disconnected"}</span>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm text-text-light/50">
-                    Status: {connected ? "🟢 Connected" : "🔴 Disconnected"}
+              </div>
+              <p className="text-[#E5E7EB]/60">
+                Session:{" "}
+                <span className="text-[#22D3EE] font-mono font-semibold">
+                  {sessionCode}
+                </span>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column - Join Instructions */}
+              <div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-2xl p-8 shadow-2xl"
+                >
+                  {/* Join Code Display */}
+                  <div className="mb-8">
+                    <h2 className="text-3xl font-bold text-[#0B1020] mb-4 text-center">
+                      Join Code: {sessionCode}
+                    </h2>
                   </div>
+
+                  {/* QR Code Section */}
+                  <div className="mb-8">
+                    <div className="flex items-center justify-center gap-2 text-[#0B1020] mb-4">
+                      <QrCode className="w-5 h-5" />
+                      <h3 className="font-semibold">Scan QR Code to Join</h3>
+                    </div>
+                    <div className="bg-[#E5E7EB] rounded-xl p-6 flex items-center justify-center">
+                      <SessionQRCode
+                        sessionCode={sessionCode}
+                        joinUrl={`/join/${sessionCode}`}
+                        variant="minimal"
+                      />
+                    </div>
+                    <p className="text-center text-sm text-[#0B1020]/60 mt-4">
+                      Scan with your phone camera
+                    </p>
+                  </div>
+
+                  {/* Copy Link Section */}
+                  <div className="bg-[#E5E7EB] rounded-xl p-6">
+                    <p className="text-sm font-semibold text-[#0B1020] mb-3 text-center">
+                      Or copy this link:
+                    </p>
+                    <div className="flex gap-2">
+                      <div className="flex-1 bg-white border-2 border-[#6366F1]/30 rounded-lg px-4 py-3 font-mono text-sm text-[#0B1020] overflow-x-auto whitespace-nowrap">
+                        {typeof window !== "undefined"
+                          ? `${window.location.origin}/join/${sessionCode}`
+                          : `/join/${sessionCode}`}
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleCopyLink}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                          copied
+                            ? "bg-[#22C55E] text-white"
+                            : "bg-[#6366F1] hover:bg-[#5558E3] text-white"
+                        }`}
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-5 h-5" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-5 h-5" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Action Buttons */}
+                <div className="mt-6 flex gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleStartGame}
+                    disabled={!connected || players.length === 0}
+                    className="flex-1 px-8 py-4 bg-linear-to-r from-[#22C55E] to-[#1DB954] hover:from-[#1DB954] hover:to-[#16A34A] text-white rounded-xl font-semibold shadow-lg shadow-[#22C55E]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Start Game
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleCancelSession}
+                    className="px-8 py-4 bg-[#EF4444]/10 hover:bg-[#EF4444]/20 border-2 border-[#EF4444]/30 hover:border-[#EF4444]/50 text-[#EF4444] rounded-xl font-semibold transition-all"
+                  >
+                    Cancel Session
+                  </motion.button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <SessionQRCode
-                  sessionCode={sessionCode}
-                  joinUrl={`/join/${sessionCode}`}
-                />
-
-                <div className="bg-card-bg rounded-lg shadow-md p-6">
-                  <h3 className="text-lg text-center font-semibold text-text-light mb-4">
-                    Players ({players.length})
+              {/* Right Column - Players List */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-[#1A1F35] rounded-2xl p-6 border border-[#6366F1]/20 h-fit"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold flex items-center gap-3">
+                    <Users className="w-6 h-6 text-[#22D3EE]" />
+                    <span>Players ({players.length})</span>
                   </h3>
-                  {players.length === 0 ? (
-                    <p className="text-text-light/50 text-center">
-                      No players joined yet
-                    </p>
-                  ) : (
-                    <ul
-                      className={`grid gap-2 max-h-64 overflow-y-auto pt-[50px] ${
-                        players.length > 6 ? "grid-cols-2" : "grid-cols-1"
-                      }`}
-                    >
-                      {players.map((player) => (
-                        <li
-                          key={player.playerId}
-                          className={`w-full text-text-light flex items-center ${
-                            players.length > 6
-                              ? "justify-center px-2"
-                              : "justify-center px-[50px]"
-                          }`}
-                        >
-                          <span className="w-6 shrink-0 flex items-center justify-center">
-                            👤
-                          </span>
-                          <span className="ml-2 text-center truncate min-w-0 flex-1">
-                            {player.name}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                  {players.length > 0 && (
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="w-3 h-3 bg-[#22C55E] rounded-full"
+                    />
                   )}
                 </div>
-              </div>
 
-              <div className="mt-6 flex justify-center gap-4">
-                <button
-                  onClick={handleStartGame}
-                  disabled={!connected || players.length === 0}
-                  className="px-6 py-3 bg-success text-white rounded-md hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  Start Game
-                </button>
-                <button
-                  onClick={handleCancelSession}
-                  className="px-6 py-3 bg-error text-white rounded-md hover:bg-error/90 transition-colors font-medium"
-                >
-                  Cancel Session
-                </button>
-              </div>
+                <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                  {players.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Users className="w-16 h-16 mx-auto text-[#6366F1]/30 mb-4" />
+                      <p className="text-[#E5E7EB]/50 mb-2">
+                        Waiting for players to join...
+                      </p>
+                      <p className="text-sm text-[#E5E7EB]/30">
+                        Share the code or QR code with players
+                      </p>
+                    </div>
+                  ) : (
+                    <AnimatePresence>
+                      {players.map((player, index) => (
+                        <motion.div
+                          key={player.playerId}
+                          initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                          animate={{ opacity: 1, x: 0, scale: 1 }}
+                          exit={{ opacity: 0, x: -50, scale: 0.9 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex items-center gap-4 p-4 bg-[#0B1020]/50 rounded-xl border border-[#6366F1]/20 hover:border-[#6366F1]/40 transition-all"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-linear-to-br from-[#6366F1] to-[#22D3EE] flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                            {player.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-[#E5E7EB] text-lg">
+                              {player.name}
+                            </p>
+                            <p className="text-sm text-[#E5E7EB]/50 font-mono">
+                              Player ID: {player.playerId.substring(0, 8)}...
+                            </p>
+                          </div>
+                          <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-pulse" />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  )}
+                </div>
+
+                {players.length > 0 && (
+                  <div className="mt-6 p-4 bg-[#6366F1]/10 rounded-lg border border-[#6366F1]/30">
+                    <p className="text-sm text-[#E5E7EB]/70 text-center">
+                      Players are joining in real-time. Start the game when
+                      ready!
+                    </p>
+                  </div>
+                )}
+              </motion.div>
             </div>
           </div>
         </div>
@@ -983,38 +1115,6 @@ export default function HostDashboard() {
         socket={socket}
         connected={connected}
       />
-      {(() => {
-        // Check if game is in WAITING state (new session) - use string comparison to avoid TypeScript narrowing issues
-        const statusStr = String(gameState?.status || "");
-        const isWaiting = statusStr === "WAITING" || !gameState?.status;
-        return (
-          <AnswerRevealModal
-            isOpen={showAnswerRevealModal && !isWaiting}
-            onClose={() => dispatch(setShowAnswerRevealModal(false))}
-            question={isWaiting ? null : currentQuestion || null}
-            answerDistribution={stats.answerDistribution}
-            currentIndex={currentIndex}
-            questionCount={questionCount}
-            onPrevious={handlePreviousQuestion}
-            onNext={handleNextQuestion}
-            canNavigate={canNavigate}
-            connected={connected || false}
-            players={players}
-            playerScores={stats.playerScores}
-            onRevealWinner={(leaderboard) => {
-              if (socket) {
-                socket.emit("REVEAL_WINNER", {
-                  sessionCode,
-                  leaderboard,
-                });
-              }
-            }}
-            onEndGame={() => {
-              dispatch(setShowEndGameModal(true));
-            }}
-          />
-        );
-      })()}
       <div className="min-h-screen bg-deep-navy">
         {/* Header */}
         <div className="border-b border-indigo/20 bg-card-bg/50 px-6 py-4">
@@ -1149,58 +1249,102 @@ export default function HostDashboard() {
                 )}
 
                 {/* Control Buttons */}
-                <div className="flex gap-3">
-                  {!isQuestionActive && !gameState?.answerRevealed && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleStartQuestion}
-                      disabled={(() => {
-                        const disabled =
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    {!isQuestionActive && !gameState?.answerRevealed && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleStartQuestion}
+                        disabled={(() => {
+                          const disabled =
+                            !connected ||
+                            !currentQuestion ||
+                            gameState?.isReviewMode === true ||
+                            gameState?.answerRevealed === true;
+                          return disabled;
+                        })()}
+                        className="flex-1 px-6 py-3 bg-indigo hover:bg-indigo/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Play className="w-5 h-5" />
+                        <span>Start Question</span>
+                      </motion.button>
+                    )}
+                    {isQuestionActive && !gameState?.answerRevealed && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleRevealAnswer}
+                        disabled={
                           !connected ||
-                          !currentQuestion ||
-                          gameState?.isReviewMode === true ||
-                          gameState?.answerRevealed === true;
-                        return disabled;
-                      })()}
-                      className="flex-1 px-6 py-3 bg-indigo hover:bg-indigo/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Play className="w-5 h-5" />
-                      <span>Start Question</span>
-                    </motion.button>
-                  )}
-                  {isQuestionActive && !gameState?.answerRevealed && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        if (!gameState?.answerRevealed) {
-                          handleRevealAnswer();
-                        } else {
-                          dispatch(setShowAnswerRevealModal(true));
+                          stats.playerCount === 0 ||
+                          stats.answerCount < stats.playerCount
                         }
-                      }}
-                      disabled={
-                        !connected ||
-                        stats.playerCount === 0 ||
-                        stats.answerCount < stats.playerCount
-                      }
-                      className="flex-1 px-6 py-3 bg-cyan hover:bg-cyan/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Eye className="w-5 h-5" />
-                      <span>Reveal Answer</span>
-                    </motion.button>
-                  )}
-                  {gameState?.answerRevealed && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => dispatch(setShowAnswerRevealModal(true))}
-                      className="flex-1 px-6 py-3 bg-success hover:bg-success/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Trophy className="w-5 h-5" />
-                      <span>Show Leaderboard</span>
-                    </motion.button>
+                        className="flex-1 px-6 py-3 bg-cyan hover:bg-cyan/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Eye className="w-5 h-5" />
+                        <span>Reveal Answer</span>
+                      </motion.button>
+                    )}
+                  </div>
+
+                  {/* Navigation Buttons */}
+                  {(gameState?.answerRevealed || gameState?.isReviewMode) && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center pt-4 border-t border-indigo/30">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handlePreviousQuestion}
+                          disabled={
+                            !connected ||
+                            currentIndex === 0 ||
+                            (questionCount > 0 && currentIndex >= questionCount)
+                          }
+                          className="px-6 py-3 bg-[#1A1F35] hover:bg-[#252B44] border-2 border-[#6366F1]/30 hover:border-[#6366F1]/50 text-[#E5E7EB] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                          <span>Previous Question</span>
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            const isLastQuestion =
+                              questionCount > 0 &&
+                              currentIndex >= questionCount - 1;
+                            if (isLastQuestion) {
+                              handleRevealWinner();
+                            } else {
+                              setShowLeaderboard(true);
+                            }
+                          }}
+                          className="px-6 py-3 bg-indigo hover:bg-indigo/90 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+                        >
+                          <Trophy className="w-5 h-5" />
+                          <span>
+                            {questionCount > 0 &&
+                            currentIndex >= questionCount - 1
+                              ? "🏆 Reveal Winner"
+                              : "View Leaderboard"}
+                          </span>
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleNextQuestion}
+                          disabled={
+                            !connected ||
+                            questionCount === 0 ||
+                            currentIndex >= questionCount - 1
+                          }
+                          className="px-6 py-3 bg-[#1A1F35] hover:bg-[#252B44] border-2 border-[#6366F1]/30 hover:border-[#6366F1]/50 text-[#E5E7EB] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+                        >
+                          <span>Next Question</span>
+                          <ChevronRight className="w-5 h-5" />
+                        </motion.button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -1376,6 +1520,260 @@ export default function HostDashboard() {
         </div>
       </div>
 
+      {/* Confetti for Winner */}
+      {showLeaderboard &&
+        winnerRevealed &&
+        (() => {
+          const leaderboard = players
+            .map((player) => ({
+              ...player,
+              score: stats.playerScores?.[player.playerId] || 0,
+            }))
+            .sort((a, b) => b.score - a.score);
+          const isTie =
+            leaderboard.length > 1 &&
+            leaderboard[0].score > 0 &&
+            leaderboard[0].score === leaderboard[1].score;
+
+          // Confetti particles (only show for winner, not tie)
+          const confettiColors = [
+            "#FFD700",
+            "#22D3EE",
+            "#6366F1",
+            "#22C55E",
+            "#F59E0B",
+          ];
+          const confetti = !isTie
+            ? Array.from({ length: 50 }, (_, i) => ({
+                id: i,
+                color:
+                  confettiColors[
+                    Math.floor(Math.random() * confettiColors.length)
+                  ],
+                delay: Math.random() * 2,
+                duration: 3 + Math.random() * 2,
+                x: Math.random() * 100,
+              }))
+            : [];
+
+          return (
+            <div
+              className="fixed inset-0 pointer-events-none"
+              style={{ zIndex: 10002 }}
+            >
+              {confetti.map((particle) => (
+                <motion.div
+                  key={particle.id}
+                  initial={{
+                    y: -20,
+                    x: `${particle.x}vw`,
+                    opacity: 1,
+                    rotate: 0,
+                  }}
+                  animate={{
+                    y: "110vh",
+                    rotate: 360,
+                    opacity: [1, 1, 0],
+                  }}
+                  transition={{
+                    duration: particle.duration,
+                    delay: particle.delay,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  style={{
+                    position: "absolute",
+                    width: "8px",
+                    height: "8px",
+                    backgroundColor: particle.color,
+                    borderRadius: "2px",
+                  }}
+                />
+              ))}
+            </div>
+          );
+        })()}
+
+      {/* Leaderboard/Winner Modal */}
+      <Modal
+        isOpen={showLeaderboard}
+        onClose={() => {
+          if (!winnerRevealed) {
+            setShowLeaderboard(false);
+          }
+        }}
+        title={winnerRevealed ? "🏆 Winner!" : "Leaderboard"}
+        size="4xl"
+      >
+        <div className="space-y-6">
+          {winnerRevealed &&
+            (() => {
+              const leaderboard = players
+                .map((player) => ({
+                  ...player,
+                  score: stats.playerScores?.[player.playerId] || 0,
+                }))
+                .sort((a, b) => b.score - a.score);
+              const winner = leaderboard.length > 0 ? leaderboard[0] : null;
+              const isTie =
+                leaderboard.length > 1 &&
+                leaderboard[0].score > 0 &&
+                leaderboard[0].score === leaderboard[1].score;
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="mb-6 text-center"
+                >
+                  <div className="bg-linear-to-r from-cyan via-indigo to-cyan rounded-lg p-6 sm:p-8 shadow-lg border-4 border-cyan/50 overflow-hidden">
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ delay: 0.2, duration: 0.5, type: "spring" }}
+                      className="text-6xl mb-4"
+                    >
+                      🏆
+                    </motion.div>
+                    {isTie ? (
+                      <>
+                        <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                          It's a Tie!
+                        </h3>
+                        <p className="text-lg sm:text-xl text-white/90 mb-4">
+                          Multiple winners with {winner?.score} points!
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                          Congratulations!
+                        </h3>
+                        <p className="text-xl sm:text-2xl text-white/90 mb-2">
+                          {winner?.name}
+                        </p>
+                        <p className="text-lg sm:text-xl text-white/90">
+                          Wins with {winner?.score} points!
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })()}
+          <div className="space-y-3">
+            {players.length === 0 ? (
+              <p className="text-center text-text-light/50 py-8">
+                No players yet
+              </p>
+            ) : (
+              <AnimatePresence>
+                {players
+                  .map((player) => ({
+                    ...player,
+                    score: stats.playerScores?.[player.playerId] || 0,
+                  }))
+                  .sort((a, b) => b.score - a.score)
+                  .map((player, index) => {
+                    const rank = index + 1;
+                    const isTopThree = rank <= 3;
+                    const leaderboard = players
+                      .map((p) => ({
+                        ...p,
+                        score: stats.playerScores?.[p.playerId] || 0,
+                      }))
+                      .sort((a, b) => b.score - a.score);
+                    const isTie =
+                      leaderboard.length > 1 &&
+                      leaderboard[0].score > 0 &&
+                      leaderboard[0].score === leaderboard[1].score;
+                    const isWinner = winnerRevealed && rank === 1 && !isTie;
+                    return (
+                      <motion.div
+                        key={player.playerId}
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{
+                          delay: index * 0.05,
+                          duration: 0.3,
+                          ease: "easeOut",
+                        }}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          isWinner
+                            ? "bg-cyan/20 border-cyan shadow-lg"
+                            : isTopThree
+                            ? rank === 1
+                              ? "bg-cyan/20 border-cyan"
+                              : rank === 2
+                              ? "bg-card-bg border-indigo/30"
+                              : "bg-cyan/10 border-cyan/50"
+                            : "bg-deep-navy border-indigo/30"
+                        }`}
+                        style={{
+                          transform: isWinner ? "scale(1.02)" : undefined,
+                        }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`text-2xl font-bold ${
+                              isWinner
+                                ? "text-cyan"
+                                : isTopThree
+                                ? rank === 1
+                                  ? "text-cyan"
+                                  : rank === 2
+                                  ? "text-text-light/50"
+                                  : "text-cyan/70"
+                                : "text-text-light/50"
+                            }`}
+                          >
+                            {isWinner ? "👑" : `#${rank}`}
+                          </div>
+                          <span
+                            className={`flex-1 text-lg font-semibold ${
+                              isWinner ? "text-cyan" : "text-text-light"
+                            }`}
+                          >
+                            {player.name}
+                            {isWinner && (
+                              <span className="ml-2 text-cyan/70">
+                                - Winner!
+                              </span>
+                            )}
+                          </span>
+                          <span
+                            className={`text-xl font-bold ${
+                              isWinner ? "text-cyan" : "text-indigo"
+                            }`}
+                          >
+                            {player.score} pts
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+              </AnimatePresence>
+            )}
+          </div>
+          {winnerRevealed && (
+            <div className="flex justify-end pt-4 border-t border-indigo/30">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  dispatch(setShowEndGameModal(true));
+                }}
+                className="px-6 py-3 bg-error text-white rounded-md hover:bg-error/90 transition-colors font-medium"
+              >
+                End Game
+              </motion.button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
       <Modal
         isOpen={showEndGameModal}
         onClose={() => {
@@ -1404,7 +1802,6 @@ export default function HostDashboard() {
                 // Even if socket is not connected, we should still navigate away
                 // The session will be cleaned up on the server side
                 dispatch(setShowEndGameModal(false));
-                dispatch(setShowAnswerRevealModal(false));
                 // Navigate back to dashboard after canceling
                 router.push("/");
               }}

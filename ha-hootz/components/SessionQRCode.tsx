@@ -5,11 +5,13 @@ import { useState, useEffect } from "react";
 interface SessionQRCodeProps {
   sessionCode: string;
   joinUrl: string;
+  variant?: "default" | "minimal";
 }
 
 export default function SessionQRCode({
   sessionCode,
   joinUrl,
+  variant = "default",
 }: SessionQRCodeProps) {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,28 @@ export default function SessionQRCode({
     fetchQRCode();
   }, [sessionCode]);
 
+  // Minimal variant - just the QR code image
+  if (variant === "minimal") {
+    return (
+      <div className="w-64 h-64 bg-white rounded-lg flex items-center justify-center border-4 border-[#0B1020]">
+        {loading ? (
+          <div className="text-[#0B1020]/40">Loading QR code...</div>
+        ) : qrCodeDataUrl ? (
+          <img
+            src={qrCodeDataUrl}
+            alt="QR Code"
+            className="w-full h-full object-contain p-2"
+          />
+        ) : (
+          <div className="text-red-500 text-sm text-center px-4">
+            Failed to load QR code
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Default variant - full component with all features
   const fullUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}${joinUrl}`

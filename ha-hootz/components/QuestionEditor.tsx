@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Question, AnswerOption } from "@/types";
 import { generateId } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { Trash2, X } from "lucide-react";
 
 interface QuestionEditorProps {
   question: Question;
@@ -69,9 +71,9 @@ export default function QuestionEditor({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-4">
+    <div className="bg-[#0B1020]/50 rounded-lg p-6 mb-4 border border-[#6366F1]/20">
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-sm text-[#E5E7EB]/80 mb-2">
           Question Text
         </label>
         <textarea
@@ -79,47 +81,44 @@ export default function QuestionEditor({
           onChange={(e) =>
             setEditedQuestion({ ...editedQuestion, text: e.target.value })
           }
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-4 py-3 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all resize-none"
           rows={3}
           placeholder="Enter your question..."
         />
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-sm text-[#E5E7EB]/80 mb-3">
           Answer Options
         </label>
-        <div className="space-y-2 mb-3">
+        <div className="space-y-3 mb-3">
           {editedQuestion.options.map((option) => (
-            <div key={option.id} className="flex items-center gap-2">
+            <div key={option.id} className="flex gap-3 items-center">
+              <input
+                type="radio"
+                checked={option.isCorrect}
+                onChange={(e) =>
+                  handleUpdateOption(option.id, {
+                    isCorrect: e.target.checked,
+                  })
+                }
+                className="w-5 h-5 accent-[#22C55E] cursor-pointer"
+              />
               <input
                 type="text"
                 value={option.text}
                 onChange={(e) =>
                   handleUpdateOption(option.id, { text: e.target.value })
                 }
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="flex-1 bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-4 py-3 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all"
+                placeholder="Enter option text..."
               />
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={option.isCorrect}
-                  onChange={(e) =>
-                    handleUpdateOption(option.id, {
-                      isCorrect: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Correct
-                </span>
-              </label>
               <button
                 onClick={() => handleDeleteOption(option.id)}
-                className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                className="p-2 hover:bg-[#EF4444]/10 text-[#EF4444] rounded-lg transition-colors"
+                title="Delete option"
               >
-                Delete
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           ))}
@@ -130,39 +129,49 @@ export default function QuestionEditor({
             value={newOptionText}
             onChange={(e) => setNewOptionText(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleAddOption()}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="flex-1 bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-4 py-3 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all"
             placeholder="Add new option..."
           />
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleAddOption}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+            className="px-4 py-2 bg-[#22C55E] hover:bg-[#1DB954] text-white rounded-lg text-sm font-medium transition-colors"
           >
             Add Option
-          </button>
+          </motion.button>
         </div>
       </div>
 
       <div className="flex gap-2 justify-end">
         {onDelete && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onDelete}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+            className="px-4 py-2 bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
           >
-            Delete Question
-          </button>
+            <Trash2 className="w-4 h-4" />
+            <span>Delete Question</span>
+          </motion.button>
         )}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-medium"
+          className="px-4 py-2 bg-[#1A1F35] hover:bg-[#0B1020] text-[#E5E7EB] rounded-lg text-sm font-medium transition-colors border border-[#6366F1]/20 flex items-center gap-2"
         >
-          Cancel
-        </button>
-        <button
+          <X className="w-4 h-4" />
+          <span>Cancel</span>
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleSave}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+          className="px-4 py-2 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-lg text-sm font-medium transition-colors"
         >
           Save Question
-        </button>
+        </motion.button>
       </div>
     </div>
   );

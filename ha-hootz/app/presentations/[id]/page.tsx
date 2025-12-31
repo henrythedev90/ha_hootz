@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Save, Info, ChevronDown, ChevronRight } from "lucide-react";
 import { Presentation, Question, ScoringConfig } from "@/types";
 import { getPresentationById, savePresentation } from "@/lib/storage";
 import { generateId, getDefaultScoringConfig } from "@/lib/utils";
 import QuestionList from "@/components/QuestionList";
 import Modal from "@/components/Modal";
 import Loading from "@/components/Loading";
-import Link from "next/link";
 
 export default function PresentationEditor() {
   const { data: session, status } = useSession();
@@ -282,273 +283,334 @@ export default function PresentationEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Link
-            href="/"
-            className="text-blue-600 dark:text-blue-400 hover:underline mb-4 inline-block"
-          >
-            ← Back to Dashboard
-          </Link>
-        </div>
-
-        <div className="bg-card-bg rounded-lg shadow-md p-6 mb-6">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-text-light mb-2">
-              Presentation Title *
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-indigo/30 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo bg-card-bg text-text-light text-lg"
-              placeholder="Enter presentation title..."
-            />
+    <div className="min-h-screen bg-[#0B1020] text-[#E5E7EB]">
+      {/* Header */}
+      <div className="border-b border-[#6366F1]/20 bg-[#1A1F35]/50 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => router.push("/")}
+              className="p-2 hover:bg-[#6366F1]/10 rounded-lg transition-colors flex items-center gap-2 text-[#22D3EE]"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back to Dashboard</span>
+            </motion.button>
           </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              rows={3}
-              placeholder="Enter a description (optional)..."
-            />
+          <div className="flex gap-2">
+            {!saving && presentation && presentation.id !== "new" && (
+              <span className="text-sm text-[#22C55E] self-center">
+                ● Autosaved
+              </span>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-2 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="w-4 h-4" />
+              <span>{saving ? "Saving..." : "Save Presentation"}</span>
+            </motion.button>
           </div>
-
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? "Saving..." : "Save Presentation"}
-          </button>
         </div>
+      </div>
 
-        {/* Scoring Configuration */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-          <button
-            onClick={() => setShowScoringConfig(!showScoringConfig)}
-            className="w-full flex justify-between items-center text-left"
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+        {/* Title/Description and Scoring Configuration Row */}
+        <div className="grid grid-cols-4 gap-6">
+          {/* Title and Description Section - 75% (3/4) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="col-span-2 bg-[#1A1F35] rounded-xl p-6 border border-[#6366F1]/20"
           >
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Scoring Configuration
-            </h2>
-            <span className="text-gray-500 dark:text-gray-400">
-              {showScoringConfig ? "▼" : "▶"}
-            </span>
-          </button>
-
-          {showScoringConfig && (
-            <div className="mt-6 space-y-6">
-              {/* Base Points */}
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Base Points per Correct Answer
+                <label className="block text-sm text-[#E5E7EB]/80 mb-2">
+                  Presentation Title *
                 </label>
                 <input
-                  type="number"
-                  min="1"
-                  value={scoringConfig.basePoints}
-                  onChange={(e) =>
-                    setScoringConfig({
-                      ...scoringConfig,
-                      basePoints: parseInt(e.target.value) || 100,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-4 py-3 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all"
+                  placeholder="Enter presentation title..."
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Points awarded for each correct answer
-                </p>
               </div>
-
-              {/* Time-Based Bonus */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Time-Based Bonus
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Award bonus points based on how quickly players answer
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={scoringConfig.timeBonusEnabled}
-                      onChange={(e) =>
-                        setScoringConfig({
-                          ...scoringConfig,
-                          timeBonusEnabled: e.target.checked,
-                        })
-                      }
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-                {scoringConfig.timeBonusEnabled && (
-                  <div className="ml-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Maximum Time Bonus Points
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={scoringConfig.maxTimeBonus}
-                      onChange={(e) =>
-                        setScoringConfig({
-                          ...scoringConfig,
-                          maxTimeBonus: parseInt(e.target.value) || 50,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Maximum bonus points for answering immediately (bonus
-                      decreases as time passes)
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Streak Bonus */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Streak Bonus
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setShowStreakBonusInfo(true)}
-                        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                        title="Learn how Streak Bonus works"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Award bonus points for consecutive correct answers
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={scoringConfig.streakBonusEnabled}
-                      onChange={(e) =>
-                        setScoringConfig({
-                          ...scoringConfig,
-                          streakBonusEnabled: e.target.checked,
-                        })
-                      }
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-                {scoringConfig.streakBonusEnabled && (
-                  <div className="ml-4 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Streak Thresholds (comma-separated)
-                      </label>
-                      <input
-                        type="text"
-                        value={scoringConfig.streakThresholds.join(", ")}
-                        onChange={(e) => {
-                          const thresholds = e.target.value
-                            .split(",")
-                            .map((s) => parseInt(s.trim()))
-                            .filter((n) => !isNaN(n) && n > 0);
-                          if (thresholds.length > 0) {
-                            setScoringConfig({
-                              ...scoringConfig,
-                              streakThresholds: thresholds,
-                              // Adjust bonus values array length if needed
-                              streakBonusValues:
-                                thresholds.length ===
-                                scoringConfig.streakBonusValues.length
-                                  ? scoringConfig.streakBonusValues
-                                  : thresholds.map(
-                                      (_, i) =>
-                                        scoringConfig.streakBonusValues[i] || 10
-                                    ),
-                            });
-                          }
-                        }}
-                        placeholder="3, 5, 7"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Number of consecutive correct answers required (e.g., 3,
-                        5, 7)
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Bonus Values (comma-separated)
-                      </label>
-                      <input
-                        type="text"
-                        value={scoringConfig.streakBonusValues.join(", ")}
-                        onChange={(e) => {
-                          const values = e.target.value
-                            .split(",")
-                            .map((s) => parseInt(s.trim()))
-                            .filter((n) => !isNaN(n) && n >= 0);
-                          if (
-                            values.length > 0 &&
-                            values.length ===
-                              scoringConfig.streakThresholds.length
-                          ) {
-                            setScoringConfig({
-                              ...scoringConfig,
-                              streakBonusValues: values,
-                            });
-                          }
-                        }}
-                        placeholder="10, 25, 50"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Bonus points for each threshold (must match number of
-                        thresholds)
-                      </p>
-                    </div>
-                  </div>
-                )}
+              <div>
+                <label className="block text-sm text-[#E5E7EB]/80 mb-2">
+                  Description{" "}
+                  <span className="text-[#E5E7EB]/40">(optional)</span>
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-4 py-3 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all resize-none"
+                  rows={3}
+                  placeholder="Enter a description (optional)..."
+                />
               </div>
             </div>
-          )}
+          </motion.div>
+
+          {/* Scoring Configuration - 25% (1/4) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="col-span-2 bg-[#1A1F35] rounded-xl p-6 border border-[#6366F1]/20"
+          >
+            <button
+              onClick={() => setShowScoringConfig(!showScoringConfig)}
+              className="w-full flex justify-between items-center text-left mb-4"
+            >
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <span className="text-sm">Scoring</span>
+                <Info className="w-4 h-4 text-[#22D3EE]" />
+              </h3>
+              {showScoringConfig ? (
+                <ChevronDown className="w-4 h-4 text-[#E5E7EB]/60" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-[#E5E7EB]/60" />
+              )}
+            </button>
+
+            {showScoringConfig && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-5"
+              >
+                {/* Base Points */}
+                <div>
+                  <label className="block text-xs text-[#E5E7EB]/80 mb-2">
+                    Base Points
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={scoringConfig.basePoints}
+                    onChange={(e) =>
+                      setScoringConfig({
+                        ...scoringConfig,
+                        basePoints: parseInt(e.target.value) || 100,
+                      })
+                    }
+                    className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-3 py-2 text-[#E5E7EB] outline-none transition-all text-sm"
+                  />
+                  <p className="mt-1 text-xs text-[#E5E7EB]/50">
+                    Per correct answer
+                  </p>
+                </div>
+
+                {/* Bonus Sections Row */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Time-Based Bonus */}
+                  <div className="p-3 bg-[#0B1020]/50 rounded-lg border border-[#6366F1]/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-[#E5E7EB]">
+                          Time Bonus
+                        </span>
+                        <Info className="w-3 h-3 text-[#22D3EE]/60" />
+                      </div>
+                      <button
+                        onClick={() =>
+                          setScoringConfig({
+                            ...scoringConfig,
+                            timeBonusEnabled: !scoringConfig.timeBonusEnabled,
+                          })
+                        }
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          scoringConfig.timeBonusEnabled
+                            ? "bg-[#22D3EE]"
+                            : "bg-[#1A1F35] border-2 border-[#6366F1]/30"
+                        }`}
+                      >
+                        <motion.div
+                          animate={{
+                            x: scoringConfig.timeBonusEnabled ? 20 : 2,
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 30,
+                          }}
+                          className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-lg"
+                        />
+                      </button>
+                    </div>
+                    <p className="text-xs text-[#E5E7EB]/60 mb-2">
+                      Bonus for quick answers
+                    </p>
+                    {scoringConfig.timeBonusEnabled && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-2"
+                      >
+                        <label className="block text-xs text-[#E5E7EB]/80 mb-1">
+                          Max Bonus
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={scoringConfig.maxTimeBonus}
+                          onChange={(e) =>
+                            setScoringConfig({
+                              ...scoringConfig,
+                              maxTimeBonus: parseInt(e.target.value) || 50,
+                            })
+                          }
+                          className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-3 py-2 text-[#E5E7EB] outline-none transition-all text-sm"
+                        />
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Streak Bonus */}
+                  <div className="p-3 bg-[#0B1020]/50 rounded-lg border border-[#6366F1]/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-[#E5E7EB]">
+                          Streak Bonus
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowStreakBonusInfo(true)}
+                          className="text-[#22D3EE] hover:text-[#22D3EE]/80 transition-colors"
+                          title="Learn how Streak Bonus works"
+                        >
+                          <Info className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <button
+                        onClick={() =>
+                          setScoringConfig({
+                            ...scoringConfig,
+                            streakBonusEnabled:
+                              !scoringConfig.streakBonusEnabled,
+                          })
+                        }
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          scoringConfig.streakBonusEnabled
+                            ? "bg-[#22D3EE]"
+                            : "bg-[#1A1F35] border-2 border-[#6366F1]/30"
+                        }`}
+                      >
+                        <motion.div
+                          animate={{
+                            x: scoringConfig.streakBonusEnabled ? 20 : 2,
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 30,
+                          }}
+                          className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-lg"
+                        />
+                      </button>
+                    </div>
+                    <p className="text-xs text-[#E5E7EB]/60 mb-2">
+                      Bonus for consecutive correct
+                    </p>
+                    {scoringConfig.streakBonusEnabled && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-2 space-y-3"
+                      >
+                        <div>
+                          <label className="block text-xs text-[#E5E7EB]/80 mb-1">
+                            Thresholds
+                          </label>
+                          <input
+                            type="text"
+                            value={scoringConfig.streakThresholds.join(", ")}
+                            onChange={(e) => {
+                              const thresholds = e.target.value
+                                .split(",")
+                                .map((s) => parseInt(s.trim()))
+                                .filter((n) => !isNaN(n) && n > 0);
+                              if (thresholds.length > 0) {
+                                setScoringConfig({
+                                  ...scoringConfig,
+                                  streakThresholds: thresholds,
+                                  // Adjust bonus values array length if needed
+                                  streakBonusValues:
+                                    thresholds.length ===
+                                    scoringConfig.streakBonusValues.length
+                                      ? scoringConfig.streakBonusValues
+                                      : thresholds.map(
+                                          (_, i) =>
+                                            scoringConfig.streakBonusValues[
+                                              i
+                                            ] || 10
+                                        ),
+                                });
+                              }
+                            }}
+                            placeholder="3, 5, 7"
+                            className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-3 py-2 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-[#E5E7EB]/80 mb-1">
+                            Bonus Values
+                          </label>
+                          <input
+                            type="text"
+                            value={scoringConfig.streakBonusValues.join(", ")}
+                            onChange={(e) => {
+                              const values = e.target.value
+                                .split(",")
+                                .map((s) => parseInt(s.trim()))
+                                .filter((n) => !isNaN(n) && n >= 0);
+                              if (
+                                values.length > 0 &&
+                                values.length ===
+                                  scoringConfig.streakThresholds.length
+                              ) {
+                                setScoringConfig({
+                                  ...scoringConfig,
+                                  streakBonusValues: values,
+                                });
+                              }
+                            }}
+                            placeholder="10, 25, 50"
+                            className="w-full bg-[#0B1020] border-2 border-[#6366F1]/30 focus:border-[#6366F1] rounded-lg px-3 py-2 text-[#E5E7EB] placeholder-[#E5E7EB]/30 outline-none transition-all text-sm"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
         </div>
 
-        <QuestionList
-          questions={presentation.questions}
-          onUpdate={handleQuestionUpdate}
-          onAdd={handleQuestionAdd}
-          onDelete={handleQuestionDelete}
-        />
+        {/* Questions Section */}
+        <div className="flex gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex-1 bg-[#1A1F35] rounded-xl p-6 border border-[#6366F1]/20"
+          >
+            <QuestionList
+              questions={presentation.questions}
+              onUpdate={handleQuestionUpdate}
+              onAdd={handleQuestionAdd}
+              onDelete={handleQuestionDelete}
+            />
+          </motion.div>
+        </div>
       </div>
 
       {/* Save Success Modal */}
@@ -564,28 +626,34 @@ export default function PresentationEditor() {
         title="Presentation Saved!"
       >
         <div>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
+          <p className="text-[#E5E7EB]/80 mb-6">
             What would you like to do next?
           </p>
           <div className="flex flex-col gap-3">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleStartPresentation}
               disabled={
                 starting || !presentation || presentation.questions.length === 0
               }
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-[#22C55E] hover:bg-[#1DB954] text-white rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {starting ? "Starting..." : "Start Presentation"}
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 router.push("/");
               }}
-              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+              className="px-6 py-3 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-lg font-medium transition-colors"
             >
               Go to Dashboard
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 setShowSaveSuccessModal(false);
                 // If it was a new presentation, update the URL
@@ -593,10 +661,10 @@ export default function PresentationEditor() {
                   router.replace(`/presentations/${savedPresentationId}`);
                 }
               }}
-              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-medium transition-colors"
+              className="px-6 py-3 bg-[#1A1F35] hover:bg-[#0B1020] text-[#E5E7EB] rounded-lg font-medium transition-colors border border-[#6366F1]/20"
             >
               Continue Editing
-            </button>
+            </motion.button>
           </div>
         </div>
       </Modal>
@@ -609,10 +677,10 @@ export default function PresentationEditor() {
       >
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[#E5E7EB] mb-2">
               What is Streak Bonus?
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm">
+            <p className="text-[#E5E7EB]/80 text-sm">
               Streak Bonus rewards players for answering multiple questions
               correctly in a row. The more consecutive correct answers, the
               bigger the bonus!
@@ -620,21 +688,19 @@ export default function PresentationEditor() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[#E5E7EB] mb-2">
               How to Set It Up
             </h3>
-            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+            <div className="space-y-3 text-sm text-[#E5E7EB]/80">
               <div>
                 <p className="font-medium mb-1">1. Streak Thresholds:</p>
                 <p>
                   Enter the number of consecutive correct answers needed to
                   trigger each bonus level.
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-[#E5E7EB]/50 mt-1">
                   Example:{" "}
-                  <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
-                    3, 5, 7
-                  </code>{" "}
+                  <code className="bg-[#0B1020] px-1 rounded">3, 5, 7</code>{" "}
                   means bonuses at 3, 5, and 7+ consecutive correct answers
                 </p>
               </div>
@@ -644,11 +710,9 @@ export default function PresentationEditor() {
                   Enter the bonus points awarded for each threshold. Must match
                   the number of thresholds.
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-[#E5E7EB]/50 mt-1">
                   Example:{" "}
-                  <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
-                    10, 25, 50
-                  </code>{" "}
+                  <code className="bg-[#0B1020] px-1 rounded">10, 25, 50</code>{" "}
                   means 10 points at 3 correct, 25 at 5 correct, 50 at 7+
                   correct
                 </p>
@@ -656,22 +720,18 @@ export default function PresentationEditor() {
             </div>
           </div>
 
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+          <div className="bg-[#6366F1]/10 border border-[#6366F1]/30 rounded-lg p-4">
+            <h4 className="font-semibold text-[#22D3EE] mb-2">
               Example Scenario:
             </h4>
-            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+            <ul className="text-sm text-[#E5E7EB]/80 space-y-1 list-disc list-inside">
               <li>
                 Thresholds:{" "}
-                <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">
-                  3, 5, 7
-                </code>
+                <code className="bg-[#0B1020] px-1 rounded">3, 5, 7</code>
               </li>
               <li>
                 Bonus Values:{" "}
-                <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">
-                  10, 25, 50
-                </code>
+                <code className="bg-[#0B1020] px-1 rounded">10, 25, 50</code>
               </li>
               <li>
                 Player answers 3 questions correctly → Gets 10 bonus points
@@ -688,8 +748,8 @@ export default function PresentationEditor() {
             </ul>
           </div>
 
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+          <div className="bg-[#22D3EE]/10 border border-[#22D3EE]/30 rounded-lg p-3">
+            <p className="text-sm text-[#22D3EE]">
               <strong>Tip:</strong> Make sure the number of bonus values matches
               the number of thresholds. For example, if you have 3 thresholds,
               you need 3 bonus values.

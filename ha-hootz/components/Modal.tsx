@@ -8,7 +8,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 }
 
 export default function Modal({
@@ -27,6 +27,9 @@ export default function Modal({
     md: "max-w-md",
     lg: "max-w-lg",
     xl: "max-w-xl",
+    "2xl": "max-w-2xl",
+    "3xl": "max-w-3xl",
+    "4xl": "max-w-4xl",
   };
 
   const modalContent = (
@@ -36,11 +39,11 @@ export default function Modal({
       style={{ zIndex: 10000, position: "fixed" }}
     >
       <div
-        className={`bg-card-bg rounded-lg shadow-xl p-6 w-full mx-4 ${sizeClasses[size]}`}
+        className={`bg-card-bg rounded-lg shadow-xl w-full mx-4 max-h-[90vh] flex flex-col ${sizeClasses[size]}`}
         onClick={(e) => e.stopPropagation()}
         style={{ zIndex: 10001, position: "relative" }}
       >
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 p-6 pb-4 flex-shrink-0">
           <h2 className="text-2xl font-bold text-text-light">
             {title}
           </h2>
@@ -62,7 +65,9 @@ export default function Modal({
             </svg>
           </button>
         </div>
-        {children}
+        <div className="px-6 pb-6 overflow-y-auto flex-1 min-h-0">
+          {children}
+        </div>
       </div>
     </div>
   );

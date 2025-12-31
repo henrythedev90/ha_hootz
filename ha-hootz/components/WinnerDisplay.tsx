@@ -67,31 +67,44 @@ export default function WinnerDisplay({
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/90 p-1 sm:p-2 md:p-4 overflow-y-auto">
       {/* Confetti - Only for Winner */}
-      {isWinner &&
-        confetti.map((particle) => (
-          <motion.div
-            key={particle.id}
-            initial={{ y: -20, x: `${particle.x}vw`, opacity: 1, rotate: 0 }}
-            animate={{
-              y: "110vh",
-              rotate: 360,
-              opacity: [1, 1, 0],
-            }}
-            transition={{
-              duration: particle.duration,
-              delay: particle.delay,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            style={{
-              position: "absolute",
-              width: "8px",
-              height: "8px",
-              backgroundColor: particle.color,
-              borderRadius: "2px",
-            }}
-          />
-        ))}
+      {isWinner && (
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{ zIndex: 51 }}
+        >
+          {confetti.map((particle) => (
+            <motion.div
+              key={particle.id}
+              initial={{
+                y: "-10vh",
+                x: `${particle.x}vw`,
+                opacity: 1,
+                rotate: 0,
+              }}
+              animate={{
+                y: "110vh",
+                rotate: 360,
+                opacity: [1, 1, 0],
+              }}
+              transition={{
+                duration: particle.duration,
+                delay: particle.delay,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              style={{
+                position: "absolute",
+                width: "8px",
+                height: "8px",
+                backgroundColor: particle.color,
+                borderRadius: "2px",
+                left: 0,
+                top: 0,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="w-full max-w-4xl relative z-10 py-2 sm:py-4">
         {/* Winner Announcement Banner - Only for 1st Place */}
