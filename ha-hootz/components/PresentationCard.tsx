@@ -104,21 +104,21 @@ export default function PresentationCard({
           <Play className="w-4 h-4" />
           <span>{starting ? "Starting..." : "Host"}</span>
         </motion.button>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Link
-            href={`/presentations/${presentation.id}`}
-            className="px-4 py-2 bg-card-bg hover:bg-[#252B44] border border-indigo/30 text-text-light rounded-lg transition-colors flex items-center justify-center"
-          >
-            <Edit className="w-4 h-4" />
-          </Link>
-        </motion.div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => router.push(`/presentations/${presentation.id}`)}
+          className="w-14 h-14 px-4 py-2 bg-card-bg hover:bg-[#252B44] border border-indigo/30 text-text-light rounded-lg transition-colors flex items-center justify-center"
+        >
+          <Edit className="w-6 h-6" />
+        </motion.button>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => onDelete(presentation.id)}
-          className="px-4 py-2 bg-card-bg hover:bg-error/10 border border-error/30 text-error rounded-lg transition-colors flex items-center justify-center"
+          className="w-14 h-14 px-4 py-2 bg-card-bg hover:bg-error/10 border border-error/30 text-error rounded-lg transition-colors flex items-center justify-center"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-6 h-6" />
         </motion.button>
       </div>
     </motion.div>
