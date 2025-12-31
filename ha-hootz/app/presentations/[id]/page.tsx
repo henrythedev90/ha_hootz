@@ -329,20 +329,10 @@ export default function PresentationEditor() {
         </div>
 
         {/* Questions Section */}
-        <div className="flex gap-6">
+        <div className="flex gap-6 ">
           <QuestionNavigationSidebar
             questions={presentation.questions}
             selectedQuestionIndex={selectedQuestionIndex}
-            onAddQuestion={() => {
-              const newQuestion: Question = {
-                id: generateId(),
-                type: "multiple-choice",
-                text: "",
-                options: [],
-              };
-              handleQuestionAdd(newQuestion);
-              setSelectedQuestionIndex(presentation.questions.length);
-            }}
             onSelectQuestion={(index) => {
               setSelectedQuestionIndex(index);
               setViewingQuestionIndex(index);

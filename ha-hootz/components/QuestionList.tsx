@@ -104,54 +104,13 @@ export default function QuestionList({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
         >
-          {editingId === question.id ? (
+          {editingId === question.id && (
             <QuestionEditor
               question={question}
               onSave={handleSave}
               onCancel={handleCancel}
               onDelete={() => handleDelete(question.id)}
             />
-          ) : (
-            <div className="bg-[#0B1020]/50 rounded-lg p-4 mb-4 border border-[#6366F1]/20 hover:border-[#6366F1]/40 transition-all">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="px-2 py-1 bg-[#6366F1]/30 text-[#22D3EE] text-xs rounded font-medium">
-                      Q{index + 1}
-                    </span>
-                    <span className="px-2 py-1 bg-[#6366F1]/20 text-[#6366F1] rounded text-xs font-medium">
-                      {question.type === "multiple-choice"
-                        ? "Multiple Choice"
-                        : "True/False"}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-medium text-[#E5E7EB] mb-3">
-                    {question.text}
-                  </h3>
-                  <div className="space-y-2">
-                    {question.options.map((option) => (
-                      <div
-                        key={option.id}
-                        className={`text-sm px-3 py-2 rounded ${
-                          option.isCorrect
-                            ? "bg-[#22C55E]/20 text-[#22C55E] font-medium"
-                            : "bg-[#1A1F35] text-[#E5E7EB]/60"
-                        }`}
-                      >
-                        {option.isCorrect ? "✓ " : "○ "}
-                        {option.text}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleEdit(question)}
-                  className="ml-4 px-4 py-2 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  Edit
-                </button>
-              </div>
-            </div>
           )}
         </motion.div>
       ))}
