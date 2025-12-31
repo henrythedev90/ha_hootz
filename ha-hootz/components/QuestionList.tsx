@@ -61,8 +61,8 @@ export default function QuestionList({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-[#E5E7EB]">
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-lg font-semibold text-[#E5E7EB]">
           Questions ({questions.length})
         </h2>
         <motion.button
@@ -72,9 +72,9 @@ export default function QuestionList({
             setIsAdding(true);
             setEditingId(null);
           }}
-          className="px-4 py-2 bg-[#22C55E] hover:bg-[#1DB954] text-white rounded-lg flex items-center gap-2 transition-colors"
+          className="px-3 py-1.5 bg-[#22C55E] hover:bg-[#1DB954] text-white rounded-lg flex items-center gap-1.5 transition-colors text-sm"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           <span>Add Question</span>
         </motion.button>
       </div>
@@ -116,7 +116,7 @@ export default function QuestionList({
       ))}
 
       {questions.length === 0 && !isAdding && (
-        <div className="text-center py-12 text-[#E5E7EB]/60">
+        <div className="text-center py-8 text-[#E5E7EB]/60 text-sm">
           <p>No questions yet. Click "Add Question" to get started!</p>
         </div>
       )}
