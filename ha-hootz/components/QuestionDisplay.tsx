@@ -1,7 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Play, Eye, Trophy, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Play,
+  Eye,
+  Trophy,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+} from "lucide-react";
 
 interface Question {
   text: string;
@@ -27,6 +34,7 @@ interface QuestionDisplayProps {
   connected: boolean;
   playerCount: number;
   answerCount: number;
+  randomizeAnswers?: boolean;
   onStartQuestion: () => void;
   onRevealAnswer: () => void;
   onPreviousQuestion: () => void;
@@ -50,6 +58,7 @@ export default function QuestionDisplay({
   connected,
   playerCount,
   answerCount,
+  randomizeAnswers = false,
   onStartQuestion,
   onRevealAnswer,
   onPreviousQuestion,
@@ -101,53 +110,76 @@ export default function QuestionDisplay({
       </div>
 
       {question && (
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {(["A", "B", "C", "D"] as const).map((option) => {
-            const isCorrect = answerRevealed && correctAnswer === option;
-            const distribution = answerDistribution[option] || 0;
-            const total = Object.values(answerDistribution).reduce(
-              (a, b) => a + b,
-              0
-            );
-            const percentage =
-              total > 0 ? Math.round((distribution / total) * 100) : 0;
+        <>
+          {/* Notice about randomized answer order for players */}
+          {randomizeAnswers && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-4 bg-cyan/10 border border-cyan/30 rounded-lg flex items-start gap-3"
+            >
+              <Info className="w-5 h-5 text-cyan shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-text-light/90 font-medium mb-1">
+                  Answer Order Notice
+                </p>
+                <p className="text-xs text-text-light/70">
+                  Players see answer choices in a randomized order. The order
+                  shown here (A, B, C, D) may differ from what each player sees
+                  on their screen.
+                </p>
+              </div>
+            </motion.div>
+          )}
 
-            return (
-              <div
-                key={option}
-                className={`p-6 rounded-lg border-2 transition-all ${
-                  isCorrect
-                    ? "bg-success/20 border-success"
-                    : "bg-deep-navy/50 border-indigo/30"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-text-light">
-                    {option}
-                  </span>
-                  {answerRevealed && (
-                    <span className="text-sm text-text-light/60">
-                      {percentage}%
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {(["A", "B", "C", "D"] as const).map((option) => {
+              const isCorrect = answerRevealed && correctAnswer === option;
+              const distribution = answerDistribution[option] || 0;
+              const total = Object.values(answerDistribution).reduce(
+                (a, b) => a + b,
+                0
+              );
+              const percentage =
+                total > 0 ? Math.round((distribution / total) * 100) : 0;
+
+              return (
+                <div
+                  key={option}
+                  className={`p-6 rounded-lg border-2 transition-all ${
+                    isCorrect
+                      ? "bg-success/20 border-success"
+                      : "bg-deep-navy/50 border-indigo/30"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-text-light">
+                      {option}
                     </span>
+                    {answerRevealed && (
+                      <span className="text-sm text-text-light/60">
+                        {percentage}%
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-text-light">{question[option]}</p>
+                  {answerRevealed && (
+                    <div className="mt-3 h-2 bg-deep-navy/50 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className={`h-full ${
+                          isCorrect ? "bg-success" : "bg-indigo"
+                        }`}
+                      />
+                    </div>
                   )}
                 </div>
-                <p className="text-text-light">{question[option]}</p>
-                {answerRevealed && (
-                  <div className="mt-3 h-2 bg-deep-navy/50 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${percentage}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      className={`h-full ${
-                        isCorrect ? "bg-success" : "bg-indigo"
-                      }`}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Control Buttons */}

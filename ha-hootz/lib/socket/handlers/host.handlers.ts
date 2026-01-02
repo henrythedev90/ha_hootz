@@ -132,7 +132,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
     }
   });
 
-  socket.on("START_GAME", async ({ sessionCode }) => {
+  socket.on("START_GAME", async ({ sessionCode, randomizeAnswers }) => {
     try {
       // Verify host is authorized
       if (!isAuthorized(sessionCode)) {
@@ -160,6 +160,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         ...existingState, // Preserve existing properties like scoringConfig
         status: "IN_PROGRESS",
         questionIndex: 0,
+        randomizeAnswers: randomizeAnswers ?? false,
         // Explicitly reset game state flags when starting a new game
         answerRevealed: false,
         correctAnswer: undefined,
@@ -225,12 +226,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
           duration: question.durationMs,
         });
 
-        // Get current game state to preserve scoringConfig
+        // Get current game state to preserve scoringConfig and randomizeAnswers
         const currentState = await redis.get(gameStateKey(sessionId));
         const existingState = currentState ? JSON.parse(currentState) : {};
 
         const gameState = {
-          ...existingState, // Preserve existing properties like scoringConfig
+          ...existingState, // Preserve existing properties like scoringConfig and randomizeAnswers
           status: "QUESTION_ACTIVE",
           question,
           questionIndex: questionIndex ?? 0, // Default to 0 if not provided
@@ -244,6 +245,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
           question,
           questionIndex: gameState.questionIndex,
           endAt,
+          randomizeAnswers: existingState.randomizeAnswers ?? false,
         });
       } catch (error) {
         console.error("Error starting question:", error);
@@ -465,6 +467,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         answerRevealed: isReviewMode,
         correctAnswer: isReviewMode ? question.correct : undefined,
         isReviewMode: isReviewMode, // Flag to indicate this is review mode
+        randomizeAnswers: gameState.randomizeAnswers ?? false,
       });
 
       // Notify host with the same data structure
@@ -474,6 +477,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         answerRevealed: isReviewMode,
         correctAnswer: isReviewMode ? question.correct : undefined,
         isReviewMode: isReviewMode, // Flag to indicate this is review mode
+        randomizeAnswers: gameState.randomizeAnswers ?? false,
       });
     } catch (error) {
       console.error("Error navigating question:", error);

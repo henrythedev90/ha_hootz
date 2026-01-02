@@ -20,7 +20,7 @@ export default function ScoringConfigurationPanel({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="col-span-2 bg-[#1A1F35] rounded-xl p-6 border border-[#6366F1]/20"
+      className="bg-[#1A1F35] rounded-xl p-4 lg:p-6 border border-[#6366F1]/20"
     >
       <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
         <span className="text-sm">Scoring</span>

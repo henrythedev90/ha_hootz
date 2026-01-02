@@ -24,7 +24,7 @@ export default function PresentationDetailsForm({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="col-span-2 bg-[#1A1F35] rounded-xl p-6 border border-[#6366F1]/20"
+      className="bg-[#1A1F35] rounded-xl p-4 lg:p-6 border border-[#6366F1]/20"
     >
       <div className="space-y-4">
         <div>

@@ -73,6 +73,7 @@ export default function HostDashboard() {
   const [copied, setCopied] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [winnerRevealed, setWinnerRevealed] = useState(false);
+  const [randomizeAnswers, setRandomizeAnswers] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -680,7 +681,13 @@ export default function HostDashboard() {
 
   const handleStartGame = () => {
     if (!socket) return;
-    socket.emit("START_GAME", { sessionCode });
+    // Update game state with randomizeAnswers setting before starting
+    dispatch(
+      updateGameState({
+        randomizeAnswers: randomizeAnswers,
+      })
+    );
+    socket.emit("START_GAME", { sessionCode, randomizeAnswers });
   };
 
   const handleStartQuestion = () => {
@@ -887,6 +894,8 @@ export default function HostDashboard() {
           players={players}
           connected={connected}
           copied={copied}
+          randomizeAnswers={randomizeAnswers}
+          onRandomizeAnswersChange={setRandomizeAnswers}
           onCopyLink={handleCopyLink}
           onStartGame={handleStartGame}
           onCancelSession={handleCancelSession}
@@ -936,6 +945,7 @@ export default function HostDashboard() {
                 connected={connected}
                 playerCount={stats.playerCount}
                 answerCount={stats.answerCount}
+                randomizeAnswers={gameState?.randomizeAnswers || false}
                 onStartQuestion={handleStartQuestion}
                 onRevealAnswer={handleRevealAnswer}
                 onPreviousQuestion={handlePreviousQuestion}

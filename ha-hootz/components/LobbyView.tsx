@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, QrCode, Copy, Check } from "lucide-react";
+import { Users, QrCode, Copy, Check, Shuffle } from "lucide-react";
 import SessionQRCode from "./SessionQRCode";
 
 interface Player {
@@ -14,6 +14,8 @@ interface LobbyViewProps {
   players: Player[];
   connected: boolean;
   copied: boolean;
+  randomizeAnswers: boolean;
+  onRandomizeAnswersChange: (value: boolean) => void;
   onCopyLink: () => void;
   onStartGame: () => void;
   onCancelSession: () => void;
@@ -24,6 +26,8 @@ export default function LobbyView({
   players,
   connected,
   copied,
+  randomizeAnswers,
+  onRandomizeAnswersChange,
   onCopyLink,
   onStartGame,
   onCancelSession,
@@ -126,6 +130,41 @@ export default function LobbyView({
                       </>
                     )}
                   </motion.button>
+                </div>
+              </div>
+
+              {/* Randomize Answers Toggle */}
+              <div className="mt-6 p-4 bg-[#E5E7EB] rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Shuffle className="w-5 h-5 text-[#0B1020]" />
+                    <div>
+                      <p className="text-sm font-semibold text-[#0B1020]">
+                        Randomize Answer Choices
+                      </p>
+                      <p className="text-xs text-[#0B1020]/60">
+                        Each player will see answers in a different random order
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onRandomizeAnswersChange(!randomizeAnswers)}
+                    className={`relative w-14 h-8 rounded-full transition-colors ${
+                      randomizeAnswers ? "bg-[#6366F1]" : "bg-[#0B1020]/20"
+                    }`}
+                  >
+                    <motion.div
+                      animate={{
+                        x: randomizeAnswers ? 28 : 4,
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 30,
+                      }}
+                      className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md"
+                    />
+                  </button>
                 </div>
               </div>
             </motion.div>

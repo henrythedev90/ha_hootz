@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -74,6 +74,10 @@ export default function GamePage() {
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const gameStateRef = useRef(gameState);
+  const [answerOrder, setAnswerOrder] = useState<{
+    displayToActual: Record<string, "A" | "B" | "C" | "D">;
+    actualToDisplay: Record<"A" | "B" | "C" | "D", string>;
+  } | null>(null);
 
   // Keep gameStateRef in sync with Redux gameState
   useEffect(() => {
@@ -217,8 +221,47 @@ export default function GamePage() {
           setGameState({
             ...data.gameState,
             sessionId: data.sessionId || data.gameState.sessionId,
+            randomizeAnswers: data.gameState.randomizeAnswers ?? false,
           })
         );
+        // Initialize answer order based on randomizeAnswers setting
+        // Only set if there's an active question, otherwise wait for question-started
+        const shouldRandomize = data.gameState.randomizeAnswers ?? false;
+        if (
+          data.gameState.status === "QUESTION_ACTIVE" &&
+          data.gameState.question
+        ) {
+          if (shouldRandomize) {
+            // Generate random order for this player
+            const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
+            const shuffled = [...options].sort(() => Math.random() - 0.5);
+            const displayLetters = ["A", "B", "C", "D"];
+
+            const displayToActual: Record<string, "A" | "B" | "C" | "D"> = {};
+            const actualToDisplay: Record<"A" | "B" | "C" | "D", string> =
+              {} as Record<"A" | "B" | "C" | "D", string>;
+
+            displayLetters.forEach((displayLetter, index) => {
+              const actualAnswer = shuffled[index];
+              displayToActual[displayLetter] = actualAnswer;
+              actualToDisplay[actualAnswer] = displayLetter;
+            });
+
+            setAnswerOrder({ displayToActual, actualToDisplay });
+          } else {
+            // No randomization - use identity mapping
+            setAnswerOrder({
+              displayToActual: { A: "A", B: "B", C: "C", D: "D" },
+              actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
+            });
+          }
+        } else if (!shouldRandomize) {
+          // Pre-initialize identity mapping for when questions start
+          setAnswerOrder({
+            displayToActual: { A: "A", B: "B", C: "C", D: "D" },
+            actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
+          });
+        }
         if (data.playerCount !== undefined) {
           dispatch(setPlayerCount(data.playerCount));
         }
@@ -271,11 +314,16 @@ export default function GamePage() {
 
     newSocket.on(
       "game-started",
-      (data: { status: string; questionIndex: number }) => {
+      (data: {
+        status: string;
+        questionIndex: number;
+        randomizeAnswers?: boolean;
+      }) => {
         dispatch(
           updateGameState({
             ...data,
             status: "IN_PROGRESS",
+            randomizeAnswers: data.randomizeAnswers ?? false,
           })
         );
         dispatch(setSelectedAnswer(null));
@@ -297,13 +345,42 @@ export default function GamePage() {
         };
         questionIndex: number;
         endAt: number;
+        randomizeAnswers?: boolean;
       }) => {
+        const shouldRandomize = data.randomizeAnswers ?? false;
+
+        if (shouldRandomize) {
+          // Generate random order for this player
+          const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
+          const shuffled = [...options].sort(() => Math.random() - 0.5);
+          const displayLetters = ["A", "B", "C", "D"];
+
+          const displayToActual: Record<string, "A" | "B" | "C" | "D"> = {};
+          const actualToDisplay: Record<"A" | "B" | "C" | "D", string> =
+            {} as Record<"A" | "B" | "C" | "D", string>;
+
+          displayLetters.forEach((displayLetter, index) => {
+            const actualAnswer = shuffled[index];
+            displayToActual[displayLetter] = actualAnswer;
+            actualToDisplay[actualAnswer] = displayLetter;
+          });
+
+          setAnswerOrder({ displayToActual, actualToDisplay });
+        } else {
+          // No randomization - use identity mapping
+          setAnswerOrder({
+            displayToActual: { A: "A", B: "B", C: "C", D: "D" },
+            actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
+          });
+        }
+
         dispatch(
           updateGameState({
             status: "QUESTION_ACTIVE",
             question: data.question,
             questionIndex: data.questionIndex,
             endAt: data.endAt,
+            randomizeAnswers: shouldRandomize,
           })
         );
         dispatch(setSelectedAnswer(null));
@@ -332,8 +409,37 @@ export default function GamePage() {
         answerRevealed?: boolean;
         correctAnswer?: "A" | "B" | "C" | "D";
         isReviewMode?: boolean;
+        randomizeAnswers?: boolean;
       }) => {
         const isReviewMode = data.isReviewMode || false;
+        const shouldRandomize = data.randomizeAnswers ?? false;
+
+        let actualToDisplay: Record<"A" | "B" | "C" | "D", string>;
+
+        if (shouldRandomize) {
+          // Generate random order for this player for this question
+          const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
+          const shuffled = [...options].sort(() => Math.random() - 0.5);
+          const displayLetters = ["A", "B", "C", "D"];
+
+          const displayToActual: Record<string, "A" | "B" | "C" | "D"> = {};
+          actualToDisplay = {} as Record<"A" | "B" | "C" | "D", string>;
+
+          displayLetters.forEach((displayLetter, index) => {
+            const actualAnswer = shuffled[index];
+            displayToActual[displayLetter] = actualAnswer;
+            actualToDisplay[actualAnswer] = displayLetter;
+          });
+
+          setAnswerOrder({ displayToActual, actualToDisplay });
+        } else {
+          // No randomization - use identity mapping
+          actualToDisplay = { A: "A", B: "B", C: "C", D: "D" };
+          setAnswerOrder({
+            displayToActual: { A: "A", B: "B", C: "C", D: "D" },
+            actualToDisplay,
+          });
+        }
 
         if (isReviewMode && playerId) {
           try {
@@ -346,12 +452,15 @@ export default function GamePage() {
               answerData.answer &&
               answerData.answer !== "NO_ANSWER"
             ) {
-              dispatch(
-                setSelectedAnswer(answerData.answer as "A" | "B" | "C" | "D")
-              );
-              dispatch(
-                setPreviousAnswer(answerData.answer as "A" | "B" | "C" | "D")
-              );
+              // Map the actual answer to the displayed answer for this question
+              const actualAnswer = answerData.answer as "A" | "B" | "C" | "D";
+              const displayAnswer = actualToDisplay[actualAnswer] as
+                | "A"
+                | "B"
+                | "C"
+                | "D";
+              dispatch(setSelectedAnswer(displayAnswer));
+              dispatch(setPreviousAnswer(displayAnswer));
             } else {
               dispatch(setSelectedAnswer(null));
             }
@@ -452,17 +561,22 @@ export default function GamePage() {
     };
   }, [sessionCode, playerName, sessionEnded, playerId, dispatch]);
 
-  const handleAnswerSelect = (answer: "A" | "B" | "C" | "D") => {
+  const handleAnswerSelect = (displayAnswer: "A" | "B" | "C" | "D") => {
     if (!socket || !gameState) return;
     if (gameState.status !== "QUESTION_ACTIVE" || gameState.answerRevealed)
       return;
 
-    dispatch(setSelectedAnswer(answer));
+    // Map the displayed answer back to the actual answer (or use identity if not randomized)
+    const actualAnswer = answerOrder
+      ? answerOrder.displayToActual[displayAnswer]
+      : displayAnswer;
+
+    dispatch(setSelectedAnswer(displayAnswer));
 
     socket.emit("SUBMIT_ANSWER", {
       gameId: gameState.sessionId,
       questionIndex: gameState.questionIndex,
-      answer,
+      answer: actualAnswer,
     });
   };
 
@@ -851,13 +965,17 @@ export default function GamePage() {
             </motion.h1>
 
             {/* Answer Buttons */}
-            {showAnswerButtons ? (
+            {showAnswerButtons && answerOrder ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(["A", "B", "C", "D"] as const).map((option, index) => {
-                  const isSelected = selectedAnswer === option;
+                {(["A", "B", "C", "D"] as const).map((displayOption, index) => {
+                  // Get the actual answer option that this display option represents
+                  const actualOption =
+                    answerOrder.displayToActual[displayOption];
+                  const isSelected = selectedAnswer === displayOption;
+                  // Check if this displayed option corresponds to the correct answer
                   const isCorrectAnswer =
                     gameState.answerRevealed &&
-                    gameState.correctAnswer === option;
+                    gameState.correctAnswer === actualOption;
                   const showCorrect =
                     gameState.answerRevealed && isCorrectAnswer;
                   const showWrong =
@@ -865,13 +983,13 @@ export default function GamePage() {
 
                   return (
                     <motion.button
-                      key={option}
+                      key={displayOption}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.1 }}
                       whileHover={!isLocked ? { scale: 1.03 } : {}}
                       whileTap={!isLocked ? { scale: 0.97 } : {}}
-                      onClick={() => handleAnswerSelect(option)}
+                      onClick={() => handleAnswerSelect(displayOption)}
                       disabled={isLocked}
                       className={`relative p-6 md:p-8 rounded-2xl border-3 transition-all text-left ${
                         showCorrect
@@ -904,7 +1022,7 @@ export default function GamePage() {
                           ) : showWrong ? (
                             <X className="w-6 h-6" />
                           ) : (
-                            option
+                            displayOption
                           )}
                         </div>
                         <div className="flex-1 pt-2">
@@ -913,7 +1031,7 @@ export default function GamePage() {
                               showCorrect || showWrong ? "font-semibold" : ""
                             }`}
                           >
-                            {gameState.question?.[option] || ""}
+                            {gameState.question?.[actualOption] || ""}
                           </p>
                         </div>
                       </div>
@@ -965,13 +1083,14 @@ export default function GamePage() {
                 </motion.div>
               )}
 
-              {gameState.answerRevealed && selectedAnswer && (
+              {gameState.answerRevealed && selectedAnswer && answerOrder && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   className={`mt-8 p-6 rounded-2xl text-center ${
-                    selectedAnswer === gameState.correctAnswer
+                    answerOrder.displayToActual[selectedAnswer] ===
+                    gameState.correctAnswer
                       ? "bg-success/20 border-2 border-success"
                       : "bg-error/20 border-2 border-error"
                   }`}
@@ -981,7 +1100,8 @@ export default function GamePage() {
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", duration: 0.5 }}
                   >
-                    {selectedAnswer === gameState.correctAnswer ? (
+                    {answerOrder.displayToActual[selectedAnswer] ===
+                    gameState.correctAnswer ? (
                       <div>
                         <div className="text-6xl mb-3">🎉</div>
                         <h2 className="text-3xl font-bold text-success mb-2">
@@ -996,7 +1116,11 @@ export default function GamePage() {
                           Wrong Answer
                         </h2>
                         <p className="text-text-light/70">
-                          Correct answer: {gameState.correctAnswer}
+                          Correct answer:{" "}
+                          {gameState.correctAnswer &&
+                            answerOrder.actualToDisplay[
+                              gameState.correctAnswer
+                            ]}
                         </p>
                       </div>
                     )}

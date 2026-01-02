@@ -36,6 +36,7 @@ export interface GameState {
     streakBonusThreshold?: number;
     streakBonusPoints?: number;
   };
+  randomizeAnswers?: boolean; // Whether to randomize answer order for each player
 }
 
 interface GameSliceState {

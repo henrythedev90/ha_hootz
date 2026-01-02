@@ -244,6 +244,74 @@ export default function PresentationEditor() {
     }
   };
 
+  const handleQuestionReorder = async (fromIndex: number, toIndex: number) => {
+    if (!presentation) return;
+
+    const isNew = presentation.id === "new";
+    const hasTitle = presentation.title.trim().length > 0;
+
+    // Reorder questions
+    const reorderedQuestions = [...presentation.questions];
+    const [movedQuestion] = reorderedQuestions.splice(fromIndex, 1);
+    reorderedQuestions.splice(toIndex, 0, movedQuestion);
+
+    // If presentation is new and has no title, just update local state
+    if (isNew && !hasTitle) {
+      const updated: Presentation = {
+        ...presentation,
+        questions: reorderedQuestions,
+        updatedAt: new Date().toISOString(),
+      };
+      setPresentation(updated);
+      // Update selected index if it was affected by the reorder
+      if (selectedQuestionIndex !== null) {
+        if (selectedQuestionIndex === fromIndex) {
+          setSelectedQuestionIndex(toIndex);
+        } else if (
+          selectedQuestionIndex > fromIndex &&
+          selectedQuestionIndex <= toIndex
+        ) {
+          setSelectedQuestionIndex(selectedQuestionIndex - 1);
+        } else if (
+          selectedQuestionIndex < fromIndex &&
+          selectedQuestionIndex >= toIndex
+        ) {
+          setSelectedQuestionIndex(selectedQuestionIndex + 1);
+        }
+      }
+      return;
+    }
+
+    // Otherwise, save to database
+    try {
+      const updated: Presentation = {
+        ...presentation,
+        questions: reorderedQuestions,
+        updatedAt: new Date().toISOString(),
+      };
+      const saved = await savePresentation(updated);
+      setPresentation(saved);
+      // Update selected index if it was affected by the reorder
+      if (selectedQuestionIndex !== null) {
+        if (selectedQuestionIndex === fromIndex) {
+          setSelectedQuestionIndex(toIndex);
+        } else if (
+          selectedQuestionIndex > fromIndex &&
+          selectedQuestionIndex <= toIndex
+        ) {
+          setSelectedQuestionIndex(selectedQuestionIndex - 1);
+        } else if (
+          selectedQuestionIndex < fromIndex &&
+          selectedQuestionIndex >= toIndex
+        ) {
+          setSelectedQuestionIndex(selectedQuestionIndex + 1);
+        }
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to reorder questions");
+    }
+  };
+
   const handleStartPresentation = async () => {
     if (!presentation || presentation.id === "new") {
       alert("Please save the presentation before starting.");
@@ -311,29 +379,36 @@ export default function PresentationEditor() {
       />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      <div className="max-w-7xl mx-auto p-4 lg:p-8 space-y-6 lg:space-y-8">
         {/* Title/Description and Scoring Configuration Row */}
-        <div className="grid grid-cols-4 gap-6">
-          <PresentationDetailsForm
-            title={title}
-            description={description}
-            questionDuration={scoringConfig.questionDuration || 30}
-            onTitleChange={setTitle}
-            onDescriptionChange={setDescription}
-            onQuestionDurationChange={(duration) =>
-              setScoringConfig({ ...scoringConfig, questionDuration: duration })
-            }
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+          <div className="lg:col-span-2">
+            <PresentationDetailsForm
+              title={title}
+              description={description}
+              questionDuration={scoringConfig.questionDuration || 30}
+              onTitleChange={setTitle}
+              onDescriptionChange={setDescription}
+              onQuestionDurationChange={(duration) =>
+                setScoringConfig({
+                  ...scoringConfig,
+                  questionDuration: duration,
+                })
+              }
+            />
+          </div>
 
-          <ScoringConfigurationPanel
-            scoringConfig={scoringConfig}
-            onConfigChange={setScoringConfig}
-            onShowStreakBonusInfo={() => setShowStreakBonusInfo(true)}
-          />
+          <div className="lg:col-span-2">
+            <ScoringConfigurationPanel
+              scoringConfig={scoringConfig}
+              onConfigChange={setScoringConfig}
+              onShowStreakBonusInfo={() => setShowStreakBonusInfo(true)}
+            />
+          </div>
         </div>
 
         {/* Questions Section */}
-        <div className="flex gap-6 ">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           <QuestionNavigationSidebar
             questions={presentation.questions}
             selectedQuestionIndex={selectedQuestionIndex}
@@ -342,6 +417,7 @@ export default function PresentationEditor() {
               setViewingQuestionIndex(index);
               setShowQuestionModal(true);
             }}
+            onReorder={handleQuestionReorder}
           />
 
           {/* Question List Content */}
@@ -349,7 +425,7 @@ export default function PresentationEditor() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="flex-1 bg-[#1A1F35] rounded-xl p-6 border border-[#6366F1]/20"
+            className="flex-1 bg-[#1A1F35] rounded-xl p-4 lg:p-6 border border-[#6366F1]/20"
           >
             <QuestionList
               questions={presentation.questions}
