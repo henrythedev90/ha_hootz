@@ -763,10 +763,9 @@ export default function GamePage() {
     const questionCount = gameState.questionCount ?? 0;
 
     // Calculate timer percentage using actual question duration
-    const questionDuration =
-      (gameState.scoringConfig as any)?.questionDuration
-        ? ((gameState.scoringConfig as any).questionDuration * 1000)
-        : 30000; // Default to 30 seconds
+    const questionDuration = (gameState.scoringConfig as any)?.questionDuration
+      ? (gameState.scoringConfig as any).questionDuration * 1000
+      : 30000; // Default to 30 seconds
     const timerPercentage = gameState.endAt
       ? Math.max(0, ((gameState.endAt - Date.now()) / questionDuration) * 100)
       : 0;
@@ -936,10 +935,13 @@ export default function GamePage() {
             ) : (
               <div className="text-center py-8 mb-4">
                 <div className="bg-card-bg border border-indigo/30 rounded-lg p-6">
-                  <p className="text-lg text-text-light mb-2">
-                    Waiting for host to start the question...
-                  </p>
-                  <p className="text-sm text-text-light/50">
+                  <Loading
+                    message="Waiting for host to start the question..."
+                    fullScreen={false}
+                    variant="pulse"
+                    size="medium"
+                  />
+                  <p className="text-sm text-text-light/50 mt-4">
                     Answer buttons will appear when the question begins
                   </p>
                 </div>
@@ -1087,16 +1089,21 @@ export default function GamePage() {
           className="w-full max-w-md"
         >
           <div className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-8 text-center">
-            <h2 className="text-xl font-semibold text-text-light mb-4">
-              {gameState.status === "QUESTION_ENDED"
-                ? "Question ended"
-                : "Game in progress..."}
-            </h2>
-            <p className="text-text-light/70">
-              {gameState.status === "QUESTION_ENDED"
-                ? "Waiting for next question."
-                : "Waiting for the host to start the first question."}
-            </p>
+            {gameState.status === "QUESTION_ENDED" ? (
+              <>
+                <h2 className="text-xl font-semibold text-text-light mb-4">
+                  Question ended
+                </h2>
+                <p className="text-text-light/70">Waiting for next question.</p>
+              </>
+            ) : (
+              <Loading
+                message="Game in progress..."
+                fullScreen={false}
+                variant="pulse"
+                size="medium"
+              />
+            )}
           </div>
         </motion.div>
       </div>

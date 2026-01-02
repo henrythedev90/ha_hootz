@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
+import Loading from "./Loading";
 
 interface Player {
   playerId: string;
@@ -271,9 +272,12 @@ export default function PlayersListModal({
               {/* Players List */}
               <div className="px-8 py-6 flex-1 overflow-y-auto">
                 {loading ? (
-                  <div className="text-center py-12">
-                    <p className="text-[#E5E7EB]/50">Loading players...</p>
-                  </div>
+                  <Loading
+                    message="Loading players..."
+                    fullScreen={false}
+                    variant="dots"
+                    size="small"
+                  />
                 ) : error && !players.length ? (
                   <div className="text-center py-12">
                     <p className="text-[#EF4444]">{error}</p>

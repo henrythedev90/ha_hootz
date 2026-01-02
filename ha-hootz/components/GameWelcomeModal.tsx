@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle } from "lucide-react";
 
@@ -20,6 +20,12 @@ export default function GameWelcomeModal({
   sessionCode,
 }: GameWelcomeModalProps) {
   const [countdown, setCountdown] = useState(5);
+  const onCloseRef = useRef(onClose);
+
+  // Update ref when onClose changes
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // Auto-close after 5 seconds with countdown
   useEffect(() => {
@@ -36,7 +42,10 @@ export default function GameWelcomeModal({
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(countdownInterval);
-          onClose();
+          // Use setTimeout to defer the onClose call to avoid setState during render
+          setTimeout(() => {
+            onCloseRef.current();
+          }, 0);
           return 0;
         }
         return prev - 1;
@@ -46,14 +55,14 @@ export default function GameWelcomeModal({
     // Fallback timer to ensure modal closes
     const timer = setTimeout(() => {
       clearInterval(countdownInterval);
-      onClose();
+      onCloseRef.current();
     }, 5000);
 
     return () => {
       clearInterval(countdownInterval);
       clearTimeout(timer);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
