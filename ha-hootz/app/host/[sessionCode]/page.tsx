@@ -693,6 +693,10 @@ export default function HostDashboard() {
       return;
     }
 
+    // Get question duration from scoring config (default to 30 seconds)
+    const questionDuration =
+      ((gameState.scoringConfig as any)?.questionDuration || 30) * 1000; // Convert to milliseconds
+
     socket.emit("START_QUESTION", {
       sessionCode,
       question: {
@@ -702,7 +706,7 @@ export default function HostDashboard() {
         C: question.C,
         D: question.D,
         correct: question.correct,
-        durationMs: 30000,
+        durationMs: questionDuration,
       },
       questionIndex: gameState.questionIndex,
     });
@@ -923,6 +927,11 @@ export default function HostDashboard() {
                 isReviewMode={gameState?.isReviewMode || false}
                 timeRemaining={timeRemaining}
                 endAt={gameState?.endAt}
+                questionDuration={
+                  gameState?.scoringConfig?.questionDuration
+                    ? (gameState.scoringConfig as any).questionDuration * 1000
+                    : 30000
+                }
                 answerDistribution={stats.answerDistribution}
                 connected={connected}
                 playerCount={stats.playerCount}

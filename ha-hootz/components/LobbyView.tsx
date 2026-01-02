@@ -129,27 +129,6 @@ export default function LobbyView({
                 </div>
               </div>
             </motion.div>
-
-            {/* Action Buttons */}
-            <div className="mt-6 flex gap-4">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onStartGame}
-                disabled={!connected || players.length === 0}
-                className="flex-1 px-8 py-4 bg-linear-to-r from-[#22C55E] to-[#1DB954] hover:from-[#1DB954] hover:to-[#16A34A] text-white rounded-xl font-semibold shadow-lg shadow-[#22C55E]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Start Game
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onCancelSession}
-                className="px-8 py-4 bg-[#EF4444]/10 hover:bg-[#EF4444]/20 border-2 border-[#EF4444]/30 hover:border-[#EF4444]/50 text-[#EF4444] rounded-xl font-semibold transition-all"
-              >
-                Cancel Session
-              </motion.button>
-            </div>
           </div>
 
           {/* Right Column - Players List */}
@@ -221,6 +200,27 @@ export default function LobbyView({
               </div>
             )}
           </motion.div>
+        </div>
+
+        {/* Action Buttons - Centered Row */}
+        <div className="flex justify-center gap-4 mt-6">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onStartGame}
+            disabled={!connected || players.length === 0}
+            className="px-8 py-4 bg-linear-to-r from-[#22C55E] to-[#1DB954] hover:from-[#1DB954] hover:to-[#16A34A] text-white rounded-xl font-semibold shadow-lg shadow-[#22C55E]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Start Game
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onCancelSession}
+            className="px-8 py-4 bg-[#EF4444]/10 hover:bg-[#EF4444]/20 border-2 border-[#EF4444]/30 hover:border-[#EF4444]/50 text-[#EF4444] rounded-xl font-semibold transition-all"
+          >
+            Cancel Session
+          </motion.button>
         </div>
       </div>
     </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle } from "lucide-react";
 
 interface GameWelcomeModalProps {
   isOpen: boolean;
@@ -17,95 +19,182 @@ export default function GameWelcomeModal({
   hostName,
   sessionCode,
 }: GameWelcomeModalProps) {
-  const [showModal, setShowModal] = useState(isOpen);
+  const [countdown, setCountdown] = useState(5);
 
+  // Auto-close after 5 seconds with countdown
   useEffect(() => {
-    setShowModal(isOpen);
-  }, [isOpen]);
+    if (!isOpen) {
+      setCountdown(5);
+      return;
+    }
 
-  // Auto-close after 5 seconds
-  useEffect(() => {
-    if (!isOpen) return;
+    // Reset countdown when modal opens
+    setCountdown(5);
 
+    // Update countdown every second
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          onClose();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Fallback timer to ensure modal closes
     const timer = setTimeout(() => {
-      setShowModal(false);
+      clearInterval(countdownInterval);
       onClose();
     }, 5000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearInterval(countdownInterval);
+      clearTimeout(timer);
+    };
   }, [isOpen, onClose]);
 
-  if (!showModal) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-8 text-center">
-        <div className="mb-6">
-          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-10 w-10 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Your Game will be starting shortly!
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-lg">
-            {playerName && (
-              <>
-                Hey{" "}
-                <span className="font-semibold text-blue-600 dark:text-blue-400">
-                  {playerName}
-                </span>
-                !
-              </>
-            )}
-            {!playerName && "Welcome!"}
-          </p>
-        </div>
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"
+          >
+            {/* Content */}
+            <div className="p-8 text-center">
+              {/* Icon */}
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="mb-6 flex justify-center"
+              >
+                <div className="w-20 h-20 rounded-full bg-[#6366F1] flex items-center justify-center">
+                  <CheckCircle className="w-12 h-12 text-white" />
+                </div>
+              </motion.div>
 
-        <div className="mb-6 space-y-3">
-          <p className="text-gray-700 dark:text-gray-200">Good luck!</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {hostName ? (
-              <>
-                <span className="font-semibold">{hostName}</span> is preparing
-                the first question.
-              </>
-            ) : (
-              "The host is preparing the first question."
-            )}
-          </p>
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-              Session Code
-            </p>
-            <p className="text-lg font-mono font-semibold text-blue-600 dark:text-blue-400">
-              {sessionCode}
-            </p>
-          </div>
-        </div>
+              {/* Heading */}
+              <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-3xl font-bold text-[#0B1020] mb-4"
+              >
+                Your Game will be
+                <br />
+                starting shortly!
+              </motion.h2>
 
-        <button
-          onClick={() => {
-            setShowModal(false);
-            onClose();
-          }}
-          className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-        >
-          Got it!
-        </button>
-      </div>
-    </div>
+              {/* Countdown */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="mb-4"
+              >
+                <p className="text-gray-500 mb-2 text-sm">
+                  Closing automatically in
+                </p>
+                <motion.div
+                  key={countdown}
+                  initial={{ scale: 1.2, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-6xl font-bold text-[#22D3EE] mb-1"
+                >
+                  {countdown}
+                </motion.div>
+                <p className="text-sm text-gray-400">
+                  {countdown === 1 ? "second" : "seconds"}
+                </p>
+              </motion.div>
+
+              {/* Player Greeting */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mb-3"
+              >
+                <p className="text-lg text-gray-600">
+                  {playerName ? (
+                    <>
+                      Hey{" "}
+                      <span className="text-[#6366F1] font-semibold">
+                        {playerName}
+                      </span>
+                      !
+                    </>
+                  ) : (
+                    "Welcome!"
+                  )}
+                </p>
+              </motion.div>
+
+              {/* Good Luck Message */}
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="text-lg text-gray-800 font-medium mb-2"
+              >
+                Good luck!
+              </motion.p>
+
+              {/* Host Status */}
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="text-sm text-gray-500 mb-6"
+              >
+                {hostName ? (
+                  <>
+                    <span className="font-semibold text-gray-700">
+                      {hostName}
+                    </span>{" "}
+                    is preparing the first question.
+                  </>
+                ) : (
+                  "The host is preparing the first question."
+                )}
+              </motion.p>
+
+              {/* Session Code */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="mb-6 pt-6 border-t border-gray-200"
+              >
+                <p className="text-sm text-gray-500 mb-2">Session Code</p>
+                <p className="text-2xl font-bold text-[#6366F1] font-mono tracking-wider">
+                  {sessionCode}
+                </p>
+              </motion.div>
+
+              {/* Action Button */}
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onClose}
+                className="w-full py-4 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-xl font-semibold text-lg shadow-lg shadow-[#6366F1]/30 transition-all"
+              >
+                Got it!
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

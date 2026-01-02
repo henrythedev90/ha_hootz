@@ -22,6 +22,7 @@ interface QuestionDisplayProps {
   isReviewMode: boolean;
   timeRemaining: number;
   endAt?: number;
+  questionDuration?: number; // Duration in milliseconds
   answerDistribution: { A: number; B: number; C: number; D: number };
   connected: boolean;
   playerCount: number;
@@ -44,6 +45,7 @@ export default function QuestionDisplay({
   isReviewMode,
   timeRemaining,
   endAt,
+  questionDuration = 30000, // Default to 30 seconds in milliseconds
   answerDistribution,
   connected,
   playerCount,
@@ -80,7 +82,10 @@ export default function QuestionDisplay({
                   animate={{
                     width: `${
                       endAt
-                        ? Math.max(0, ((endAt - Date.now()) / 30000) * 100)
+                        ? Math.max(
+                            0,
+                            ((endAt - Date.now()) / questionDuration) * 100
+                          )
                         : 0
                     }%`,
                   }}
