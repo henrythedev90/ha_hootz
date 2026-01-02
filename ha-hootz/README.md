@@ -6,6 +6,14 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
 
 ### UI/UX Enhancements
 
+- **Loading Component**: Completely redesigned with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Reusable across the application for consistent loading states. Supports both full-screen and inline modes.
+- **Game Welcome Modal**: Enhanced with smooth entrance animations, countdown timer (5 seconds), and improved visual design matching app theme. Includes animated icon, staggered content reveals, and auto-close functionality.
+- **Thank You Modal**: Redesigned with modern animations, gradient call-to-action card, and improved visual hierarchy. Features animated celebration emoji, smooth transitions, and optional close button with "Maybe later" option.
+- **Lobby View**: Improved button layout with centered action buttons in their own row for better visual balance and user experience.
+- **Loading States**: Replaced static loading text with animated Loading component throughout the application:
+  - Players list modal now shows animated loading when fetching players
+  - Game page shows pulse animation when waiting for host to start question
+  - Game in progress state displays animated loading indicator
 - **Question Editor & List Components**: Optimized component sizing and spacing to ensure all elements fit on screen without scrolling. Reduced padding, margins, and font sizes while maintaining readability and usability.
 - **Leaderboard Modal**: Enhanced animation system with Framer Motion layout animations and spring physics for smoother, more dynamic transitions when players reorder. Added visual enhancements including medal emojis (🥇🥈🥉) for top 3 positions and improved visual hierarchy with ring effects and leader banners.
 - **Modal Component**: Added configurable padding prop for flexible content spacing customization.
@@ -352,11 +360,11 @@ ha-hootz/
 - **`Modal.tsx`**: Base reusable modal component with customizable size, title, and content
 - **`DeleteConfirmationModal.tsx`**: Specialized modal for delete confirmations with customizable messages (supports player mode)
 - **`PlayersListModal.tsx`**: Modal showing joined players with countdown timer before starting game
-- **`GameWelcomeModal.tsx`**: Welcome modal for players when game session starts
+- **`GameWelcomeModal.tsx`**: Enhanced welcome modal for players when game session starts. Features smooth animations, countdown timer (auto-closes after 5 seconds), animated icon, and staggered content reveals.
 - **`AnswerRevealModal.tsx`**: Modal displaying correct answer, answer distribution, leaderboard, and navigation controls
 - **`WinnerDisplay.tsx`**: Full-screen winner announcement component showing player rank and full leaderboard
-- **`ThankYouModal.tsx`**: Thank you modal displayed to players when host ends game, encourages account creation
-- **`Loading.tsx`**: Loading component with custom animation, supports full-screen or inline modes
+- **`ThankYouModal.tsx`**: Enhanced thank you modal displayed to players when host ends game. Features modern animations, gradient call-to-action card, animated celebration emoji, and encourages account creation with smooth transitions.
+- **`Loading.tsx`**: Enhanced loading component with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Supports both full-screen and inline modes with customizable messages.
 
 ### Layout Components
 
@@ -382,6 +390,8 @@ ha-hootz/
 
 // Loading State
 <Loading message="Loading presentations..." />
+<Loading message="Loading players..." fullScreen={false} variant="dots" size="small" />
+<Loading message="Game in progress..." fullScreen={false} variant="pulse" size="medium" />
 
 // Centered Layout
 <CenteredLayout>
