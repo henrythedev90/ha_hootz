@@ -65,7 +65,7 @@ export default function WinnerDisplay({
     : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/90 p-1 sm:p-2 md:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/90 p-3 sm:p-2 md:p-4 overflow-y-auto">
       {/* Confetti - Only for Winner */}
       {isWinner && (
         <div
@@ -106,7 +106,7 @@ export default function WinnerDisplay({
         </div>
       )}
 
-      <div className="w-full max-w-4xl relative z-10 py-2 sm:py-4">
+      <div className="w-full max-w-4xl relative z-10 py-3 sm:py-4">
         {/* Winner Announcement Banner - Only for 1st Place */}
         <AnimatePresence>
           {isWinner && (
@@ -115,9 +115,9 @@ export default function WinnerDisplay({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -50 }}
               transition={{ type: "spring", duration: 0.8 }}
-              className="mb-2 sm:mb-3 md:mb-4 lg:mb-6"
+              className="mb-3 sm:mb-3 md:mb-4 lg:mb-6"
             >
-              <div className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-lg sm:rounded-xl md:rounded-2xl p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 shadow-2xl border-2 sm:border-3 md:border-4 border-yellow-300">
+              <div className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl sm:rounded-xl md:rounded-2xl p-3 sm:p-3 md:p-4 lg:p-6 xl:p-8 shadow-2xl border-3 sm:border-3 md:border-4 border-yellow-300">
                 <motion.div
                   animate={{
                     scale: [1, 1.05, 1],
@@ -128,17 +128,17 @@ export default function WinnerDisplay({
                     repeat: Infinity,
                     repeatDelay: 1,
                   }}
-                  className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-1 sm:mb-2 md:mb-3 lg:mb-4 text-center"
+                  className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-2 sm:mb-2 md:mb-3 lg:mb-4 text-center"
                 >
                   🏆
                 </motion.div>
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1 sm:mb-2 md:mb-3 drop-shadow-lg text-center">
+                <h1 className="text-2xl sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-2 sm:mb-2 md:mb-3 drop-shadow-lg text-center">
                   {isTie ? "It's a Tie!" : "Congratulations!"}
                 </h1>
-                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-yellow-100 mb-0.5 sm:mb-1 md:mb-2 font-semibold text-center">
+                <h2 className="text-xl sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-yellow-100 mb-1.5 sm:mb-1 md:mb-2 font-semibold text-center">
                   {playerName}
                 </h2>
-                <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-yellow-100 font-bold text-center">
+                <p className="text-lg sm:text-base md:text-lg lg:text-xl xl:text-2xl text-yellow-100 font-bold text-center">
                   You Won with {playerScore} points!
                 </p>
               </div>
@@ -151,10 +151,10 @@ export default function WinnerDisplay({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: isWinner ? 0.5 : 0 }}
-          className="bg-card-bg rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl p-2 sm:p-3 md:p-4 lg:p-6 mb-2 sm:mb-3 md:mb-4 lg:mb-6 border border-indigo/20"
+          className="bg-card-bg rounded-2xl sm:rounded-xl md:rounded-2xl shadow-2xl p-3 sm:p-3 md:p-4 lg:p-6 mb-3 sm:mb-3 md:mb-4 lg:mb-6 border border-indigo/20"
         >
           <div className="text-center">
-            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-text-light mb-1.5 sm:mb-2 md:mb-3 lg:mb-4">
+            <h2 className="text-2xl sm:text-xl md:text-2xl lg:text-3xl font-bold text-text-light mb-2.5 sm:mb-2 md:mb-3 lg:mb-4">
               Your Final Rank
             </h2>
             <motion.div
@@ -164,7 +164,7 @@ export default function WinnerDisplay({
                 type: "spring",
                 delay: isWinner ? 0.7 : 0.2,
               }}
-              className={`inline-flex items-center justify-center w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 rounded-full text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-1.5 sm:mb-2 md:mb-3 ${
+              className={`inline-flex items-center justify-center w-20 h-20 sm:w-18 sm:h-18 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 rounded-full text-3xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-2.5 sm:mb-2 md:mb-3 ${
                 isWinner
                   ? "bg-linear-to-br from-cyan to-indigo text-white shadow-lg shadow-cyan/50"
                   : isSecond
@@ -185,13 +185,13 @@ export default function WinnerDisplay({
                 `#${playerRank}`
               )}
             </motion.div>
-            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-text-light mb-0.5 sm:mb-1 md:mb-2">
+            <h3 className="text-xl sm:text-lg md:text-xl lg:text-2xl font-bold text-text-light mb-1.5 sm:mb-1 md:mb-2">
               {playerName}
             </h3>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-indigo font-semibold mb-1 sm:mb-1.5 md:mb-2 lg:mb-3">
+            <p className="text-lg sm:text-base md:text-lg lg:text-xl text-indigo font-semibold mb-2 sm:mb-1.5 md:mb-2 lg:mb-3">
               {playerScore} points
             </p>
-            <p className="text-xs sm:text-sm md:text-base text-text-light/70">
+            <p className="text-base sm:text-sm md:text-base text-text-light/70">
               Out of {totalPlayers} {totalPlayers === 1 ? "player" : "players"}
             </p>
           </div>
@@ -202,14 +202,14 @@ export default function WinnerDisplay({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: isWinner ? 0.9 : 0.4 }}
-          className="bg-card-bg rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl p-2 sm:p-3 md:p-4 lg:p-6 border border-indigo/20"
+          className="bg-card-bg rounded-2xl sm:rounded-xl md:rounded-2xl shadow-2xl p-3 sm:p-3 md:p-4 lg:p-6 border border-indigo/20"
         >
-          <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-text-light mb-1.5 sm:mb-2 md:mb-3 lg:mb-4 text-center">
+          <h3 className="text-xl sm:text-lg md:text-xl lg:text-2xl font-bold text-text-light mb-2.5 sm:mb-2 md:mb-3 lg:mb-4 text-center">
             Final Leaderboard
           </h3>
-          <div className="space-y-1 sm:space-y-1.5 md:space-y-2 lg:space-y-3 max-h-[35vh] sm:max-h-[40vh] md:max-h-[45vh] lg:max-h-[50vh] xl:max-h-none overflow-y-auto pr-1">
+          <div className="space-y-2 sm:space-y-1.5 md:space-y-2 lg:space-y-3 max-h-[55vh] sm:max-h-[40vh] md:max-h-[45vh] lg:max-h-[50vh] xl:max-h-none overflow-y-auto pr-1">
             {leaderboard.length === 0 ? (
-              <p className="text-center text-text-light/50 py-2 sm:py-3 md:py-4 lg:py-6">
+              <p className="text-center text-text-light/50 py-3 sm:py-3 md:py-4 lg:py-6">
                 No players
               </p>
             ) : (
@@ -227,7 +227,7 @@ export default function WinnerDisplay({
                       delay: (isWinner ? 1.1 : 0.6) + index * 0.1,
                       type: "spring",
                     }}
-                    className={`p-1.5 sm:p-2 md:p-3 lg:p-4 rounded-md sm:rounded-lg md:rounded-xl border-2 transition-all ${
+                    className={`p-2.5 sm:p-2 md:p-3 lg:p-4 rounded-xl sm:rounded-lg md:rounded-xl border-2 transition-all ${
                       isPlayer
                         ? "bg-indigo/20 border-indigo shadow-xl shadow-indigo/20"
                         : isTopThree
@@ -239,9 +239,9 @@ export default function WinnerDisplay({
                         : "bg-deep-navy border-indigo/30"
                     }`}
                   >
-                    <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-1.5 md:gap-2 lg:gap-3">
                       <div
-                        className={`text-base sm:text-lg md:text-xl lg:text-2xl font-bold shrink-0 ${
+                        className={`text-xl sm:text-lg md:text-xl lg:text-2xl font-bold shrink-0 ${
                           isTopThree
                             ? rank === 1
                               ? "text-cyan"
@@ -267,19 +267,19 @@ export default function WinnerDisplay({
                         )}
                       </div>
                       <span
-                        className={`flex-1 text-xs sm:text-sm md:text-base lg:text-lg font-semibold truncate ${
+                        className={`flex-1 text-base sm:text-sm md:text-base lg:text-lg font-semibold truncate ${
                           isPlayer ? "text-indigo" : "text-text-light"
                         }`}
                       >
                         {player.name}
                         {isPlayer && (
-                          <span className="ml-1 sm:ml-1.5 text-indigo/70">
+                          <span className="ml-2 sm:ml-1.5 text-indigo/70">
                             (You)
                           </span>
                         )}
                       </span>
                       <span
-                        className={`text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-bold shrink-0 ${
+                        className={`text-base sm:text-sm md:text-base lg:text-lg xl:text-xl font-bold shrink-0 ${
                           isPlayer ? "text-indigo" : "text-indigo/80"
                         }`}
                       >

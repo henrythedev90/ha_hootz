@@ -84,16 +84,16 @@ export default function QuestionList({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <QuestionEditor
-            question={{
-              id: "new",
-              type: "multiple-choice",
-              text: "",
-              options: [],
-            }}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
+        <QuestionEditor
+          question={{
+            id: "new",
+            type: "multiple-choice",
+            text: "",
+            options: [],
+          }}
+          onSave={handleSave}
+          onCancel={handleCancel}
+        />
         </motion.div>
       )}
 

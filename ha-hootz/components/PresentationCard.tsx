@@ -109,7 +109,7 @@ export default function PresentationCard({
           whileTap={{ scale: 0.95 }}
           onClick={() => router.push(`/presentations/${presentation.id}`)}
           className="w-14 h-14 px-4 py-2 bg-card-bg hover:bg-[#252B44] border border-indigo/30 text-text-light rounded-lg transition-colors flex items-center justify-center"
-        >
+          >
           <Edit className="w-6 h-6" />
         </motion.button>
         <motion.button

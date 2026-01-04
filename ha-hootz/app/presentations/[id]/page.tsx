@@ -427,13 +427,13 @@ export default function PresentationEditor() {
             transition={{ delay: 0.3 }}
             className="flex-1 bg-[#1A1F35] rounded-xl p-4 lg:p-6 border border-[#6366F1]/20"
           >
-            <QuestionList
-              questions={presentation.questions}
-              onUpdate={handleQuestionUpdate}
-              onAdd={handleQuestionAdd}
-              onDelete={handleQuestionDelete}
+        <QuestionList
+          questions={presentation.questions}
+          onUpdate={handleQuestionUpdate}
+          onAdd={handleQuestionAdd}
+          onDelete={handleQuestionDelete}
               editQuestionId={editQuestionId}
-            />
+        />
           </motion.div>
         </div>
       </div>
@@ -479,12 +479,12 @@ export default function PresentationEditor() {
         onStart={handleStartPresentation}
         onGoToDashboard={() => router.push("/")}
         onContinueEditing={() => {
-          setShowSaveSuccessModal(false);
-          // If it was a new presentation, update the URL
-          if (isNew && savedPresentationId) {
-            router.replace(`/presentations/${savedPresentationId}`);
-          }
-        }}
+                setShowSaveSuccessModal(false);
+                // If it was a new presentation, update the URL
+                if (isNew && savedPresentationId) {
+                  router.replace(`/presentations/${savedPresentationId}`);
+                }
+              }}
         starting={starting}
         canStart={!!presentation && presentation.questions.length > 0}
       />

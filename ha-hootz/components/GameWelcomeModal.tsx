@@ -86,7 +86,7 @@ export default function GameWelcomeModal({
               >
                 <div className="w-20 h-20 rounded-full bg-[#6366F1] flex items-center justify-center">
                   <CheckCircle className="w-12 h-12 text-white" />
-                </div>
+          </div>
               </motion.div>
 
               {/* Heading */}
@@ -133,17 +133,17 @@ export default function GameWelcomeModal({
               >
                 <p className="text-lg text-gray-600">
                   {playerName ? (
-                    <>
-                      Hey{" "}
+              <>
+                Hey{" "}
                       <span className="text-[#6366F1] font-semibold">
-                        {playerName}
-                      </span>
-                      !
-                    </>
+                  {playerName}
+                </span>
+                !
+              </>
                   ) : (
                     "Welcome!"
                   )}
-                </p>
+          </p>
               </motion.div>
 
               {/* Good Luck Message */}
@@ -163,16 +163,16 @@ export default function GameWelcomeModal({
                 transition={{ delay: 0.6 }}
                 className="text-sm text-gray-500 mb-6"
               >
-                {hostName ? (
-                  <>
+            {hostName ? (
+              <>
                     <span className="font-semibold text-gray-700">
                       {hostName}
                     </span>{" "}
                     is preparing the first question.
-                  </>
-                ) : (
-                  "The host is preparing the first question."
-                )}
+              </>
+            ) : (
+              "The host is preparing the first question."
+            )}
               </motion.p>
 
               {/* Session Code */}
@@ -184,8 +184,8 @@ export default function GameWelcomeModal({
               >
                 <p className="text-sm text-gray-500 mb-2">Session Code</p>
                 <p className="text-2xl font-bold text-[#6366F1] font-mono tracking-wider">
-                  {sessionCode}
-                </p>
+              {sessionCode}
+            </p>
               </motion.div>
 
               {/* Action Button */}
@@ -197,12 +197,12 @@ export default function GameWelcomeModal({
                 whileTap={{ scale: 0.98 }}
                 onClick={onClose}
                 className="w-full py-4 bg-[#6366F1] hover:bg-[#5558E3] text-white rounded-xl font-semibold text-lg shadow-lg shadow-[#6366F1]/30 transition-all"
-              >
-                Got it!
+        >
+          Got it!
               </motion.button>
-            </div>
+      </div>
           </motion.div>
-        </div>
+    </div>
       )}
     </AnimatePresence>
   );
