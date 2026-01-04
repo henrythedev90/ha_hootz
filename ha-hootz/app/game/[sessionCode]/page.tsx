@@ -78,6 +78,9 @@ export default function GamePage() {
     displayToActual: Record<string, "A" | "B" | "C" | "D">;
     actualToDisplay: Record<"A" | "B" | "C" | "D", string>;
   } | null>(null);
+  const [answerColors, setAnswerColors] = useState<
+    Record<string, { color: string; rgba: string }>
+  >({});
 
   // Keep gameStateRef in sync with Redux gameState
   useEffect(() => {
@@ -349,11 +352,32 @@ export default function GamePage() {
       }) => {
         const shouldRandomize = data.randomizeAnswers ?? false;
 
+        // Generate random colors for each answer option (for UX purposes)
+        const colorPalette = ["#6366F1", "#22D3EE", "#F59E0B", "#A855F7"];
+        const shuffledColors = [...colorPalette].sort(
+          () => Math.random() - 0.5
+        );
+        const displayLetters = ["A", "B", "C", "D"];
+
+        const newAnswerColors: Record<string, { color: string; rgba: string }> =
+          {};
+        displayLetters.forEach((letter, index) => {
+          const hexColor = shuffledColors[index];
+          // Convert hex to rgba for glow effect
+          const r = parseInt(hexColor.slice(1, 3), 16);
+          const g = parseInt(hexColor.slice(3, 5), 16);
+          const b = parseInt(hexColor.slice(5, 7), 16);
+          newAnswerColors[letter] = {
+            color: hexColor,
+            rgba: `rgba(${r},${g},${b},0.3)`,
+          };
+        });
+        setAnswerColors(newAnswerColors);
+
         if (shouldRandomize) {
           // Generate random order for this player
           const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
           const shuffled = [...options].sort(() => Math.random() - 0.5);
-          const displayLetters = ["A", "B", "C", "D"];
 
           const displayToActual: Record<string, "A" | "B" | "C" | "D"> = {};
           const actualToDisplay: Record<"A" | "B" | "C" | "D", string> =
@@ -414,13 +438,34 @@ export default function GamePage() {
         const isReviewMode = data.isReviewMode || false;
         const shouldRandomize = data.randomizeAnswers ?? false;
 
+        // Generate random colors for each answer option (for UX purposes)
+        const colorPalette = ["#6366F1", "#22D3EE", "#F59E0B", "#A855F7"];
+        const shuffledColors = [...colorPalette].sort(
+          () => Math.random() - 0.5
+        );
+        const displayLetters = ["A", "B", "C", "D"];
+
+        const newAnswerColors: Record<string, { color: string; rgba: string }> =
+          {};
+        displayLetters.forEach((letter, index) => {
+          const hexColor = shuffledColors[index];
+          // Convert hex to rgba for glow effect
+          const r = parseInt(hexColor.slice(1, 3), 16);
+          const g = parseInt(hexColor.slice(3, 5), 16);
+          const b = parseInt(hexColor.slice(5, 7), 16);
+          newAnswerColors[letter] = {
+            color: hexColor,
+            rgba: `rgba(${r},${g},${b},0.3)`,
+          };
+        });
+        setAnswerColors(newAnswerColors);
+
         let actualToDisplay: Record<"A" | "B" | "C" | "D", string>;
 
         if (shouldRandomize) {
           // Generate random order for this player for this question
           const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
           const shuffled = [...options].sort(() => Math.random() - 0.5);
-          const displayLetters = ["A", "B", "C", "D"];
 
           const displayToActual: Record<string, "A" | "B" | "C" | "D"> = {};
           actualToDisplay = {} as Record<"A" | "B" | "C" | "D", string>;
@@ -981,6 +1026,31 @@ export default function GamePage() {
                   const showWrong =
                     gameState.answerRevealed && isSelected && !isCorrectAnswer;
 
+                  // Get random color for this answer option
+                  const answerColor = answerColors[displayOption];
+                  const isDefaultState =
+                    !showCorrect && !showWrong && !isSelected;
+                  const isSelectedState =
+                    isSelected && !showCorrect && !showWrong;
+
+                  // Determine border color and glow
+                  let borderColor: string | undefined;
+                  let glowColor: string | undefined;
+
+                  if (showCorrect) {
+                    borderColor = undefined; // Use className
+                    glowColor = undefined;
+                  } else if (showWrong) {
+                    borderColor = undefined; // Use className
+                    glowColor = undefined;
+                  } else if (isSelectedState && answerColor) {
+                    borderColor = answerColor.color;
+                    glowColor = answerColor.rgba;
+                  } else if (isDefaultState && answerColor) {
+                    borderColor = answerColor.color;
+                    glowColor = answerColor.rgba;
+                  }
+
                   return (
                     <motion.button
                       key={displayOption}
@@ -996,14 +1066,22 @@ export default function GamePage() {
                           ? "bg-success/20 border-success shadow-[0_0_30px_rgba(34,197,94,0.3)]"
                           : showWrong
                           ? "bg-error/20 border-error shadow-[0_0_30px_rgba(239,68,68,0.3)]"
-                          : isSelected
-                          ? "bg-indigo/20 border-indigo shadow-[0_0_20px_rgba(99,102,241,0.3)]"
-                          : "bg-card-bg border-indigo/30 hover:border-indigo/60 hover:bg-card-bg/80"
+                          : isSelectedState
+                          ? "bg-card-bg/80"
+                          : "bg-card-bg hover:bg-card-bg/80"
                       } ${
                         isLocked && !isSelected && !showCorrect
                           ? "opacity-50"
                           : ""
                       }`}
+                      style={
+                        borderColor && glowColor
+                          ? {
+                              borderColor: borderColor,
+                              boxShadow: `0 0 30px ${glowColor}`,
+                            }
+                          : {}
+                      }
                     >
                       <div className="flex items-start gap-4">
                         <div
@@ -1012,10 +1090,15 @@ export default function GamePage() {
                               ? "bg-success text-white"
                               : showWrong
                               ? "bg-error text-white"
-                              : isSelected
-                              ? "bg-indigo text-white"
+                              : isSelectedState && answerColor
+                              ? "text-white"
                               : "bg-deep-navy text-text-light/60"
                           }`}
+                          style={
+                            isSelectedState && answerColor
+                              ? { backgroundColor: answerColor.color }
+                              : {}
+                          }
                         >
                           {showCorrect ? (
                             <Check className="w-6 h-6" />
