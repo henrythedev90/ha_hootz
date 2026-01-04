@@ -76,7 +76,11 @@ export default function GameStatsSidebar({
                 return (
                   <div
                     key={player.playerId}
-                    className="flex items-center justify-between p-3 bg-deep-navy/50 rounded-lg"
+                    className={`flex items-center justify-between p-3 rounded-lg transition-all ${
+                      hasSubmitted
+                        ? "bg-success/20 border border-success shadow-[0_0_30px_rgba(34,197,94,0.3)]"
+                        : "bg-deep-navy/50"
+                    }`}
                   >
                     <span className="text-text-light">{player.name}</span>
                     <div className="flex items-center gap-3 text-sm">
@@ -126,8 +130,12 @@ export default function GameStatsSidebar({
                     >
                       {index + 1}
                     </div>
-                    <span className="flex-1 text-text-light">{player.name}</span>
-                    <span className="font-semibold text-cyan">{player.score}</span>
+                    <span className="flex-1 text-text-light">
+                      {player.name}
+                    </span>
+                    <span className="font-semibold text-cyan">
+                      {player.score}
+                    </span>
                   </motion.div>
                 ))
             )}
@@ -171,4 +179,3 @@ export default function GameStatsSidebar({
     </div>
   );
 }
-
