@@ -22,6 +22,7 @@ import type { ScoringConfig } from "@/types";
 export function getDefaultScoringConfig(): ScoringConfig {
   return {
     basePoints: 100,
+    questionDuration: 30, // Default: 30 seconds
     timeBonusEnabled: false,
     maxTimeBonus: 50,
     streakBonusEnabled: false,

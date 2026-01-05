@@ -28,6 +28,7 @@ export interface GameState {
   isReviewMode?: boolean;
   scoringConfig?: {
     basePoints?: number;
+    questionDuration?: number; // Duration in seconds: 10, 20, or 30
     timeBonusEnabled?: boolean;
     timeBonusThreshold?: number;
     timeBonusPoints?: number;
@@ -35,6 +36,7 @@ export interface GameState {
     streakBonusThreshold?: number;
     streakBonusPoints?: number;
   };
+  randomizeAnswers?: boolean; // Whether to randomize answer order for each player
 }
 
 interface GameSliceState {

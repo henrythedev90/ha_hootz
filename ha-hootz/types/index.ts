@@ -17,6 +17,9 @@ export interface ScoringConfig {
   // Base scoring
   basePoints: number; // Default: 100
 
+  // Question timer duration
+  questionDuration: number; // Duration in seconds: 10, 20, or 30 (default: 30)
+
   // Time-based bonus
   timeBonusEnabled: boolean;
   maxTimeBonus: number; // Maximum bonus points (default: 50)

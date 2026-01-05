@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import SessionQRCode from "@/components/SessionQRCode";
+import { motion } from "framer-motion";
 import Loading from "@/components/Loading";
 import CenteredLayout from "@/components/CenteredLayout";
 import PlayersListModal from "@/components/PlayersListModal";
-import AnswerRevealModal from "@/components/AnswerRevealModal";
-import Modal from "@/components/Modal";
+import EndGameModal from "@/components/EndGameModal";
+import LeaderboardModal from "@/components/LeaderboardModal";
+import LobbyView from "@/components/LobbyView";
+import LiveGameHeader from "@/components/LiveGameHeader";
+import QuestionDisplay from "@/components/QuestionDisplay";
+import GameStatsSidebar from "@/components/GameStatsSidebar";
+import ConfettiEffect from "@/components/ConfettiEffect";
 import { useSession } from "next-auth/react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -41,7 +46,6 @@ import {
 } from "@/store/slices/socketSlice";
 import {
   setShowPlayersModal,
-  setShowAnswerRevealModal,
   setShowEndGameModal,
   resetUiState,
 } from "@/store/slices/uiSlice";
@@ -55,7 +59,7 @@ export default function HostDashboard() {
 
   // Redux state
   const dispatch = useAppDispatch();
-  const gameState = useAppSelector((state) => state.game.gameState);
+  const gameState = useAppSelector((state) => state.game?.gameState ?? null);
   const questions = useAppSelector((state) => state.host.questions);
   const players = useAppSelector((state) => state.host.players);
   const stats = useAppSelector((state) => state.host.stats);
@@ -64,13 +68,16 @@ export default function HostDashboard() {
   const socket = useAppSelector((state) => state.socket.socket);
   const connected = useAppSelector((state) => state.socket.connected);
   const showPlayersModal = useAppSelector((state) => state.ui.showPlayersModal);
-  const showAnswerRevealModal = useAppSelector(
-    (state) => state.ui.showAnswerRevealModal
-  );
   const showEndGameModal = useAppSelector((state) => state.ui.showEndGameModal);
+
+  const [copied, setCopied] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [winnerRevealed, setWinnerRevealed] = useState(false);
+  const [randomizeAnswers, setRandomizeAnswers] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameStateRef = useRef(gameState);
   const statsRef = useRef(stats);
 
@@ -85,13 +92,18 @@ export default function HostDashboard() {
 
   // Reset Redux state and set session code when sessionCode changes
   useEffect(() => {
+    // Clear any pending redirects from previous session
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+
     // Reset all state when sessionCode changes (new session)
     dispatch(resetGameState());
     dispatch(resetHostState());
     dispatch(resetUiState()); // Reset all modals and UI state
 
     // Explicitly close all modals as a safety measure
-    dispatch(setShowAnswerRevealModal(false));
     dispatch(setShowPlayersModal(false));
     dispatch(setShowEndGameModal(false));
 
@@ -160,7 +172,6 @@ export default function HostDashboard() {
           );
           // Explicitly close all modals when fetching game state for a new session
           if (isWaiting) {
-            dispatch(setShowAnswerRevealModal(false));
             dispatch(setShowPlayersModal(false));
             dispatch(setShowEndGameModal(false));
           }
@@ -174,7 +185,6 @@ export default function HostDashboard() {
             })
           );
           // Close all modals for new sessions
-          dispatch(setShowAnswerRevealModal(false));
           dispatch(setShowPlayersModal(false));
           dispatch(setShowEndGameModal(false));
         }
@@ -189,7 +199,6 @@ export default function HostDashboard() {
           })
         );
         // Close all modals on error
-        dispatch(setShowAnswerRevealModal(false));
         dispatch(setShowPlayersModal(false));
         dispatch(setShowEndGameModal(false));
       }
@@ -225,12 +234,19 @@ export default function HostDashboard() {
         dispatch(setTimeRemaining(remaining));
 
         if (remaining === 0) {
-          // Auto-end question when timer expires
-          if (socket) {
-            socket.emit("END_QUESTION", {
+          // Auto-reveal answer when timer expires
+          if (socket && !gameState.answerRevealed) {
+            socket.emit("REVEAL_ANSWER", {
               sessionCode,
               questionIndex: gameState.questionIndex,
             });
+            dispatch(
+              updateGameState({
+                answerRevealed: true,
+                correctAnswer: gameState.question?.correct,
+                status: "QUESTION_ENDED",
+              })
+            );
           }
         }
       };
@@ -583,7 +599,6 @@ export default function HostDashboard() {
             })
           );
         }
-        dispatch(setShowAnswerRevealModal(false));
       }
     );
 
@@ -611,8 +626,22 @@ export default function HostDashboard() {
     );
 
     newSocket.on("session-cancelled", () => {
-      setTimeout(() => {
-        router.push("/");
+      // Clear any existing redirect timeout
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+
+      // Store the current sessionCode to verify we're still on the cancelled session
+      const cancelledSessionCode = sessionCode;
+
+      // Set redirect timeout - only redirect if we're still on the cancelled session
+      redirectTimeoutRef.current = setTimeout(() => {
+        // Double-check we're still on the cancelled session before redirecting
+        // This prevents redirecting if user has already navigated to a new session
+        if (params.sessionCode === cancelledSessionCode) {
+          router.push("/");
+        }
+        redirectTimeoutRef.current = null;
       }, 2000);
     });
 
@@ -629,10 +658,15 @@ export default function HostDashboard() {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
+      // Clear any pending redirects when cleaning up
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+        redirectTimeoutRef.current = null;
+      }
       newSocket.removeAllListeners();
       newSocket.disconnect();
     };
-  }, [sessionCode, router, dispatch]);
+  }, [sessionCode, router, dispatch, params.sessionCode]);
 
   // Emit host-join when socket is connected and session is ready
   useEffect(() => {
@@ -647,7 +681,13 @@ export default function HostDashboard() {
 
   const handleStartGame = () => {
     if (!socket) return;
-    socket.emit("START_GAME", { sessionCode });
+    // Update game state with randomizeAnswers setting before starting
+    dispatch(
+      updateGameState({
+        randomizeAnswers: randomizeAnswers,
+      })
+    );
+    socket.emit("START_GAME", { sessionCode, randomizeAnswers });
   };
 
   const handleStartQuestion = () => {
@@ -660,6 +700,10 @@ export default function HostDashboard() {
       return;
     }
 
+    // Get question duration from scoring config (default to 30 seconds)
+    const questionDuration =
+      ((gameState.scoringConfig as any)?.questionDuration || 30) * 1000; // Convert to milliseconds
+
     socket.emit("START_QUESTION", {
       sessionCode,
       question: {
@@ -669,7 +713,7 @@ export default function HostDashboard() {
         C: question.C,
         D: question.D,
         correct: question.correct,
-        durationMs: 30000,
+        durationMs: questionDuration,
       },
       questionIndex: gameState.questionIndex,
     });
@@ -688,7 +732,6 @@ export default function HostDashboard() {
         status: "QUESTION_ENDED",
       })
     );
-    dispatch(setShowAnswerRevealModal(true));
   };
 
   const handleNextQuestion = () => {
@@ -725,7 +768,6 @@ export default function HostDashboard() {
     // Allow canceling session even if socket is not connected
     // This helps in cases where connection is lost but user wants to cancel
     // Close other modals first to ensure EndGameModal is visible
-    dispatch(setShowAnswerRevealModal(false));
     dispatch(setShowPlayersModal(false));
 
     // Force a toggle to ensure re-render even if already true
@@ -737,6 +779,37 @@ export default function HostDashboard() {
     } else {
       dispatch(setShowEndGameModal(true));
     }
+  };
+
+  const handleCopyLink = () => {
+    const fullUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/join/${sessionCode}`
+        : `/join/${sessionCode}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRevealWinner = () => {
+    // Prepare leaderboard data
+    const leaderboard = players
+      .map((player) => ({
+        ...player,
+        score: stats.playerScores?.[player.playerId] || 0,
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    // Emit REVEAL_WINNER event to all players
+    if (socket) {
+      socket.emit("REVEAL_WINNER", {
+        sessionCode,
+        leaderboard,
+      });
+    }
+
+    setShowLeaderboard(true);
+    setWinnerRevealed(true);
   };
 
   // Get current question from gameState or fallback to questions array
@@ -752,31 +825,11 @@ export default function HostDashboard() {
   // But don't close EndGameModal if user is actively trying to cancel
   useEffect(() => {
     if (gameState?.status === "WAITING") {
-      dispatch(setShowAnswerRevealModal(false));
       dispatch(setShowPlayersModal(false));
       // Don't auto-close EndGameModal - let user control it
       // dispatch(setShowEndGameModal(false));
     }
   }, [gameState?.status, dispatch]);
-
-  // Automatically open AnswerRevealModal when question ends
-  // Only open if game is not in WAITING state (new session) and question is not in review mode
-  useEffect(() => {
-    if (
-      isQuestionEnded &&
-      currentQuestion &&
-      gameState?.status !== "WAITING" &&
-      !gameState?.isReviewMode
-    ) {
-      dispatch(setShowAnswerRevealModal(true));
-    }
-  }, [
-    isQuestionEnded,
-    currentQuestion,
-    gameState?.status,
-    gameState?.isReviewMode,
-    dispatch,
-  ]);
 
   if (status === "loading") {
     return <Loading />;
@@ -789,20 +842,18 @@ export default function HostDashboard() {
   if (sessionStatus === "ended") {
     return (
       <CenteredLayout>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-4">
-            Game Has Ended
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
+        <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-cyan mb-4">Game Has Ended</h1>
+          <p className="text-text-light/70 mb-4">
             This game has already ended.
           </p>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-text-light/50 mb-6">
             We apologize, but you cannot access the host dashboard for a game
             that has already ended.
           </p>
           <button
             onClick={() => router.push("/")}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+            className="w-full px-6 py-3 bg-indigo text-white rounded-md hover:bg-indigo/90 transition-colors font-medium"
           >
             Return to Dashboard
           </button>
@@ -826,121 +877,29 @@ export default function HostDashboard() {
           socket={socket}
           connected={connected}
         />
-        <Modal
+        <EndGameModal
           isOpen={showEndGameModal}
-          onClose={() => {
+          onClose={() => dispatch(setShowEndGameModal(false))}
+          onConfirm={() => {
+            if (socket && connected) {
+              socket.emit("CANCEL_SESSION", { sessionCode });
+            }
             dispatch(setShowEndGameModal(false));
+            router.push("/");
           }}
-          title="End Game"
-          size="md"
-        >
-          <div className="space-y-4">
-            <p className="text-gray-700 dark:text-gray-300">
-              Are you sure you want to end the game? All players will be
-              disconnected.
-            </p>
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                onClick={() => dispatch(setShowEndGameModal(false))}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (socket && connected) {
-                    socket.emit("CANCEL_SESSION", { sessionCode });
-                  }
-                  dispatch(setShowEndGameModal(false));
-                  dispatch(setShowAnswerRevealModal(false));
-                  router.push("/");
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
-              >
-                End Game
-              </button>
-            </div>
-          </div>
-        </Modal>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    Host Dashboard
-                  </h1>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    Session: {sessionCode}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Status: {connected ? "🟢 Connected" : "🔴 Disconnected"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <SessionQRCode
-                  sessionCode={sessionCode}
-                  joinUrl={`/join/${sessionCode}`}
-                />
-
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                  <h3 className="text-lg text-center font-semibold text-gray-900 dark:text-white mb-4">
-                    Players ({players.length})
-                  </h3>
-                  {players.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400 text-center">
-                      No players joined yet
-                    </p>
-                  ) : (
-                    <ul
-                      className={`grid gap-2 max-h-64 overflow-y-auto pt-[50px] ${
-                        players.length > 6 ? "grid-cols-2" : "grid-cols-1"
-                      }`}
-                    >
-                      {players.map((player) => (
-                        <li
-                          key={player.playerId}
-                          className={`w-full text-gray-700 dark:text-gray-300 flex items-center ${
-                            players.length > 6
-                              ? "justify-center px-2"
-                              : "justify-center px-[50px]"
-                          }`}
-                        >
-                          <span className="w-6 shrink-0 flex items-center justify-center">
-                            👤
-                          </span>
-                          <span className="ml-2 text-center truncate min-w-0 flex-1">
-                            {player.name}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-center gap-4">
-                <button
-                  onClick={handleStartGame}
-                  disabled={!connected || players.length === 0}
-                  className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  Start Game
-                </button>
-                <button
-                  onClick={handleCancelSession}
-                  className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
-                >
-                  Cancel Session
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+          sessionCode={sessionCode}
+        />
+        <LobbyView
+          sessionCode={sessionCode}
+          players={players}
+          connected={connected}
+          copied={copied}
+          randomizeAnswers={randomizeAnswers}
+          onRandomizeAnswersChange={setRandomizeAnswers}
+          onCopyLink={handleCopyLink}
+          onStartGame={handleStartGame}
+          onCancelSession={handleCancelSession}
+        />
       </>
     );
   }
@@ -955,299 +914,102 @@ export default function HostDashboard() {
         socket={socket}
         connected={connected}
       />
-      {(() => {
-        // Check if game is in WAITING state (new session) - use string comparison to avoid TypeScript narrowing issues
-        const statusStr = String(gameState?.status || "");
-        const isWaiting = statusStr === "WAITING" || !gameState?.status;
-        return (
-          <AnswerRevealModal
-            isOpen={showAnswerRevealModal && !isWaiting}
-            onClose={() => dispatch(setShowAnswerRevealModal(false))}
-            question={isWaiting ? null : currentQuestion || null}
-            answerDistribution={stats.answerDistribution}
-            currentIndex={currentIndex}
-            questionCount={questionCount}
-            onPrevious={handlePreviousQuestion}
-            onNext={handleNextQuestion}
-            canNavigate={canNavigate}
-            connected={connected || false}
-            players={players}
-            playerScores={stats.playerScores}
-            onRevealWinner={(leaderboard) => {
-              if (socket) {
-                socket.emit("REVEAL_WINNER", {
-                  sessionCode,
-                  leaderboard,
-                });
-              }
-            }}
-            onEndGame={() => {
-              dispatch(setShowEndGameModal(true));
-            }}
-          />
-        );
-      })()}
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Live Game Session
-                </h1>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Session: {sessionCode} •{" "}
-                  {connected ? "🟢 Connected" : "🔴 Disconnected"}
-                </p>
-              </div>
-              <button
-                onClick={handleCancelSession}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
-              >
-                Cancel Session
-              </button>
-            </div>
-          </div>
+      <div className="min-h-screen bg-deep-navy">
+        <LiveGameHeader
+          sessionCode={sessionCode}
+          playerCount={players.length}
+          connected={connected}
+          onEndGame={handleCancelSession}
+        />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Question Control
-              </h2>
-
-              {currentQuestion && (
-                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                  Question {currentIndex + 1} of {questionCount}
-                </div>
-              )}
-
-              {isQuestionActive && !gameState?.answerRevealed && (
-                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-                      {timeRemaining}s
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Time Remaining
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentQuestion ? (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    {currentQuestion.text}
-                  </h3>
-                  <div className="space-y-3">
-                    {(["A", "B", "C", "D"] as const).map((option) => {
-                      return (
-                        <div
-                          key={option}
-                          className="p-3 rounded-lg border-2 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-700 dark:text-gray-300">
-                              {option}:
-                            </span>
-                            <span className="text-gray-900 dark:text-white">
-                              {currentQuestion[option]}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-gray-500 dark:text-gray-400">
-                  No question loaded
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <button
-                  onClick={handleStartQuestion}
-                  disabled={(() => {
-                    const disabled =
-                      !connected ||
-                      !currentQuestion ||
-                      isQuestionActive ||
-                      gameState?.isReviewMode === true ||
-                      gameState?.answerRevealed === true;
-                    return disabled;
-                  })()}
-                  className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  title={
-                    gameState?.isReviewMode || gameState?.answerRevealed
-                      ? "This question has already been answered"
-                      : undefined
-                  }
-                >
-                  Start Question
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!gameState?.answerRevealed) {
-                      handleRevealAnswer();
-                    } else {
-                      dispatch(setShowAnswerRevealModal(true));
-                    }
-                  }}
-                  disabled={
-                    !connected ||
-                    (!gameState?.answerRevealed &&
-                      (stats.playerCount === 0 ||
-                        stats.answerCount < stats.playerCount))
-                  }
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  {stats.playerCount === 0
-                    ? "Reveal Answer (No Players)"
-                    : stats.answerCount < stats.playerCount
-                    ? `Reveal Answer (${stats.answerCount}/${stats.playerCount} answered)`
-                    : "Reveal Answer"}
-                </button>
-
-                {isQuestionActive && (
-                  <button
-                    onClick={handleEndQuestion}
-                    disabled={!connected}
-                    className="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  >
-                    End Question
-                  </button>
-                )}
-              </div>
+        <div className="max-w-7xl mx-auto p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Question Display */}
+            <div className="lg:col-span-2 space-y-6">
+              <QuestionDisplay
+                question={currentQuestion || null}
+                questionIndex={currentIndex}
+                questionCount={questionCount}
+                isQuestionActive={isQuestionActive}
+                answerRevealed={gameState?.answerRevealed || false}
+                correctAnswer={gameState?.correctAnswer}
+                isReviewMode={gameState?.isReviewMode || false}
+                timeRemaining={timeRemaining}
+                endAt={gameState?.endAt}
+                questionDuration={
+                  gameState?.scoringConfig?.questionDuration
+                    ? (gameState.scoringConfig as any).questionDuration * 1000
+                    : 30000
+                }
+                answerDistribution={stats.answerDistribution}
+                connected={connected}
+                playerCount={stats.playerCount}
+                answerCount={stats.answerCount}
+                randomizeAnswers={gameState?.randomizeAnswers || false}
+                onStartQuestion={handleStartQuestion}
+                onRevealAnswer={handleRevealAnswer}
+                onPreviousQuestion={handlePreviousQuestion}
+                onNextQuestion={handleNextQuestion}
+                onRevealWinner={handleRevealWinner}
+                onViewLeaderboard={() => setShowLeaderboard(true)}
+              />
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Live Monitoring
-              </h2>
-
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                  {stats.playerCount}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Connected Players
-                </div>
-              </div>
-
-              {isQuestionActive || isQuestionEnded ? (
-                <div className="mb-6">
-                  <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                    <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
-                      {stats.answerCount}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Answers Submitted
-                    </div>
-                  </div>
-                  {gameState?.answerRevealed && (
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-center">
-                      <p className="text-sm text-blue-600 dark:text-blue-400">
-                        Click "View Answer Reveal" to see detailed results
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  Start a question to see live stats
-                </div>
-              )}
-
-              <div className="mt-6">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Players
-                </h4>
-                {players.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    No players joined
-                  </p>
-                ) : (
-                  <ul className="space-y-2 max-h-48 overflow-y-auto">
-                    {players
-                      .map((player) => ({
-                        ...player,
-                        score: stats.playerScores?.[player.playerId] || 0,
-                      }))
-                      .sort((a, b) => b.score - a.score)
-                      .map((player) => {
-                        const hasSubmitted =
-                          stats.playersWithAnswers?.includes(player.playerId) ||
-                          false;
-                        return (
-                          <li
-                            key={player.playerId}
-                            className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2"
-                          >
-                            <span>👤</span>
-                            <span className="flex-1">{player.name}</span>
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">
-                              {player.score} pts
-                            </span>
-                            {hasSubmitted && (
-                              <span
-                                className="text-yellow-500"
-                                title="Answer submitted"
-                              >
-                                💡
-                              </span>
-                            )}
-                          </li>
-                        );
-                      })}
-                  </ul>
-                )}
-              </div>
-            </div>
+            {/* Right Column - Stats/Players/Leaderboard */}
+            <GameStatsSidebar
+              players={players}
+              stats={stats}
+              answerRevealed={gameState?.answerRevealed || false}
+              correctAnswer={gameState?.correctAnswer}
+            />
           </div>
         </div>
       </div>
 
-      <Modal
-        isOpen={showEndGameModal}
+      {/* Confetti for Winner */}
+      {showLeaderboard &&
+        winnerRevealed &&
+        (() => {
+          const leaderboard = players
+            .map((player) => ({
+              ...player,
+              score: stats.playerScores?.[player.playerId] || 0,
+            }))
+            .sort((a, b) => b.score - a.score);
+          const isTie =
+            leaderboard.length > 1 &&
+            leaderboard[0].score > 0 &&
+            leaderboard[0].score === leaderboard[1].score;
+          return <ConfettiEffect show={true} isTie={isTie} />;
+        })()}
+
+      {/* Leaderboard/Winner Modal */}
+      <LeaderboardModal
+        isOpen={showLeaderboard}
         onClose={() => {
-          dispatch(setShowEndGameModal(false));
+          if (!winnerRevealed) {
+            setShowLeaderboard(false);
+          }
         }}
-        title="End Game"
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-700 dark:text-gray-300">
-            Are you sure you want to end the game? All players will be
-            disconnected.
-          </p>
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              onClick={() => dispatch(setShowEndGameModal(false))}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                if (socket && connected) {
-                  socket.emit("CANCEL_SESSION", { sessionCode });
-                }
-                // Even if socket is not connected, we should still navigate away
-                // The session will be cleaned up on the server side
-                dispatch(setShowEndGameModal(false));
-                dispatch(setShowAnswerRevealModal(false));
-                // Navigate back to dashboard after canceling
-                router.push("/");
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
-            >
-              End Game
-            </button>
-          </div>
-        </div>
-      </Modal>
+        players={players}
+        playerScores={stats.playerScores || {}}
+        winnerRevealed={winnerRevealed}
+        onEndGame={() => dispatch(setShowEndGameModal(true))}
+      />
+
+      {/* End Game Modal */}
+      <EndGameModal
+        isOpen={showEndGameModal}
+        onClose={() => dispatch(setShowEndGameModal(false))}
+        onConfirm={() => {
+          if (socket && connected) {
+            socket.emit("CANCEL_SESSION", { sessionCode });
+          }
+          dispatch(setShowEndGameModal(false));
+          router.push("/");
+        }}
+        sessionCode={sessionCode}
+      />
     </>
   );
 }

@@ -5,6 +5,8 @@ import { Presentation } from "@/types";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Play, Edit, Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface PresentationCardProps {
   presentation: Presentation;
@@ -68,50 +70,57 @@ export default function PresentationCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {presentation.title}
-          </h3>
-          {presentation.description && (
-            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
-              {presentation.description}
-            </p>
-          )}
-          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-            <span>{presentation.questions.length} questions</span>
-            <span>•</span>
-            <span>Updated {formatDate(presentation.updatedAt)}</span>
-          </div>
-        </div>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{
+        y: -8,
+        boxShadow: "0 10px 40px rgba(99, 102, 241, 0.2)",
+      }}
+      className="bg-card-bg rounded-xl p-6 border border-indigo/20 hover:border-indigo/40 transition-all cursor-pointer group"
+    >
+      <h3 className="text-xl font-semibold mb-2 text-text-light group-hover:text-cyan transition-colors">
+        {presentation.title}
+      </h3>
+      <p className="text-sm text-text-light/60 mb-4">
+        {presentation.questions.length} questions • Updated{" "}
+        {formatDate(presentation.updatedAt)}
+      </p>
+
+      {/* Actions */}
       <div className="flex gap-2">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleStartPresentation}
           disabled={starting || presentation.questions.length === 0}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+          className="flex-1 px-4 py-2 bg-indigo hover:bg-indigo/90 text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           title={
             presentation.questions.length === 0
               ? "Add at least one question to start"
               : "Start Presentation"
           }
         >
-          {starting ? "Starting..." : "Start"}
-        </button>
-        <Link
-          href={`/presentations/${presentation.id}`}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-        >
-          Edit
-        </Link>
-        <button
+          <Play className="w-4 h-4" />
+          <span>{starting ? "Starting..." : "Host"}</span>
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => router.push(`/presentations/${presentation.id}`)}
+          className="w-14 h-14 px-4 py-2 bg-card-bg hover:bg-[#252B44] border border-indigo/30 text-text-light rounded-lg transition-colors flex items-center justify-center"
+          >
+          <Edit className="w-6 h-6" />
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => onDelete(presentation.id)}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+          className="w-14 h-14 px-4 py-2 bg-card-bg hover:bg-error/10 border border-error/30 text-error rounded-lg transition-colors flex items-center justify-center"
         >
-          Delete
-        </button>
+          <Trash2 className="w-6 h-6" />
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }
