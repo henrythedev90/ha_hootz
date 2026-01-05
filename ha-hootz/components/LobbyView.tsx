@@ -207,7 +207,11 @@ export default function LobbyView({
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div
+                className={`grid gap-2 ${
+                  players.length > 6 ? "grid-cols-2" : "grid-cols-1"
+                }`}
+              >
                 <AnimatePresence>
                   {[...players].reverse().map((player, index) => (
                     <motion.div
