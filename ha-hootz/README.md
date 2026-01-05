@@ -6,17 +6,102 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
 
 ### UI/UX Enhancements
 
-- **Loading Component**: Completely redesigned with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Reusable across the application for consistent loading states. Supports both full-screen and inline modes.
-- **Game Welcome Modal**: Enhanced with smooth entrance animations, countdown timer (5 seconds), and improved visual design matching app theme. Includes animated icon, staggered content reveals, and auto-close functionality.
-- **Thank You Modal**: Redesigned with modern animations, gradient call-to-action card, and improved visual hierarchy. Features animated celebration emoji, smooth transitions, and optional close button with "Maybe later" option.
-- **Lobby View**: Improved button layout with centered action buttons in their own row for better visual balance and user experience.
-- **Loading States**: Replaced static loading text with animated Loading component throughout the application:
-  - Players list modal now shows animated loading when fetching players
+- **Loading Component**: Completely redesigned with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Reusable across the application for consistent loading states. Supports both full-screen and inline modes. Used throughout the application:
+
+  - Players list modal shows animated loading when fetching players
   - Game page shows pulse animation when waiting for host to start question
   - Game in progress state displays animated loading indicator
+
+- **Game Welcome Modal**: Enhanced with smooth Framer Motion entrance animations using spring physics, countdown timer (auto-closes after 5 seconds), and improved visual design matching app theme. Features:
+
+  - Staggered content reveals with spring animations
+  - Animated CheckCircle icon from lucide-react
+  - Countdown display showing "Closing automatically in X seconds"
+  - Dark background with indigo color scheme
+  - Improved button effects and hover states
+
+- **Thank You Modal**: Redesigned with modern Framer Motion animations, gradient call-to-action card, and improved visual hierarchy. Features:
+
+  - Staggered entrance animations with spring physics
+  - Animated celebration emoji with rotation effects
+  - ArrowRight and X icons from lucide-react
+  - Optional close button in top-right corner
+  - "Maybe later" button for skipping account creation
+  - Smooth transitions and improved button effects
+
+- **Lobby View**: Complete redesign with improved layout and organization:
+
+  - Compact header with border-bottom and connection status indicator
+  - Two-column grid layout (responsive on mobile)
+  - Copy Link section in dedicated card with 3:1 flex ratio layout
+  - QR Code section with centered display
+  - Randomize Answer Choices toggle integrated into QR card
+  - Players list with header, scrollable content area, and footer
+  - Bottom action bar with border-top for Start Game and Cancel Session buttons
+  - All content fits on screen without scrolling
+  - Responsive padding and spacing throughout
+
+- **Presentation Editor**: Made fully responsive for mobile devices:
+
+  - Grid layout stacks on mobile (1 column) and expands on desktop (4 columns)
+  - Questions section stacks vertically on mobile, horizontally on desktop
+  - Responsive padding adjustments for all screen sizes
+  - Desktop layout remains unchanged (lg: breakpoints)
+
+- **Question Navigation Sidebar**: Enhanced with multiple improvements:
+
+  - Sticky "Question Bank" heading that stays in place on scroll with backdrop blur
+  - Drag-and-drop functionality for reordering questions (HTML5 Drag and Drop API)
+  - Visual feedback during drag operations (draggedIndex, dragOverIndex states)
+  - GripVertical icon as drag handle
+  - Improved styling with gradient backgrounds for unselected items
+  - Text color changes on hover (light text on dark background)
+  - Responsive width adjustments for mobile/desktop
+
+- **Answer Choice Randomization**: Enhanced visual experience for players:
+
+  - Host can toggle "Randomize Answer Choices" option in lobby view
+  - Each player sees answer options in a unique random order
+  - Random border colors from palette: [#6366F1, #22D3EE, #F59E0B, #A855F7]
+  - Glow effects matching GameStatsSidebar style (shadow-[0_0_30px_rgba(...)])
+  - Selected answers use the same random color as their border
+  - Colors only apply in default state (correct/wrong/selected states take precedence)
+  - Randomization setting persists through game state
+
+- **Game Stats Sidebar**: Enhanced player list with visual feedback:
+
+  - Players who have submitted answers glow with success color (#22C55E)
+  - Glow effect matches answer choice styling (shadow-[0_0_30px_rgba(34,197,94,0.3)])
+  - Success-colored background and border for submitted players
+  - Real-time visual indication of answer submission status
+
+- **Winner Display**: Improved mobile experience:
+
+  - Increased mobile proportions by ~56% (two 25% increases)
+  - Responsive text sizes, padding, and spacing
+  - Larger rank badges and improved touch targets
+  - Desktop sizes remain unchanged
+
+- **Host Dashboard**: Responsive improvements:
+
+  - Compact header with responsive padding and text sizes
+  - Grid layout that fits content without scrolling
+  - Improved spacing and padding for mobile devices
+  - All content accessible without page scrolling
+
+- **Answer Choices Visual Design**: Enhanced with random colors and glow effects:
+
+  - Each answer option gets a random color from the palette when question starts
+  - Glow effects create visual interest and improve UX
+  - Colors regenerate for each new question
+  - Maintains all existing functionality (correct/wrong/selected states)
+
 - **Question Editor & List Components**: Optimized component sizing and spacing to ensure all elements fit on screen without scrolling. Reduced padding, margins, and font sizes while maintaining readability and usability.
+
 - **Leaderboard Modal**: Enhanced animation system with Framer Motion layout animations and spring physics for smoother, more dynamic transitions when players reorder. Added visual enhancements including medal emojis (🥇🥈🥉) for top 3 positions and improved visual hierarchy with ring effects and leader banners.
+
 - **Modal Component**: Added configurable padding prop for flexible content spacing customization.
+
 - **Presentation Card**: Fixed button sizing inconsistencies and improved button dimensions for better usability and visual consistency.
 
 ### Code Quality & Maintenance
