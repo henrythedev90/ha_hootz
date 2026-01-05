@@ -123,7 +123,7 @@ export default function LobbyView({
       {/* Main Content Area - Single Viewport Grid */}
       <div className="flex-[0.8] grid grid-cols-12 gap-6 px-6 py-5 min-h-0 overflow-hidden">
         {/* Left Side - Session Info & Settings */}
-        <div className="col-span-12 lg:col-span-6 flex flex-col gap-4 min-h-0">
+        <div className="col-span-12 lg:col-span-6 flex flex-col gap-4 min-h-0 lg:border-r lg:border-[#6366F1] lg:pr-6">
           {/* Session Info Area */}
           <div className="flex-1 flex items-center justify-center px-4">
             <div className="flex items-center gap-7">
@@ -248,7 +248,7 @@ export default function LobbyView({
         </div>
 
         {/* Right Side - Players Preview */}
-        <div className="col-span-12 lg:col-span-6 flex flex-col min-h-0">
+        <div className="col-span-12 lg:col-span-6 flex flex-col min-h-0 lg:pl-6">
           <div className="flex items-center gap-2 mb-3 px-2">
             <Users className="w-5 h-5 text-[#22D3EE]" />
             <h2 className="text-lg font-semibold text-[#E5E7EB]">

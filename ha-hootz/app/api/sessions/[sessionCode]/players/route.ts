@@ -5,7 +5,7 @@ import {
   getSession as getTriviaSession,
 } from "@/lib/redis/triviaRedis";
 import redisPromise from "@/lib/redis/client";
-import { playersKey, playerSocketKey } from "@/lib/redis/keys";
+import { playersKey, playerSocketKey, playerAvatarsKey } from "@/lib/redis/keys";
 
 export async function GET(
   request: NextRequest,
@@ -33,9 +33,11 @@ export async function GET(
 
     // Get all players (playerId -> name mapping)
     const playersHash = await redis.hGetAll(playersKey(sessionId));
+    // Get all avatars (playerId -> avatarUrl mapping)
+    const avatarsHash = await redis.hGetAll(playerAvatarsKey(sessionId));
 
     // Convert to array and filter only active players (those with active sockets)
-    const players: Array<{ playerId: string; name: string }> = [];
+    const players: Array<{ playerId: string; name: string; avatarUrl?: string }> = [];
 
     // Get Socket.io instance to check active connections
     const { getSocketServer } = await import("@/lib/socket/server");
@@ -46,7 +48,11 @@ export async function GET(
       if (socketId) {
         const socket = io.sockets.sockets.get(socketId);
         if (socket && socket.connected) {
-          players.push({ playerId, name });
+          players.push({
+            playerId,
+            name,
+            avatarUrl: avatarsHash[playerId] || undefined,
+          });
         }
       }
     }

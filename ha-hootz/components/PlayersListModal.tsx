@@ -83,13 +83,21 @@ export default function PlayersListModal({
     const handlePlayerJoined = (data: {
       playerId: string;
       name: string;
+      avatarUrl?: string;
       playerCount: number;
     }) => {
       setPlayers((prev) => {
         if (prev.some((p) => p.playerId === data.playerId)) {
           return prev;
         }
-        return [...prev, { playerId: data.playerId, name: data.name }];
+        return [
+          ...prev,
+          {
+            playerId: data.playerId,
+            name: data.name,
+            avatarUrl: data.avatarUrl,
+          },
+        ];
       });
     };
 
@@ -290,38 +298,47 @@ export default function PlayersListModal({
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {players.map((player, index) => (
-                      <motion.div
-                        key={player.playerId}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="flex items-center gap-4 p-4 bg-[#0B1020]/50 rounded-lg border border-[#6366F1]/20"
-                      >
-                        {player.avatarUrl ? (
-                          <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-[#6366F1]/30 shadow-md shrink-0">
-                            <img
-                              src={player.avatarUrl}
-                              alt={player.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-linear-to-br from-[#6366F1] to-[#22D3EE] flex items-center justify-center text-white font-bold text-lg">
-                            {player.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[#E5E7EB] truncate">
+                  <div className="flex flex-wrap gap-2">
+                    <AnimatePresence>
+                      {players.map((player, index) => (
+                        <motion.div
+                          key={player.playerId}
+                          initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 25,
+                            delay: index * 0.03,
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 bg-[#1A1F35] rounded-full border border-[#6366F1]/40 hover:border-[#6366F1]/60 hover:bg-[#1A1F35]/80 transition-all group shadow-sm shadow-[#6366F1]/10"
+                        >
+                          {/* Avatar Pill */}
+                          {player.avatarUrl ? (
+                            <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#6366F1]/50 shadow-md shadow-[#6366F1]/20 shrink-0">
+                              <img
+                                src={player.avatarUrl}
+                                alt={player.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-linear-to-br from-[#6366F1] to-[#22D3EE] flex items-center justify-center text-white font-bold text-sm shadow-md shadow-[#6366F1]/30 shrink-0">
+                              {player.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-sm font-medium text-[#E5E7EB] pr-1">
                             {player.name}
-                          </p>
-                          <p className="text-sm text-[#E5E7EB]/50 font-mono truncate">
-                            ID: {player.playerId.substring(0, 8)}...
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))}
+                          </span>
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="w-1.5 h-1.5 bg-[#22C55E] rounded-full shadow-sm shadow-[#22C55E]/50"
+                          />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
                 )}
               </div>
