@@ -7,6 +7,7 @@ import {
   playerSocketKey,
   resultsKey,
   leftPlayersKey,
+  playerAvatarsKey,
 } from "../../redis/keys";
 import {
   getSessionIdFromCode,
@@ -28,7 +29,7 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
   >();
 
   // New join-session event using session code
-  socket.on("join-session", async ({ sessionCode, name }) => {
+  socket.on("join-session", async ({ sessionCode, name, avatarUrl }) => {
     try {
       if (!sessionCode || !name || !name.trim()) {
         socket.emit("join-error", {
@@ -138,6 +139,10 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
 
       // Store player info in Redis (using playerId as key, name as value)
       await redis.hSet(playersKey(sessionId), playerId, name.trim());
+      // Store avatar if provided
+      if (avatarUrl) {
+        await redis.hSet(playerAvatarsKey(sessionId), playerId, avatarUrl);
+      }
       await redis.set(playerSocketKey(sessionId, playerId), socket.id, {
         EX: 60 * 60 * 2, // 2 hours expiration
       });
@@ -195,10 +200,16 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         },
       });
 
+      // Get avatar for this player
+      const playerAvatar = avatarUrl
+        ? avatarUrl
+        : await redis.hGet(playerAvatarsKey(sessionId), playerId);
+
       // Broadcast to all players in the session (including host)
       io.to(sessionCode).emit("player-joined", {
         playerId,
         name: name.trim(),
+        avatarUrl: playerAvatar || undefined,
         sessionCode,
         playerCount,
       });

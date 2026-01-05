@@ -47,6 +47,10 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const sessionCode = params.sessionCode as string;
   const playerName = searchParams.get("name");
+  const avatarParam = searchParams.get("avatar");
+  const playerAvatar = avatarParam
+    ? (JSON.parse(decodeURIComponent(avatarParam)) as { imageUrl: string })
+    : null;
 
   // Redux state
   const dispatch = useAppDispatch();
@@ -206,6 +210,7 @@ export default function GamePage() {
       newSocket.emit("join-session", {
         sessionCode,
         name: playerName,
+        avatarUrl: playerAvatar?.imageUrl,
       });
     });
 

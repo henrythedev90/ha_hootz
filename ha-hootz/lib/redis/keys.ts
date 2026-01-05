@@ -26,3 +26,5 @@ export const playerStreaksKey = (sessionId: string) =>
   `trivia:${sessionId}:playerStreaks`;
 export const questionScoresKey = (sessionId: string, questionIndex: number) =>
   `trivia:${sessionId}:scores:${questionIndex}`;
+export const playerAvatarsKey = (sessionId: string) =>
+  `trivia:avatars:${sessionId}`;

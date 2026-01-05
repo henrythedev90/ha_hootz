@@ -426,10 +426,17 @@ export default function HostDashboard() {
       (data: {
         playerId: string;
         name: string;
+        avatarUrl?: string;
         sessionCode: string;
         playerCount?: number;
       }) => {
-        dispatch(addPlayer({ playerId: data.playerId, name: data.name }));
+        dispatch(
+          addPlayer({
+            playerId: data.playerId,
+            name: data.name,
+            avatarUrl: data.avatarUrl,
+          })
+        );
 
         if (data.playerCount !== undefined) {
           dispatch(updateStats({ playerCount: data.playerCount }));

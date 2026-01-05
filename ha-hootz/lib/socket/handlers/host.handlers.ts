@@ -1,6 +1,11 @@
 import { Server, Socket } from "socket.io";
 import redisPromise from "../../redis/client";
-import { gameStateKey, playersKey, answersKey } from "../../redis/keys";
+import {
+  gameStateKey,
+  playersKey,
+  answersKey,
+  playerAvatarsKey,
+} from "../../redis/keys";
 import {
   updateSessionStatus,
   getSessionIdFromCode,
@@ -80,9 +85,11 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       // Get current players
       const redis = await getRedis();
       const players = await redis.hGetAll(playersKey(sessionId));
+      const avatars = await redis.hGetAll(playerAvatarsKey(sessionId));
       const playersList = Object.entries(players).map(([playerId, name]) => ({
         playerId,
         name,
+        avatarUrl: avatars[playerId] || undefined,
       }));
 
       // Get current game state from Redis

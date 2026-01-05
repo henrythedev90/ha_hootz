@@ -4,6 +4,7 @@ import type { Question } from "./gameSlice";
 export interface Player {
   playerId: string;
   name: string;
+  avatarUrl?: string;
 }
 
 export interface Stats {
