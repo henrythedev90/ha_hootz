@@ -142,12 +142,13 @@ export default function JoinPage() {
   };
 
   const handleAvatarSelect = (avatar: Avatar) => {
-    // Redirect to game page with nickname and avatar info
-    const avatarParam = encodeURIComponent(JSON.stringify(avatar));
+    // Store avatar in sessionStorage for cleaner URLs
+    const storageKey = `avatar_${sessionCode}_${validatedNickname}`;
+    sessionStorage.setItem(storageKey, avatar.imageUrl);
+
+    // Redirect to game page with just the nickname
     router.push(
-      `/game/${sessionCode}?name=${encodeURIComponent(
-        validatedNickname
-      )}&avatar=${avatarParam}`
+      `/game/${sessionCode}?name=${encodeURIComponent(validatedNickname)}`
     );
   };
 

@@ -48,10 +48,22 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const sessionCode = params.sessionCode as string;
   const playerName = searchParams.get("name");
-  const avatarParam = searchParams.get("avatar");
-  const playerAvatar = avatarParam
-    ? (JSON.parse(decodeURIComponent(avatarParam)) as { imageUrl: string })
-    : null;
+
+  // Get avatar from sessionStorage (stored during join flow)
+  // Use function initializer to read synchronously on client side
+  const [playerAvatar] = useState<{ imageUrl: string } | null>(() => {
+    if (typeof window === "undefined" || !playerName || !sessionCode) {
+      return null;
+    }
+    const storageKey = `avatar_${sessionCode}_${playerName}`;
+    const storedAvatarUrl = sessionStorage.getItem(storageKey);
+    if (storedAvatarUrl) {
+      // Clean up after reading
+      sessionStorage.removeItem(storageKey);
+      return { imageUrl: storedAvatarUrl };
+    }
+    return null;
+  });
 
   // Redux state
   const dispatch = useAppDispatch();
