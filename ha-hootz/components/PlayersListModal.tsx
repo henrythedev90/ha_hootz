@@ -39,6 +39,9 @@ export default function PlayersListModal({
   const countdownDurationRef = useRef<number>(5); // 5 seconds
   const hasClosedRef = useRef(false);
   const onCloseRef = useRef(onClose);
+  const [playerColors, setPlayerColors] = useState<
+    Record<string, { color: string; rgba: string }>
+  >({});
 
   // Update onClose ref when it changes
   useEffect(() => {
@@ -75,6 +78,45 @@ export default function PlayersListModal({
 
     fetchPlayers();
   }, [isOpen, sessionCode]);
+
+  // Generate random colors for player avatars
+  useEffect(() => {
+    const colorPalette = [
+      "#6366F1",
+      "#22D3EE",
+      "#F59E0B",
+      "#A855F7",
+      "#EC4899",
+      "#10B981",
+      "#8B5CF6",
+      "#F97316",
+      "#06B6D4",
+      "#84CC16",
+    ];
+    setPlayerColors((prevColors) => {
+      const newColors: Record<string, { color: string; rgba: string }> = {
+        ...prevColors,
+      };
+
+      players.forEach((player) => {
+        if (!newColors[player.playerId]) {
+          // Pick a random color from palette
+          const randomColor =
+            colorPalette[Math.floor(Math.random() * colorPalette.length)];
+          // Convert hex to rgba for glow effect
+          const r = parseInt(randomColor.slice(1, 3), 16);
+          const g = parseInt(randomColor.slice(3, 5), 16);
+          const b = parseInt(randomColor.slice(5, 7), 16);
+          newColors[player.playerId] = {
+            color: randomColor,
+            rgba: `rgba(${r},${g},${b},0.3)`,
+          };
+        }
+      });
+
+      return newColors;
+    });
+  }, [players]);
 
   // Listen for player join/leave events via socket
   useEffect(() => {
@@ -312,11 +354,42 @@ export default function PlayersListModal({
                             damping: 25,
                             delay: index * 0.03,
                           }}
-                          className="flex items-center gap-2 px-3 py-2 bg-[#1A1F35] rounded-full border border-[#6366F1]/40 hover:border-[#6366F1]/60 hover:bg-[#1A1F35]/80 transition-all group shadow-sm shadow-[#6366F1]/10"
+                          className="flex items-center gap-2 px-3 py-2 bg-[#1A1F35] rounded-full border hover:bg-[#1A1F35]/80 transition-all group shadow-sm"
+                          style={
+                            playerColors[player.playerId]
+                              ? {
+                                  borderColor:
+                                    playerColors[player.playerId].color,
+                                  boxShadow: `0 0 20px ${
+                                    playerColors[player.playerId].rgba
+                                  }`,
+                                }
+                              : {
+                                  borderColor: "#6366F1",
+                                  boxShadow: "0 0 20px rgba(99, 102, 241, 0.3)",
+                                }
+                          }
                         >
                           {/* Avatar Pill */}
                           {player.avatarUrl ? (
-                            <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#6366F1]/50 shadow-md shadow-[#6366F1]/20 shrink-0">
+                            <div
+                              className="w-8 h-8 rounded-full overflow-hidden ring-2 shadow-md shrink-0"
+                              style={
+                                playerColors[player.playerId]
+                                  ? {
+                                      borderColor:
+                                        playerColors[player.playerId].color,
+                                      boxShadow: `0 0 15px ${
+                                        playerColors[player.playerId].rgba
+                                      }`,
+                                    }
+                                  : {
+                                      borderColor: "#6366F1",
+                                      boxShadow:
+                                        "0 0 15px rgba(99, 102, 241, 0.3)",
+                                    }
+                              }
+                            >
                               <img
                                 src={player.avatarUrl}
                                 alt={player.name}
@@ -324,7 +397,18 @@ export default function PlayersListModal({
                               />
                             </div>
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-linear-to-br from-[#6366F1] to-[#22D3EE] flex items-center justify-center text-white font-bold text-sm shadow-md shadow-[#6366F1]/30 shrink-0">
+                            <div
+                              className="w-8 h-8 rounded-full bg-linear-to-br from-[#6366F1] to-[#22D3EE] flex items-center justify-center text-white font-bold text-sm shadow-md shrink-0"
+                              style={
+                                playerColors[player.playerId]
+                                  ? {
+                                      boxShadow: `0 0 15px ${
+                                        playerColors[player.playerId].rgba
+                                      }`,
+                                    }
+                                  : {}
+                              }
+                            >
                               {player.name.charAt(0).toUpperCase()}
                             </div>
                           )}
