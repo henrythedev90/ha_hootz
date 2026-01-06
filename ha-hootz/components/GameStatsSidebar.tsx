@@ -7,6 +7,7 @@ import { Users, Trophy, BarChart3 } from "lucide-react";
 interface Player {
   playerId: string;
   name: string;
+  avatarUrl?: string;
 }
 
 interface GameStatsSidebarProps {
@@ -85,9 +86,22 @@ export default function GameStatsSidebar({
                     <span className="text-text-light">{player.name}</span>
                     <div className="flex items-center gap-3 text-sm">
                       {hasSubmitted && (
-                        <span className="text-cyan" title="Answer submitted">
-                          💡
-                        </span>
+                        <div
+                          className="w-6 h-6 rounded-full overflow-hidden ring-2 ring-success shadow-md shrink-0"
+                          title="Answer submitted"
+                        >
+                          {player.avatarUrl ? (
+                            <img
+                              src={player.avatarUrl}
+                              alt={player.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-linear-to-br from-[#6366F1] to-[#22D3EE] flex items-center justify-center text-white font-bold text-xs">
+                              {player.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

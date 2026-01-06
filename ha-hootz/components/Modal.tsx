@@ -46,7 +46,9 @@ export default function Modal({
         style={{ zIndex: 10001, position: "relative" }}
       >
         <div className="flex justify-between items-center mb-4 p-6 pb-4 shrink-0">
-          <h2 className="text-2xl font-bold text-text-light">{title}</h2>
+          <h2 className="text-2xl font-bold text-text-light text-center flex-1">
+            {title}
+          </h2>
           <button
             onClick={onClose}
             className="text-text-light/50 hover:text-text-light transition-colors"
