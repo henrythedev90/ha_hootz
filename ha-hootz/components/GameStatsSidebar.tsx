@@ -8,6 +8,7 @@ interface Player {
   playerId: string;
   name: string;
   avatarUrl?: string;
+  streak?: number;
 }
 
 interface GameStatsSidebarProps {
@@ -83,7 +84,14 @@ export default function GameStatsSidebar({
                         : "bg-deep-navy/50"
                     }`}
                   >
-                    <span className="text-text-light">{player.name}</span>
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="text-text-light">{player.name}</span>
+                      {(player.streak ?? 0) >= 1 && (
+                        <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
+                          🔥 {player.streak}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3 text-sm">
                       {hasSubmitted && (
                         <div
@@ -144,9 +152,14 @@ export default function GameStatsSidebar({
                     >
                       {index + 1}
                     </div>
-                    <span className="flex-1 text-text-light">
-                      {player.name}
-                    </span>
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="text-text-light">{player.name}</span>
+                      {(player.streak ?? 0) >= 1 && (
+                        <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
+                          🔥 {player.streak}
+                        </span>
+                      )}
+                    </div>
                     <span className="font-semibold text-cyan">
                       {player.score}
                     </span>

@@ -5,6 +5,8 @@ import {
   playersKey,
   answersKey,
   playerAvatarsKey,
+  playerStreaksKey,
+  playerSocketKey,
 } from "../../redis/keys";
 import {
   updateSessionStatus,
@@ -14,6 +16,7 @@ import {
   calculateQuestionScores,
   getDefaultScoringConfig,
   setQuestion,
+  getPlayerStreak,
 } from "../../redis/triviaRedis";
 
 async function getRedis() {
@@ -82,15 +85,28 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       // Join the session room
       socket.join(sessionCode);
 
-      // Get current players
+      // Get current players - only those with active socket connections
       const redis = await getRedis();
       const players = await redis.hGetAll(playersKey(sessionId));
       const avatars = await redis.hGetAll(playerAvatarsKey(sessionId));
-      const playersList = Object.entries(players).map(([playerId, name]) => ({
-        playerId,
-        name,
-        avatarUrl: avatars[playerId] || undefined,
-      }));
+      const streaks = await redis.hGetAll(playerStreaksKey(sessionId));
+
+      // Filter to only include players with active socket connections
+      const playersList = [];
+      for (const [playerId, name] of Object.entries(players)) {
+        const socketId = await redis.get(playerSocketKey(sessionId, playerId));
+        if (socketId) {
+          const playerSocket = io.sockets.sockets.get(socketId);
+          if (playerSocket && playerSocket.connected) {
+            playersList.push({
+              playerId,
+              name,
+              avatarUrl: avatars[playerId] || undefined,
+              streak: streaks[playerId] ? Number(streaks[playerId]) : 0,
+            });
+          }
+        }
+      }
 
       // Get current game state from Redis
       const stateStr = await redis.get(gameStateKey(sessionId));
@@ -361,6 +377,13 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         scoringConfig
       );
 
+      // Get updated streaks for all players
+      const streaks = await redis.hGetAll(playerStreaksKey(sessionId));
+      const playerStreaks: Record<string, number> = {};
+      for (const [playerId, streak] of Object.entries(streaks)) {
+        playerStreaks[playerId] = Number(streak);
+      }
+
       // Update game state to show answer is revealed and question is ended
       await redis.set(
         gameStateKey(sessionId),
@@ -381,6 +404,12 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       // Also emit question-ended event to ensure all clients update status
       io.to(sessionCode).emit("question-ended", {
         questionIndex,
+      });
+
+      // Emit updated streaks to host
+      socket.emit("player-streaks-updated", {
+        sessionCode,
+        streaks: playerStreaks,
       });
     } catch (error) {
       console.error("Error revealing answer:", error);

@@ -6,6 +6,8 @@ import Modal from "./Modal";
 interface Player {
   playerId: string;
   name: string;
+  avatarUrl?: string;
+  streak?: number;
 }
 
 interface LeaderboardModalProps {
@@ -148,17 +150,26 @@ export default function LeaderboardModal({
                           : `#${rank}`}
                       </motion.div>
                       <motion.div layout className="flex-1">
-                        <motion.span
-                          layout
-                          className={`text-lg font-semibold ${
-                            isWinner ? "text-cyan" : "text-text-light"
-                          }`}
-                        >
-                          {player.name}
-                          {isWinner && (
-                            <span className="ml-2 text-cyan/70">- Winner!</span>
+                        <div className="flex items-center gap-2">
+                          <motion.span
+                            layout
+                            className={`text-lg font-semibold ${
+                              isWinner ? "text-cyan" : "text-text-light"
+                            }`}
+                          >
+                            {player.name}
+                            {isWinner && (
+                              <span className="ml-2 text-cyan/70">
+                                - Winner!
+                              </span>
+                            )}
+                          </motion.span>
+                          {(player.streak ?? 0) >= 1 && (
+                            <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
+                              🔥 {player.streak}
+                            </span>
                           )}
-                        </motion.span>
+                        </div>
                       </motion.div>
                       <motion.span
                         layout

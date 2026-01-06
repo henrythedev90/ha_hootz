@@ -80,6 +80,7 @@ export default function HostDashboard() {
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameStateRef = useRef(gameState);
   const statsRef = useRef(stats);
+  const playersRef = useRef(players);
 
   // Keep refs in sync with Redux state
   useEffect(() => {
@@ -89,6 +90,10 @@ export default function HostDashboard() {
   useEffect(() => {
     statsRef.current = stats;
   }, [stats]);
+
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
 
   // Reset Redux state and set session code when sessionCode changes
   useEffect(() => {
@@ -387,7 +392,12 @@ export default function HostDashboard() {
       "host-joined",
       (data: {
         sessionCode: string;
-        players: Array<{ playerId: string; name: string }>;
+        players: Array<{
+          playerId: string;
+          name: string;
+          avatarUrl?: string;
+          streak?: number;
+        }>;
         gameState?: any;
       }) => {
         dispatch(setPlayers(data.players || []));
@@ -427,14 +437,17 @@ export default function HostDashboard() {
         playerId: string;
         name: string;
         avatarUrl?: string;
+        streak?: number;
         sessionCode: string;
         playerCount?: number;
       }) => {
+        console.log("Host received player-joined event:", data);
         dispatch(
           addPlayer({
             playerId: data.playerId,
             name: data.name,
             avatarUrl: data.avatarUrl,
+            streak: data.streak || 0,
           })
         );
 
@@ -629,6 +642,27 @@ export default function HostDashboard() {
             })
           );
         }
+      }
+    );
+
+    newSocket.on(
+      "player-streaks-updated",
+      (data: { sessionCode: string; streaks: Record<string, number> }) => {
+        // Update streaks for all players in Redux state
+        // Use ref to get current players to avoid stale closure
+        const currentPlayers = playersRef.current;
+        if (currentPlayers.length === 0) {
+          // If players list is empty, don't update (prevents clearing players)
+          console.warn(
+            "player-streaks-updated received but players list is empty, skipping update"
+          );
+          return;
+        }
+        const updatedPlayers = currentPlayers.map((player) => ({
+          ...player,
+          streak: data.streaks[player.playerId] ?? player.streak ?? 0,
+        }));
+        dispatch(setPlayers(updatedPlayers));
       }
     );
 

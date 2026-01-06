@@ -5,6 +5,7 @@ export interface Player {
   playerId: string;
   name: string;
   avatarUrl?: string;
+  streak?: number;
 }
 
 export interface Stats {
@@ -72,6 +73,9 @@ const hostSlice = createSlice({
       if (existingIndex === -1) {
         state.players.push(action.payload);
         state.stats.playerCount = state.players.length;
+      } else {
+        // Update existing player with new data (e.g., streak, avatar)
+        state.players[existingIndex] = action.payload;
       }
     },
     removePlayer: (state, action: PayloadAction<string>) => {

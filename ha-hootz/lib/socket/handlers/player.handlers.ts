@@ -15,6 +15,7 @@ import {
   getAnswerCount,
   getAnswerDistribution,
   storeAnswerTimestamp,
+  getPlayerStreak,
 } from "../../redis/triviaRedis";
 
 async function getRedis() {
@@ -205,11 +206,22 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         ? avatarUrl
         : await redis.hGet(playerAvatarsKey(sessionId), playerId);
 
+      // Get current streak for this player
+      const streak = await getPlayerStreak(sessionId, playerId);
+
       // Broadcast to all players in the session (including host)
+      console.log(`Broadcasting player-joined to room ${sessionCode}:`, {
+        playerId,
+        name: name.trim(),
+        avatarUrl: playerAvatar || undefined,
+        streak,
+        playerCount,
+      });
       io.to(sessionCode).emit("player-joined", {
         playerId,
         name: name.trim(),
         avatarUrl: playerAvatar || undefined,
+        streak,
         sessionCode,
         playerCount,
       });

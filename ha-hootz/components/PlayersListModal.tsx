@@ -256,55 +256,55 @@ export default function PlayersListModal({
               {/* Header */}
               <div className="px-8 pt-8 pb-6 border-b border-[#6366F1]/20">
                 <div className="flex items-start justify-between">
-                  <div>
+            <div>
                     <h2 className="text-3xl font-bold text-[#E5E7EB] mb-2">
-                      Players Joined
+                Players Joined
                     </h2>
                     <p className="text-[#E5E7EB]/60">
-                      Session Code:{" "}
+                Session Code:{" "}
                       <span className="text-[#22D3EE] font-mono font-semibold">
                         {sessionCode}
                       </span>
-                    </p>
-                  </div>
+              </p>
+            </div>
                   <div className="flex flex-col items-end">
                     <div className="px-4 py-2 bg-[#6366F1]/20 text-[#6366F1] rounded-lg">
                       <span className="text-3xl font-bold">
                         {players.length}
                       </span>
                       <span className="text-sm ml-2">
-                        {players.length === 1 ? "Player" : "Players"}
+                {players.length === 1 ? "Player" : "Players"}
                       </span>
                     </div>
                   </div>
-                </div>
-              </div>
+            </div>
+          </div>
 
               {/* Players List */}
               <div className="px-8 py-6 flex-1 overflow-y-auto">
-                {loading ? (
+          {loading ? (
                   <Loading
                     message="Loading players..."
                     fullScreen={false}
                     variant="dots"
                     size="small"
                   />
-                ) : error && !players.length ? (
-                  <div className="text-center py-12">
+          ) : error && !players.length ? (
+            <div className="text-center py-12">
                     <p className="text-[#EF4444]">{error}</p>
-                  </div>
-                ) : players.length === 0 ? (
+            </div>
+          ) : players.length === 0 ? (
                   <div className="text-center py-12 text-[#E5E7EB]/50">
                     <p className="text-lg">
-                      No players have joined yet. Waiting for players...
-                    </p>
-                  </div>
-                ) : (
+                No players have joined yet. Waiting for players...
+              </p>
+            </div>
+          ) : (
                   <div className="flex flex-wrap gap-2">
                     <AnimatePresence>
-                      {players.map((player, index) => (
-                        <motion.div
-                          key={player.playerId}
+                    {players.map((player, index) => (
+                      <motion.div
+                  key={player.playerId}
                           initial={{ opacity: 0, scale: 0.8, y: 10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.8, y: -10 }}
@@ -349,7 +349,7 @@ export default function PlayersListModal({
                                         "0 0 15px rgba(99, 102, 241, 0.3)",
                                     }
                               }
-                            >
+                >
                               <img
                                 src={player.avatarUrl}
                                 alt={player.name}
@@ -369,30 +369,30 @@ export default function PlayersListModal({
                                   : {}
                               }
                             >
-                              {player.name.charAt(0).toUpperCase()}
-                            </div>
+                      {player.name.charAt(0).toUpperCase()}
+                    </div>
                           )}
                           <span className="text-sm font-medium text-[#E5E7EB] pr-1">
-                            {player.name}
+                        {player.name}
                           </span>
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             className="w-1.5 h-1.5 bg-[#22C55E] rounded-full shadow-sm shadow-[#22C55E]/50"
                           />
-                        </motion.div>
-                      ))}
+                      </motion.div>
+                    ))}
                     </AnimatePresence>
                   </div>
                 )}
-              </div>
+            </div>
 
               {/* Countdown and Actions */}
               <div className="px-8 py-6 border-t border-[#6366F1]/20 bg-[#0B1020]/30">
                 <div className="text-center mb-6">
                   <p className="text-[#E5E7EB]/60 mb-2">
-                    Starting automatically in
-                  </p>
+                Starting automatically in
+              </p>
                   <motion.div
                     key={countdown}
                     initial={{ scale: 1.2, opacity: 0 }}
@@ -402,30 +402,30 @@ export default function PlayersListModal({
                     {countdown}
                   </motion.div>
                   <p className="text-sm text-[#E5E7EB]/50">
-                    {countdown === 1 ? "second" : "seconds"}
-                  </p>
-                </div>
+                {countdown === 1 ? "second" : "seconds"}
+              </p>
+            </div>
 
                 <div className="flex gap-3">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={handleCancel}
+                onClick={handleCancel}
                     className="flex-1 px-6 py-4 bg-[#1A1F35] hover:bg-[#252B44] border-2 border-[#6366F1]/30 hover:border-[#6366F1]/50 text-[#E5E7EB] rounded-xl transition-all font-medium"
-                  >
-                    Cancel
+              >
+                Cancel
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={handleStartNow}
-                    disabled={players.length === 0}
+                onClick={handleStartNow}
+                disabled={players.length === 0}
                     className="flex-1 px-6 py-4 bg-linear-to-r from-[#6366F1] to-[#5558E3] hover:from-[#5558E3] hover:to-[#4F46E5] text-white rounded-xl font-semibold shadow-lg shadow-[#6366F1]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-[#6366F1] disabled:hover:to-[#5558E3]"
-                  >
-                    Start Now
+              >
+                Start Now
                   </motion.button>
                 </div>
-              </div>
+            </div>
             </motion.div>
           </div>
         )}
