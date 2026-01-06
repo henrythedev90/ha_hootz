@@ -22,6 +22,7 @@ interface GameStatsSidebarProps {
   };
   answerRevealed: boolean;
   correctAnswer?: "A" | "B" | "C" | "D";
+  streakThresholds?: number[];
 }
 
 export default function GameStatsSidebar({
@@ -29,10 +30,14 @@ export default function GameStatsSidebar({
   stats,
   answerRevealed,
   correctAnswer,
+  streakThresholds = [3, 5, 7], // Default thresholds
 }: GameStatsSidebarProps) {
   const [activeTab, setActiveTab] = useState<
     "players" | "stats" | "leaderboard"
   >("players");
+
+  // Get the first threshold (streak doesn't start until this many consecutive correct)
+  const firstThreshold = streakThresholds.length > 0 ? streakThresholds[0] : 3;
 
   return (
     <div className="space-y-6">
@@ -86,7 +91,7 @@ export default function GameStatsSidebar({
                   >
                     <div className="flex items-center gap-2 flex-1">
                       <span className="text-text-light">{player.name}</span>
-                      {(player.streak ?? 0) >= 1 && (
+                      {(player.streak ?? 0) >= firstThreshold && (
                         <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
                           🔥 {player.streak}
                         </span>
@@ -154,7 +159,7 @@ export default function GameStatsSidebar({
                     </div>
                     <div className="flex items-center gap-2 flex-1">
                       <span className="text-text-light">{player.name}</span>
-                      {(player.streak ?? 0) >= 1 && (
+                      {(player.streak ?? 0) >= firstThreshold && (
                         <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
                           🔥 {player.streak}
                         </span>

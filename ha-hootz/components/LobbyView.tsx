@@ -297,6 +297,7 @@ export default function LobbyView({
                         playerColors[player.playerId]
                           ? {
                               borderColor: playerColors[player.playerId].color,
+                              borderWidth: 2,
                               boxShadow: `0 0 20px ${
                                 playerColors[player.playerId].rgba
                               }`,

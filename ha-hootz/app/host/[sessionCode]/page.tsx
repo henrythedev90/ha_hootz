@@ -1002,6 +1002,9 @@ export default function HostDashboard() {
               stats={stats}
               answerRevealed={gameState?.answerRevealed || false}
               correctAnswer={gameState?.correctAnswer}
+              streakThresholds={
+                (gameState?.scoringConfig as any)?.streakThresholds
+              }
             />
           </div>
         </div>
@@ -1036,6 +1039,7 @@ export default function HostDashboard() {
         playerScores={stats.playerScores || {}}
         winnerRevealed={winnerRevealed}
         onEndGame={() => dispatch(setShowEndGameModal(true))}
+        streakThresholds={(gameState?.scoringConfig as any)?.streakThresholds}
       />
 
       {/* End Game Modal */}

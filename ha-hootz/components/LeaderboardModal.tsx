@@ -17,6 +17,7 @@ interface LeaderboardModalProps {
   playerScores: Record<string, number>;
   winnerRevealed: boolean;
   onEndGame: () => void;
+  streakThresholds?: number[];
 }
 
 export default function LeaderboardModal({
@@ -26,7 +27,11 @@ export default function LeaderboardModal({
   playerScores,
   winnerRevealed,
   onEndGame,
+  streakThresholds = [3, 5, 7], // Default thresholds
 }: LeaderboardModalProps) {
+  // Get the first threshold (streak doesn't start until this many consecutive correct)
+  const firstThreshold = streakThresholds.length > 0 ? streakThresholds[0] : 3;
+
   const leaderboard = players
     .map((player) => ({
       ...player,
@@ -164,9 +169,9 @@ export default function LeaderboardModal({
                               </span>
                             )}
                           </motion.span>
-                          {(player.streak ?? 0) >= 1 && (
+                          {(player.streak ?? 0) >= firstThreshold && (
                             <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
-                              🔥 {player.streak}
+                              You're on a streak! 🔥 + {player.streak}
                             </span>
                           )}
                         </div>
