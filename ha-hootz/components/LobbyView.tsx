@@ -278,7 +278,7 @@ export default function LobbyView({
                 </p>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 p-4">
                 <AnimatePresence>
                   {players.map((player, index) => (
                     <motion.div

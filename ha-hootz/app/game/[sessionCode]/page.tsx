@@ -11,6 +11,7 @@ import CenteredLayout from "@/components/CenteredLayout";
 import GameWelcomeModal from "@/components/GameWelcomeModal";
 import WinnerDisplay from "@/components/WinnerDisplay";
 import ThankYouModal from "@/components/ThankYouModal";
+import { generateAnswerColors } from "@/lib/utils/colorUtils";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   setSessionCode,
@@ -358,31 +359,14 @@ export default function GamePage() {
         const shouldRandomize = data.randomizeAnswers ?? false;
 
         // Generate random colors for each answer option (for UX purposes)
-        const colorPalette = ["#6366F1", "#22D3EE", "#F59E0B", "#A855F7"];
-        const shuffledColors = [...colorPalette].sort(
-          () => Math.random() - 0.5
-        );
-        const displayLetters = ["A", "B", "C", "D"];
-
-        const newAnswerColors: Record<string, { color: string; rgba: string }> =
-          {};
-        displayLetters.forEach((letter, index) => {
-          const hexColor = shuffledColors[index];
-          // Convert hex to rgba for glow effect
-          const r = parseInt(hexColor.slice(1, 3), 16);
-          const g = parseInt(hexColor.slice(3, 5), 16);
-          const b = parseInt(hexColor.slice(5, 7), 16);
-          newAnswerColors[letter] = {
-            color: hexColor,
-            rgba: `rgba(${r},${g},${b},0.3)`,
-          };
-        });
+        const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
         setAnswerColors(newAnswerColors);
 
         if (shouldRandomize) {
           // Generate random order for this player
           const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
           const shuffled = [...options].sort(() => Math.random() - 0.5);
+          const displayLetters = ["A", "B", "C", "D"];
 
           const displayToActual: Record<string, "A" | "B" | "C" | "D"> = {};
           const actualToDisplay: Record<"A" | "B" | "C" | "D", string> =
@@ -444,25 +428,7 @@ export default function GamePage() {
         const shouldRandomize = data.randomizeAnswers ?? false;
 
         // Generate random colors for each answer option (for UX purposes)
-        const colorPalette = ["#6366F1", "#22D3EE", "#F59E0B", "#A855F7"];
-        const shuffledColors = [...colorPalette].sort(
-          () => Math.random() - 0.5
-        );
-        const displayLetters = ["A", "B", "C", "D"];
-
-        const newAnswerColors: Record<string, { color: string; rgba: string }> =
-          {};
-        displayLetters.forEach((letter, index) => {
-          const hexColor = shuffledColors[index];
-          // Convert hex to rgba for glow effect
-          const r = parseInt(hexColor.slice(1, 3), 16);
-          const g = parseInt(hexColor.slice(3, 5), 16);
-          const b = parseInt(hexColor.slice(5, 7), 16);
-          newAnswerColors[letter] = {
-            color: hexColor,
-            rgba: `rgba(${r},${g},${b},0.3)`,
-          };
-        });
+        const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
         setAnswerColors(newAnswerColors);
 
         let actualToDisplay: Record<"A" | "B" | "C" | "D", string>;
@@ -471,6 +437,7 @@ export default function GamePage() {
           // Generate random order for this player for this question
           const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
           const shuffled = [...options].sort(() => Math.random() - 0.5);
+          const displayLetters = ["A", "B", "C", "D"];
 
           const displayToActual: Record<string, "A" | "B" | "C" | "D"> = {};
           actualToDisplay = {} as Record<"A" | "B" | "C" | "D", string>;
