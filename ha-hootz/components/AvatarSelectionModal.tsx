@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
+import Image from "next/image";
 
 export interface Avatar {
   id: string;
@@ -154,10 +155,11 @@ export function AvatarSelectionModal({
                             : "ring-2 ring-transparent hover:ring-[#22D3EE]/50"
                         }`}
                       >
-                        <img
+                        <Image
                           src={avatar.imageUrl}
                           alt={avatar.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
                         />
 
                         {/* Overlay */}
@@ -239,11 +241,12 @@ export function AvatarSelectionModal({
             <div className="px-8 py-6 bg-[#1A1F35]/50 border-t border-[#6366F1]/20 flex items-center justify-between">
               {selectedAvatar ? (
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden ring-2 ring-[#6366F1]">
-                    <img
+                  <div className="relative w-12 h-12 rounded-lg overflow-hidden ring-2 ring-[#6366F1]">
+                    <Image
                       src={selectedAvatar.imageUrl}
                       alt={selectedAvatar.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   </div>
                   <div>

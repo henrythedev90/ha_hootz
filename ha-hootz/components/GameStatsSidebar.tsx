@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Trophy, BarChart3 } from "lucide-react";
+import Image from "next/image";
 
 interface Player {
   playerId: string;
@@ -100,14 +101,15 @@ export default function GameStatsSidebar({
                     <div className="flex items-center gap-3 text-sm">
                       {hasSubmitted && (
                         <div
-                          className="w-6 h-6 rounded-full overflow-hidden ring-2 ring-success shadow-md shrink-0"
+                          className="relative w-6 h-6 rounded-full overflow-hidden ring-2 ring-success shadow-md shrink-0"
                           title="Answer submitted"
                         >
                           {player.avatarUrl ? (
-                            <img
+                            <Image
                               src={player.avatarUrl}
                               alt={player.name}
-                              className="w-full h-full object-cover"
+                              fill
+                              className="object-cover"
                             />
                           ) : (
                             <div className="w-full h-full bg-linear-to-br from-[#6366F1] to-[#22D3EE] flex items-center justify-center text-white font-bold text-xs">

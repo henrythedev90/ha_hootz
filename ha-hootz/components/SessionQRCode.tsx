@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 interface SessionQRCodeProps {
   sessionCode: string;
@@ -38,14 +39,16 @@ export default function SessionQRCode({
   // Minimal variant - just the QR code image
   if (variant === "minimal") {
     return (
-      <div className="w-64 h-64 bg-white rounded-lg flex items-center justify-center border-4 border-[#0B1020]">
+      <div className="relative w-64 h-64 bg-white rounded-lg flex items-center justify-center border-4 border-[#0B1020]">
         {loading ? (
           <div className="text-[#0B1020]/40">Loading QR code...</div>
         ) : qrCodeDataUrl ? (
-          <img
+          <Image
             src={qrCodeDataUrl}
             alt="QR Code"
-            className="w-full h-full object-contain p-2"
+            fill
+            className="object-contain p-2"
+            unoptimized
           />
         ) : (
           <div className="text-red-500 text-sm text-center px-4">
@@ -77,16 +80,18 @@ export default function SessionQRCode({
               Scan QR Code to Join
             </h4>
           </div>
-          <div className="bg-white p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+          <div className="relative bg-white p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
             {loading ? (
               <div className="w-[200px] h-[200px] flex items-center justify-center">
                 <div className="text-gray-400">Loading QR code...</div>
               </div>
             ) : qrCodeDataUrl ? (
-              <img
+              <Image
                 src={qrCodeDataUrl}
                 alt="QR Code"
-                className="w-[200px] h-[200px]"
+                width={200}
+                height={200}
+                unoptimized
               />
             ) : (
               <div className="w-[200px] h-[200px] flex items-center justify-center text-red-500">
