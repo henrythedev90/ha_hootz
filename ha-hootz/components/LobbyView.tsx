@@ -268,7 +268,7 @@ export default function LobbyView({
           </div>
 
           {/* Players Container - Scrollable within container only */}
-          <div className="flex-1 overflow-y-auto min-h-0 px-2">
+          <div className="flex-1 overflow-y-auto min-h-0 px-2 border-2 border-[#6366F1] rounded-3xl">
             {players.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center py-12">
                 <Users className="w-16 h-16 text-[#6366F1]/20 mb-4" />
