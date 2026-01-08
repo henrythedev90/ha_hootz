@@ -67,7 +67,8 @@ describe("calculateTimeBonus", () => {
   it("should round bonus values correctly", () => {
     const questionStartTime = 1000;
     const questionDuration = 10000;
-    const submissionTime = 5000; // Half time
+    // To get half time remaining, submit at: startTime + (duration / 2) = 1000 + 5000 = 6000
+    const submissionTime = 6000; // Half time remaining
     const maxTimeBonus = 33; // Will result in 16.5, should round to 17
 
     const bonus = calculateTimeBonus(

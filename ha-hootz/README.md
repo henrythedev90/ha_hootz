@@ -156,6 +156,23 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
   - Updated `addPlayer` reducer to handle player updates (e.g., streak changes) instead of only adding new players
   - Improved real-time synchronization between server and client for player data, avatars, and streaks
 - **URL Optimization**: Switched from passing avatar data in URL parameters to using sessionStorage, resulting in cleaner, shorter URLs and improved UX.
+- **Unit Testing Setup**: Comprehensive Jest testing environment configured:
+  - **Testing Framework**: Jest with TypeScript support via `ts-jest` and `next/jest`
+  - **React Testing**: React Testing Library for component testing with `@testing-library/react`, `@testing-library/jest-dom`, and `@testing-library/user-event`
+  - **Test Environment**: jsdom environment for browser-like APIs in tests
+  - **Configuration**:
+    - `jest.config.ts`: Configured for Next.js App Router with path aliases, CSS/image mocking, and coverage collection
+    - `jest.setup.ts`: Global mocks for Next.js router, Image component, and extended Jest matchers
+  - **Mocks**: Created mocks for external dependencies:
+    - `__mocks__/socket.io-client.ts`: Mock Socket.io client to prevent real connections
+    - `__mocks__/redis.ts`: In-memory Redis mock for testing without real Redis instance
+    - `__mocks__/fileMock.js`: Mock for static file imports (images, fonts)
+  - **Test Coverage**: Unit tests for:
+    - Scoring logic (`lib/scoring/calculateScore.test.ts`): Tests for time bonuses, streak bonuses, and total score calculation
+    - Redux reducers (`store/slices/__tests__/gameSlice.test.ts`): Tests for game state management and reducer actions
+  - **Test Scripts**: Added `test`, `test:watch`, and `test:coverage` scripts to package.json
+  - **Documentation**: Created `TESTING_SETUP.md` and `JEST_FLOW.md` for comprehensive testing documentation
+  - **Next.js Image Component**: Replaced all `<img>` elements with Next.js `Image` component for automatic optimization, lazy loading, and better performance
 
 ## Features
 
@@ -309,6 +326,7 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
 - **State Management**: Redux Toolkit with React-Redux for centralized state management
 - **Authentication**: NextAuth.js v5
 - **Styling**: Tailwind CSS v4
+- **Testing**: Jest with React Testing Library, jsdom environment, ts-jest for TypeScript support
 - **Password Hashing**: bcryptjs
 - **QR Code Generation**: qrcode (server-side)
 - **Server Runtime**: tsx for TypeScript server execution
@@ -492,13 +510,27 @@ ha-hootz/
 │   ├── StoreProvider.tsx                   # Redux Provider component for Next.js App Router
 │   └── slices/
 │       ├── gameSlice.ts                    # Game state slice (status, questions, review mode)
+│       ├── __tests__/
+│       │   └── gameSlice.test.ts           # Unit tests for gameSlice reducer
 │       ├── hostSlice.ts                    # Host state slice (players with avatars and streaks, stats, leaderboard)
 │       ├── playerSlice.ts                  # Player state slice (answers, timer, leaderboard)
 │       ├── socketSlice.ts                  # Socket connection state slice
 │       └── uiSlice.ts                      # UI state slice (modals, errors, loading)
+├── lib/
+│   └── scoring/
+│       ├── calculateScore.ts               # Scoring calculation functions (time bonus, streak bonus, total score)
+│       └── calculateScore.test.ts         # Unit tests for scoring logic
 ├── hooks/
 │   ├── usePlayerColors.ts                  # Hook for generating random colors for player avatars
 │   └── useRandomColors.ts                  # Generic hook for generating random colors for any list
+├── __mocks__/
+│   ├── socket.io-client.ts                 # Mock Socket.io client for testing
+│   ├── redis.ts                            # In-memory Redis mock for testing
+│   └── fileMock.js                         # Mock for static file imports (images, fonts)
+├── jest.config.ts                          # Jest configuration for Next.js App Router
+├── jest.setup.ts                           # Jest setup file with global mocks and matchers
+├── TESTING_SETUP.md                        # Comprehensive testing setup documentation
+├── JEST_FLOW.md                            # Detailed Jest execution flow documentation
 ├── server.ts                               # Custom Next.js server with Socket.io integration
 └── types/
     ├── index.ts                            # TypeScript types
@@ -716,6 +748,99 @@ npm start
 
 # Run linter
 npm run lint
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+## Testing
+
+This project uses Jest with React Testing Library for unit testing. The testing setup is configured for Next.js App Router and TypeScript.
+
+### Test Structure
+
+- **Unit Tests**: Located in `__tests__` directories or files ending in `.test.ts`/`.test.tsx`
+- **Test Configuration**: `jest.config.ts` and `jest.setup.ts`
+- **Mocks**: Located in `__mocks__` directory for external dependencies
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (re-runs on file changes)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Test Coverage
+
+Current test coverage includes:
+
+- **Scoring Logic** (`lib/scoring/calculateScore.test.ts`):
+
+  - Time bonus calculations
+  - Streak bonus calculations
+  - Total score calculations with various configurations
+
+- **Redux Reducers** (`store/slices/__tests__/gameSlice.test.ts`):
+  - Game state management
+  - Session code management
+  - Question state updates
+  - Answer reveal state
+
+### Testing Documentation
+
+For detailed information about the testing setup, see:
+
+- **`TESTING_SETUP.md`**: Complete guide to the testing environment, dependencies, configuration, and example tests
+- **`JEST_FLOW.md`**: Detailed explanation of how Jest executes tests, including the execution timeline and common issues
+
+### Mocked Dependencies
+
+The following external dependencies are automatically mocked in tests:
+
+- **Next.js Router** (`next/navigation`): Mocked to prevent router errors
+- **Next.js Image** (`next/image`): Mocked to prevent image optimization in tests
+- **Socket.io Client**: Mocked to prevent real socket connections
+- **Redis**: In-memory mock for testing without a real Redis instance
+- **CSS Modules**: Mocked using `identity-obj-proxy`
+- **Static Files**: Images and fonts are mocked
+
+### Writing Tests
+
+When writing new tests:
+
+1. Place test files next to the code they test or in `__tests__` directories
+2. Use descriptive test names that explain what is being tested
+3. Test user behavior, not implementation details
+4. Use React Testing Library queries (`getByRole`, `getByText`, etc.)
+5. Mock external dependencies (Socket.io, Redis, etc.)
+6. Keep tests isolated and independent
+
+Example test structure:
+
+```typescript
+import { render, screen } from "@testing-library/react";
+import { calculateScore } from "./calculateScore";
+
+describe("calculateScore", () => {
+  it("should return base points for correct answer", () => {
+    const score = calculateScore({
+      /* ... */
+    });
+    expect(score).toBe(100);
+  });
+});
 ```
 
 ## Security Notes

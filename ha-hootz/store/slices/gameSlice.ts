@@ -110,5 +110,6 @@ export const {
   resetGameState,
 } = gameSlice.actions;
 
+export { gameSlice };
 export default gameSlice.reducer;
 

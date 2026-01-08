@@ -29,15 +29,66 @@ jest.mock("next/navigation", () => ({
 
 // Mock Next.js Image component
 // Prevents image optimization from running in tests
-jest.mock("next/image", () => ({
-  __esModule: true,
-  default: (props: any) => {
-    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-    // Using React.createElement instead of JSX to avoid needing .tsx extension
-    const React = require("react");
-    return React.createElement("img", props);
-  },
-}));
+jest.mock("next/image", () => {
+  const React = require("react");
+  return {
+    __esModule: true,
+    default: function NextImage(props: any) {
+      // Extract Next.js Image specific props that don't apply to regular img
+      const {
+        fill,
+        unoptimized,
+        priority,
+        quality,
+        placeholder,
+        blurDataURL,
+        loader,
+        sizes,
+        onLoad,
+        onError,
+        onLoadingComplete,
+        ...imgProps
+      } = props;
+
+      // If fill is used, we need to handle it differently
+      // For tests, we'll just render a regular img with the src
+      if (fill) {
+        // Remove width/height if fill is used, as they're not needed
+        const { width, height, ...restProps } = imgProps;
+        
+        // Determine object-fit from className
+        let objectFit = "cover";
+        if (restProps.className?.includes("object-contain")) {
+          objectFit = "contain";
+        } else if (restProps.className?.includes("object-fill")) {
+          objectFit = "fill";
+        } else if (restProps.className?.includes("object-none")) {
+          objectFit = "none";
+        } else if (restProps.className?.includes("object-scale-down")) {
+          objectFit = "scale-down";
+        }
+
+        return React.createElement("img", {
+          ...restProps,
+          style: {
+            ...restProps.style,
+            width: "100%",
+            height: "100%",
+            objectFit: objectFit,
+            position: "absolute",
+          },
+        });
+      }
+
+      // For non-fill images, use width and height if provided
+      return React.createElement("img", {
+        ...imgProps,
+        // Ensure src is always a string (handles data URLs)
+        src: imgProps.src || "",
+      });
+    },
+  };
+});
 
 // Suppress console errors/warnings in tests (optional, can be removed if you want to see them)
 // Uncomment if you want to suppress console output during tests
