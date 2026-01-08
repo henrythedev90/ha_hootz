@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Users, QrCode, Copy, Check, Shuffle, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePlayerColors } from "@/hooks/usePlayerColors";
+import Image from "next/image";
 
 interface Player {
   playerId: string;
@@ -152,16 +153,18 @@ export default function LobbyView({
               <div className="flex items-center gap-4">
                 <div className="flex flex-col items-center">
                   <QrCode className="w-5 h-5 text-[#22D3EE] mb-2" />
-                  <div className="w-[134px] h-[134px] bg-white rounded-lg p-2.5 flex items-center justify-center">
+                  <div className="relative w-[134px] h-[134px] bg-white rounded-lg p-2.5 flex items-center justify-center">
                     {qrLoading ? (
                       <div className="text-[#0B1020]/40 text-sm">
                         Loading...
                       </div>
                     ) : qrCodeDataUrl ? (
-                      <img
+                      <Image
                         src={qrCodeDataUrl}
                         alt="QR Code"
-                        className="w-full h-full object-contain"
+                        fill
+                        className="object-contain p-2"
+                        unoptimized
                       />
                     ) : (
                       <div className="text-red-500 text-sm text-center px-2">
@@ -311,7 +314,7 @@ export default function LobbyView({
                       {/* Avatar Pill */}
                       {player.avatarUrl ? (
                         <div
-                          className="w-8 h-8 rounded-full overflow-hidden ring-2 shadow-md shrink-0"
+                          className="relative w-8 h-8 rounded-full overflow-hidden ring-2 shadow-md shrink-0"
                           style={
                             playerColors[player.playerId]
                               ? {
@@ -327,10 +330,11 @@ export default function LobbyView({
                                 }
                           }
                         >
-                          <img
+                          <Image
                             src={player.avatarUrl}
                             alt={player.name}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
                           />
                         </div>
                       ) : (
