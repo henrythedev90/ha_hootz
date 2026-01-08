@@ -31,8 +31,15 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
 
 - **Lobby View**: Complete redesign with improved layout and organization:
 
+  - Single viewport, compact layout optimized for presentation-ready styling
+  - Two-column grid layout with vertical divider between sections
+  - Left column: Player preview with scrollable list
+  - Right column: Session info (QR code, session code, settings)
+  - Players list with bordered container (2px solid indigo border, 24px border-radius)
+  - Randomized colors and glow effects for player avatars
+  - Player avatars displayed with initials fallback
+  - Streak indicators (🔥) shown when players achieve streak thresholds
   - Compact header with border-bottom and connection status indicator
-  - Two-column grid layout (responsive on mobile)
   - Copy Link section in dedicated card with 3:1 flex ratio layout
   - QR Code section with centered display
   - Randomize Answer Choices toggle integrated into QR card
@@ -70,10 +77,14 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
 
 - **Game Stats Sidebar**: Enhanced player list with visual feedback:
 
+  - Players who have submitted answers show their selected avatar (or initial) instead of lightbulb emoji
   - Players who have submitted answers glow with success color (#22C55E)
   - Glow effect matches answer choice styling (shadow-[0_0_30px_rgba(34,197,94,0.3)])
   - Success-colored background and border for submitted players
   - Real-time visual indication of answer submission status
+  - Streak indicators (🔥) displayed when players achieve streak thresholds (configurable, default: 3+ consecutive correct)
+  - Players automatically appear in real-time without requiring page refresh
+  - Active players with streaks are highlighted during gameplay
 
 - **Winner Display**: Improved mobile experience:
 
@@ -100,15 +111,51 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
 
 - **Leaderboard Modal**: Enhanced animation system with Framer Motion layout animations and spring physics for smoother, more dynamic transitions when players reorder. Added visual enhancements including medal emojis (🥇🥈🥉) for top 3 positions and improved visual hierarchy with ring effects and leader banners.
 
-- **Modal Component**: Added configurable padding prop for flexible content spacing customization.
+- **Modal Component**: Added configurable padding prop for flexible content spacing customization. Centered title text alignment.
 
 - **Presentation Card**: Fixed button sizing inconsistencies and improved button dimensions for better usability and visual consistency.
+
+- **Avatar Selection System**: New player avatar selection feature:
+
+  - Players select an avatar after entering their nickname via `AvatarSelectionModal`
+  - Dark-themed modal with smooth animations and category filtering
+  - Avatar selection is required (modal cannot be closed without selection)
+  - Avatars stored in sessionStorage for clean URLs (no long URL parameters)
+  - Player avatars displayed throughout the game:
+    - Lobby view with randomized colors and glow effects
+    - GameStatsSidebar for submitted answers
+    - PlayersListModal with matching layout and styling
+    - Leaderboard displays with streak indicators
+  - Fallback to player initials if avatar not available
+  - Randomized border colors and glow effects for visual distinction
+
+- **Streak Feature UI**: Comprehensive streak tracking and display:
+
+  - Streak badges (🔥) appear when players achieve configurable streak thresholds
+  - Default threshold: 3+ consecutive correct answers (customizable in scoring config)
+  - Streaks displayed in:
+    - LobbyView player list
+    - GameStatsSidebar (Players and Leaderboard tabs)
+    - LeaderboardModal
+  - Streaks update in real-time when answers are revealed
+  - Host dashboard automatically receives streak updates via socket events
+  - Streak thresholds configurable per game session via scoring configuration
 
 ### Code Quality & Maintenance
 
 - **Component Cleanup**: Removed 42+ unused UI components from `components/ui` folder, keeping only actively used components (button, form, input, toggle-switch, utils) to reduce bundle size and improve maintainability.
 - **TypeScript Improvements**: Resolved type errors in QuestionDisplay component by removing redundant boolean comparisons that were causing type overlap issues.
 - **Next.js Compliance**: Fixed Suspense boundary requirement for `useSearchParams()` hook in authentication page to comply with Next.js 13+ requirements, ensuring proper static rendering support.
+- **Custom Hooks Refactoring**: Created reusable hooks for color generation:
+  - `useRandomColors`: Generic hook for generating random colors for any list of items
+  - `usePlayerColors`: Specific hook for player avatar color generation using `useRandomColors`
+  - Both hooks used in LobbyView and PlayersListModal for consistent color generation
+- **Utility Functions**: Created `generateAnswerColors` utility function in `lib/utils/colorUtils.ts` for answer option color generation, replacing redundant inline logic in game page.
+- **State Management Improvements**:
+  - Fixed stale closure issues in socket event handlers using `useRef` to track latest player state
+  - Updated `addPlayer` reducer to handle player updates (e.g., streak changes) instead of only adding new players
+  - Improved real-time synchronization between server and client for player data, avatars, and streaks
+- **URL Optimization**: Switched from passing avatar data in URL parameters to using sessionStorage, resulting in cleaner, shorter URLs and improved UX.
 
 ## Features
 
@@ -151,7 +198,7 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
     - Shows leaderboard with player scores
     - "Reveal Winner" button on last question
     - "End Game" button after winner is revealed
-  - **Real-Time Answer Tracking**: Lightbulb (💡) indicator shows which players have submitted answers
+  - **Real-Time Answer Tracking**: Player avatars (or initials) with success glow show which players have submitted answers
   - **Smart Answer Reveal**: Button only enabled when all connected players have submitted
   - **Timer Control**: Timer automatically stops (set to 0) when answer is revealed
   - **Question Navigation**: Navigate between questions with automatic state reset
@@ -183,6 +230,11 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
 - **Player Experience (Mobile-First)**
 
   - **Nickname Entry**: Full-screen form for entering player nickname with validation
+  - **Avatar Selection**: After entering nickname, players select an avatar from a curated collection:
+    - Dark-themed modal with smooth animations
+    - Category filtering (animals, tech, nature, etc.)
+    - Avatar selection required before joining game
+    - Avatars displayed throughout the game experience
   - **Lobby/Waiting Room**: Shows welcome message with host name and live player count
   - **Game Welcome Modal**: Displays when game session starts, welcoming player to the active game
   - **Active Question View**:
@@ -234,7 +286,10 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
   - **End Game**: Confirmation modal to end game session, disconnects all players
   - Session status checks (prevents access to ended sessions)
   - Real-time stats updates via Socket.io events
-  - Visual indicators (💡) showing which players have submitted answers
+  - Visual indicators showing which players have submitted answers (player avatars with success glow)
+  - **Player Avatars**: Displays player-selected avatars with randomized colors and glow effects
+  - **Streak Indicators**: Shows streak badges (🔥) when players achieve streak thresholds
+  - **Automatic Player Updates**: Players appear automatically in real-time without requiring page refresh
 
 - **User Experience**
   - Custom loading animations
@@ -351,10 +406,13 @@ npm run dev
 7. **Join as Player**:
    - Navigate to `/join/[sessionCode]` or scan QR code
    - Enter a unique nickname (validated in real-time)
+   - Select an avatar from the avatar selection modal
    - Join the lobby and wait for host to start
+   - Your avatar will be displayed throughout the game
    - Answer questions with large, touch-friendly buttons
    - See countdown timer and change answers while time is active
    - Answers auto-submit when timer expires
+   - Streak badges appear when you achieve consecutive correct answers
 
 ## Project Structure
 
@@ -398,11 +456,15 @@ ha-hootz/
 │   ├── Loading.tsx                        # Loading component with animation
 │   ├── SessionQRCode.tsx                  # QR code display component
 │   ├── PlayersListModal.tsx               # Modal showing joined players with countdown
+│   ├── AvatarSelectionModal.tsx          # Modal for players to select avatars
 │   ├── GameWelcomeModal.tsx               # Welcome modal for players when game starts
 │   ├── AnswerRevealModal.tsx              # Modal showing correct answer and distribution
 │   ├── WinnerDisplay.tsx                   # Full-screen winner announcement for players
 │   ├── ThankYouModal.tsx                  # Thank you modal when host ends game
 │   ├── CenteredLayout.tsx                 # Reusable centered layout component
+│   ├── LobbyView.tsx                      # Host lobby view with player list, QR code, and session info
+│   ├── GameStatsSidebar.tsx               # Host dashboard sidebar with player stats, leaderboard, and answer tracking
+│   ├── LeaderboardModal.tsx               # Full leaderboard modal with streak indicators
 │   └── Providers.tsx                      # Session provider wrapper
 ├── lib/
 │   ├── auth.ts                            # Session helper
@@ -410,7 +472,7 @@ ha-hootz/
 │   ├── mongodb.ts                          # MongoDB connection
 │   ├── redis/
 │   │   ├── client.ts                       # Redis connection (serverless-safe)
-│   │   ├── keys.ts                         # Redis key generators
+│   │   ├── keys.ts                         # Redis key generators (includes playerAvatarsKey, playerStreaksKey)
 │   │   └── triviaRedis.ts                  # Redis helpers for trivia sessions
 │   ├── socket/
 │   │   ├── server.ts                       # Socket.io server getter (accesses global instance)
@@ -421,17 +483,22 @@ ha-hootz/
 │   ├── types.ts                            # Trivia session types
 │   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
-│   └── utils.ts                            # Utility functions (generateId, formatDate)
+│   ├── utils.ts                            # Utility functions (generateId, formatDate)
+│   └── utils/
+│       └── colorUtils.ts                   # Color generation utilities (generateAnswerColors)
 ├── store/
 │   ├── index.ts                            # Redux store configuration
 │   ├── hooks.ts                            # Typed Redux hooks (useAppDispatch, useAppSelector)
 │   ├── StoreProvider.tsx                   # Redux Provider component for Next.js App Router
 │   └── slices/
 │       ├── gameSlice.ts                    # Game state slice (status, questions, review mode)
-│       ├── hostSlice.ts                    # Host state slice (players, stats, leaderboard)
+│       ├── hostSlice.ts                    # Host state slice (players with avatars and streaks, stats, leaderboard)
 │       ├── playerSlice.ts                  # Player state slice (answers, timer, leaderboard)
 │       ├── socketSlice.ts                  # Socket connection state slice
 │       └── uiSlice.ts                      # UI state slice (modals, errors, loading)
+├── hooks/
+│   ├── usePlayerColors.ts                  # Hook for generating random colors for player avatars
+│   └── useRandomColors.ts                  # Generic hook for generating random colors for any list
 ├── server.ts                               # Custom Next.js server with Socket.io integration
 └── types/
     ├── index.ts                            # TypeScript types
@@ -444,7 +511,8 @@ ha-hootz/
 
 - **`Modal.tsx`**: Base reusable modal component with customizable size, title, and content
 - **`DeleteConfirmationModal.tsx`**: Specialized modal for delete confirmations with customizable messages (supports player mode)
-- **`PlayersListModal.tsx`**: Modal showing joined players with countdown timer before starting game
+- **`PlayersListModal.tsx`**: Modal showing joined players with countdown timer before starting game. Displays player avatars with randomized colors and glow effects, matching LobbyView styling.
+- **`AvatarSelectionModal.tsx`**: Modal for players to select an avatar after entering their nickname. Features dark theme, category filtering, smooth animations, and requires selection before proceeding.
 - **`GameWelcomeModal.tsx`**: Enhanced welcome modal for players when game session starts. Features smooth animations, countdown timer (auto-closes after 5 seconds), animated icon, and staggered content reveals.
 - **`AnswerRevealModal.tsx`**: Modal displaying correct answer, answer distribution, leaderboard, and navigation controls
 - **`WinnerDisplay.tsx`**: Full-screen winner announcement component showing player rank and full leaderboard
@@ -545,7 +613,7 @@ ha-hootz/
 
 **Player Events (Client → Server):**
 
-- `join-session` - Join a game session (requires `sessionCode`, `name`)
+- `join-session` - Join a game session (requires `sessionCode`, `name`, `avatarUrl` optional)
 - `SUBMIT_ANSWER` - Submit or update an answer (requires `gameId`, `questionIndex`, `answer`)
 - `leave-game` - Player explicitly leaves the game (requires `sessionCode`)
 
@@ -561,7 +629,8 @@ ha-hootz/
   - `isReviewMode`: Boolean indicating if question is in review mode (previously answered)
   - `answerRevealed`: Boolean indicating if correct answer should be shown
   - `correctAnswer`: The correct answer option (A, B, C, or D) if in review mode
-- `player-joined` - Player joined session (includes `playerId`, `name`, `playerCount`)
+- `player-joined` - Player joined session (includes `playerId`, `name`, `avatarUrl`, `streak`, `playerCount`)
+- `player-streaks-updated` - Player streaks updated after answer reveal (includes `sessionCode`, `streaks` object mapping playerId to streak count)
 - `player-left` - Player left session (includes `playerId`, `playerCount`)
 - `answer-stats-updated` - Answer statistics updated (includes `questionIndex`, `answerCount`, `answerDistribution`, `playersWithAnswers`, `playerScores`)
 - `session-cancelled` - Session was cancelled (includes `sessionCode`, `message`)
@@ -569,9 +638,9 @@ ha-hootz/
 
 **Player Events:**
 
-- `joined-session` - Successfully joined session (includes `gameState`, `playerCount`, `playerAnswers`)
+- `joined-session` - Successfully joined session (includes `gameState`, `playerCount`, `playerAnswers`, `avatarUrl`)
 - `join-error` - Failed to join (includes `reason`)
-- `player-joined` - Another player joined (includes `playerId`, `name`, `playerCount`)
+- `player-joined` - Another player joined (includes `playerId`, `name`, `avatarUrl`, `streak`, `playerCount`)
 - `player-left` - A player left (includes `playerId`, `name`, `playerCount`)
 - `game-started` - Game has started (includes `status`, `questionIndex`)
 - `question-started` - New question is active (includes `question`, `questionIndex`, `endAt`)

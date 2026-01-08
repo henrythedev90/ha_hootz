@@ -6,6 +6,8 @@ import Modal from "./Modal";
 interface Player {
   playerId: string;
   name: string;
+  avatarUrl?: string;
+  streak?: number;
 }
 
 interface LeaderboardModalProps {
@@ -15,6 +17,7 @@ interface LeaderboardModalProps {
   playerScores: Record<string, number>;
   winnerRevealed: boolean;
   onEndGame: () => void;
+  streakThresholds?: number[];
 }
 
 export default function LeaderboardModal({
@@ -24,7 +27,11 @@ export default function LeaderboardModal({
   playerScores,
   winnerRevealed,
   onEndGame,
+  streakThresholds = [3, 5, 7], // Default thresholds
 }: LeaderboardModalProps) {
+  // Get the first threshold (streak doesn't start until this many consecutive correct)
+  const firstThreshold = streakThresholds.length > 0 ? streakThresholds[0] : 3;
+
   const leaderboard = players
     .map((player) => ({
       ...player,
@@ -148,17 +155,26 @@ export default function LeaderboardModal({
                           : `#${rank}`}
                       </motion.div>
                       <motion.div layout className="flex-1">
-                        <motion.span
-                          layout
-                          className={`text-lg font-semibold ${
-                            isWinner ? "text-cyan" : "text-text-light"
-                          }`}
-                        >
-                          {player.name}
-                          {isWinner && (
-                            <span className="ml-2 text-cyan/70">- Winner!</span>
+                        <div className="flex items-center gap-2">
+                          <motion.span
+                            layout
+                            className={`text-lg font-semibold ${
+                              isWinner ? "text-cyan" : "text-text-light"
+                            }`}
+                          >
+                            {player.name}
+                            {isWinner && (
+                              <span className="ml-2 text-cyan/70">
+                                - Winner!
+                              </span>
+                            )}
+                          </motion.span>
+                          {(player.streak ?? 0) >= firstThreshold && (
+                            <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
+                              You're on a streak! 🔥 + {player.streak}
+                            </span>
                           )}
-                        </motion.span>
+                        </div>
                       </motion.div>
                       <motion.span
                         layout

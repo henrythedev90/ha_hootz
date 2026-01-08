@@ -5,6 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Loading from "@/components/Loading";
+import {
+  AvatarSelectionModal,
+  Avatar,
+} from "@/components/AvatarSelectionModal";
 
 type Step = "code" | "nickname";
 
@@ -20,6 +24,8 @@ export default function JoinPage() {
   const [error, setError] = useState("");
   const [isValidSession, setIsValidSession] = useState(false);
   const [isSessionLocked, setIsSessionLocked] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [validatedNickname, setValidatedNickname] = useState("");
 
   useEffect(() => {
     if (urlSessionCode) {
@@ -124,15 +130,26 @@ export default function JoinPage() {
         return;
       }
 
-      // Redirect to game page - the game page will handle Socket.io join-session event
-      router.push(
-        `/game/${sessionCode}?name=${encodeURIComponent(nickname.trim())}`
-      );
+      // Show avatar selection modal instead of redirecting immediately
+      setValidatedNickname(nickname.trim());
+      setShowAvatarModal(true);
+      setSubmitting(false);
     } catch (err: any) {
       console.error("Error joining game:", err);
       setError("Failed to join game. Please try again.");
       setSubmitting(false);
     }
+  };
+
+  const handleAvatarSelect = (avatar: Avatar) => {
+    // Store avatar in sessionStorage for cleaner URLs
+    const storageKey = `avatar_${sessionCode}_${validatedNickname}`;
+    sessionStorage.setItem(storageKey, avatar.imageUrl);
+
+    // Redirect to game page with just the nickname
+    router.push(
+      `/game/${sessionCode}?name=${encodeURIComponent(validatedNickname)}`
+    );
   };
 
   // Update step when validation completes
@@ -313,6 +330,13 @@ export default function JoinPage() {
           Get ready for an exciting trivia experience! 🎉
         </motion.p>
       </motion.div>
+
+      {/* Avatar Selection Modal */}
+      <AvatarSelectionModal
+        isOpen={showAvatarModal}
+        playerName={validatedNickname}
+        onSelectAvatar={handleAvatarSelect}
+      />
     </div>
   );
 }
