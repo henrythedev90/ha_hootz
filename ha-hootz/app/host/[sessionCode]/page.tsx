@@ -506,6 +506,45 @@ export default function HostDashboard() {
         if (data.playerCount !== undefined) {
           dispatch(updateStats({ playerCount: data.playerCount }));
         }
+
+        // Recalculate answer count after player leaves
+        // This ensures answerCount only counts active players
+        const currentState = gameStateRef.current;
+        if (
+          currentState &&
+          currentState.questionIndex !== undefined &&
+          (currentState.status === "QUESTION_ACTIVE" ||
+            currentState.status === "IN_PROGRESS")
+        ) {
+          const questionIndex = currentState.questionIndex;
+          const fetchStats = async () => {
+            try {
+              const response = await fetch(
+                `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`
+              );
+              const statsData = await response.json();
+              if (statsData.success) {
+                dispatch(
+                  updateStats({
+                    answerCount: statsData.answerCount || 0,
+                    answerDistribution: statsData.answerDistribution || {
+                      A: 0,
+                      B: 0,
+                      C: 0,
+                      D: 0,
+                    },
+                    playersWithAnswers: statsData.playersWithAnswers || [],
+                    playerScores:
+                      statsData.playerScores || stats.playerScores || {},
+                  })
+                );
+              }
+            } catch (error) {
+              console.error("Error refreshing stats after player left:", error);
+            }
+          };
+          fetchStats();
+        }
       }
     );
 
