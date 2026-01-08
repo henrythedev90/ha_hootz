@@ -50,20 +50,22 @@ export default function GamePage() {
   const playerName = searchParams.get("name");
 
   // Get avatar from sessionStorage (stored during join flow)
-  // Use function initializer to read synchronously on client side
-  const [playerAvatar] = useState<{ imageUrl: string } | null>(() => {
-    if (typeof window === "undefined" || !playerName || !sessionCode) {
-      return null;
+  // Only read on client side to avoid hydration mismatch
+  const [playerAvatar, setPlayerAvatar] = useState<{ imageUrl: string } | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && playerName && sessionCode) {
+      const storageKey = `avatar_${sessionCode}_${playerName}`;
+      const storedAvatarUrl = sessionStorage.getItem(storageKey);
+      if (storedAvatarUrl) {
+        // Clean up after reading
+        sessionStorage.removeItem(storageKey);
+        setPlayerAvatar({ imageUrl: storedAvatarUrl });
+      }
     }
-    const storageKey = `avatar_${sessionCode}_${playerName}`;
-    const storedAvatarUrl = sessionStorage.getItem(storageKey);
-    if (storedAvatarUrl) {
-      // Clean up after reading
-      sessionStorage.removeItem(storageKey);
-      return { imageUrl: storedAvatarUrl };
-    }
-    return null;
-  });
+  }, [playerName, sessionCode]);
 
   // Redux state
   const dispatch = useAppDispatch();
@@ -91,6 +93,7 @@ export default function GamePage() {
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const gameStateRef = useRef(gameState);
+  const [mounted, setMounted] = useState(false);
   const [answerOrder, setAnswerOrder] = useState<{
     displayToActual: Record<string, "A" | "B" | "C" | "D">;
     actualToDisplay: Record<"A" | "B" | "C" | "D", string>;
@@ -98,6 +101,11 @@ export default function GamePage() {
   const [answerColors, setAnswerColors] = useState<
     Record<string, { color: string; rgba: string }>
   >({});
+
+  // Track if component is mounted (client-side only)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Keep gameStateRef in sync with Redux gameState
   useEffect(() => {
@@ -247,13 +255,14 @@ export default function GamePage() {
         );
         // Initialize answer order based on randomizeAnswers setting
         // Only set if there's an active question, otherwise wait for question-started
+        // Only generate random values on client side (after hydration)
         const shouldRandomize = data.gameState.randomizeAnswers ?? false;
         if (
           data.gameState.status === "QUESTION_ACTIVE" &&
           data.gameState.question
         ) {
-          if (shouldRandomize) {
-            // Generate random order for this player
+          if (shouldRandomize && mounted) {
+            // Generate random order for this player (only on client)
             const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
             const shuffled = [...options].sort(() => Math.random() - 0.5);
             const displayLetters = ["A", "B", "C", "D"];
@@ -270,7 +279,7 @@ export default function GamePage() {
 
             setAnswerOrder({ displayToActual, actualToDisplay });
           } else {
-            // No randomization - use identity mapping
+            // No randomization or not mounted yet - use identity mapping
             setAnswerOrder({
               displayToActual: { A: "A", B: "B", C: "C", D: "D" },
               actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
@@ -371,11 +380,14 @@ export default function GamePage() {
         const shouldRandomize = data.randomizeAnswers ?? false;
 
         // Generate random colors for each answer option (for UX purposes)
-        const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
-        setAnswerColors(newAnswerColors);
+        // Only generate on client side (after hydration)
+        if (mounted) {
+          const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
+          setAnswerColors(newAnswerColors);
+        }
 
-        if (shouldRandomize) {
-          // Generate random order for this player
+        if (shouldRandomize && mounted) {
+          // Generate random order for this player (only on client)
           const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
           const shuffled = [...options].sort(() => Math.random() - 0.5);
           const displayLetters = ["A", "B", "C", "D"];
@@ -392,7 +404,7 @@ export default function GamePage() {
 
           setAnswerOrder({ displayToActual, actualToDisplay });
         } else {
-          // No randomization - use identity mapping
+          // No randomization or not mounted yet - use identity mapping
           setAnswerOrder({
             displayToActual: { A: "A", B: "B", C: "C", D: "D" },
             actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
@@ -440,13 +452,16 @@ export default function GamePage() {
         const shouldRandomize = data.randomizeAnswers ?? false;
 
         // Generate random colors for each answer option (for UX purposes)
-        const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
-        setAnswerColors(newAnswerColors);
+        // Only generate on client side (after hydration)
+        if (mounted) {
+          const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
+          setAnswerColors(newAnswerColors);
+        }
 
         let actualToDisplay: Record<"A" | "B" | "C" | "D", string>;
 
-        if (shouldRandomize) {
-          // Generate random order for this player for this question
+        if (shouldRandomize && mounted) {
+          // Generate random order for this player for this question (only on client)
           const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
           const shuffled = [...options].sort(() => Math.random() - 0.5);
           const displayLetters = ["A", "B", "C", "D"];
@@ -462,7 +477,7 @@ export default function GamePage() {
 
           setAnswerOrder({ displayToActual, actualToDisplay });
         } else {
-          // No randomization - use identity mapping
+          // No randomization or not mounted yet - use identity mapping
           actualToDisplay = { A: "A", B: "B", C: "C", D: "D" };
           setAnswerOrder({
             displayToActual: { A: "A", B: "B", C: "C", D: "D" },
