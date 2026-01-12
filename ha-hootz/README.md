@@ -4,6 +4,58 @@ A Mentimeter/Kahoot-style trivia game application built with Next.js 16, TypeScr
 
 ## Recent Updates
 
+#### Test Coverage Improvements
+
+- **Enhanced Jest Test Coverage**: Significantly improved test coverage for high-value game logic areas:
+  - **Scoring Calculations** (`lib/scoring/calculateScore.test.ts`): Added comprehensive tests for:
+    - Time bonus calculations with various configurations
+    - Streak bonus calculations with different thresholds
+    - Combined bonus scenarios (time + streak)
+    - Edge cases and boundary values
+    - Score calculation with disabled bonuses
+  - **Redis Operations** (`lib/redis/triviaRedis.test.ts`): Added tests for:
+    - Player streak management (`getPlayerStreak`, `updatePlayerStreak`)
+    - Answer timestamp tracking (`storeAnswerTimestamp`, `getAnswerTimestamp`)
+    - Score calculations (`calculatePlayerScore`, `calculateQuestionScores`)
+  - **Socket Handlers** (`lib/socket/handlers/player.handlers.test.ts`): Added tests for:
+    - Answer submission and validation
+    - Answer change handling
+    - Expiration logic
+    - Error handling for invalid submissions
+  - **Redis Mock Extensions**: Extended `__mocks__/redis.ts` to support additional Redis operations:
+    - `hExists`, `hSetNX`, `zRangeWithScores`
+    - `sAdd`, `sRem`, `sMembers` (set operations)
+    - `exists`, `expire` (key management)
+
+#### Mobile UI Optimizations
+
+- **Game Page Mobile Optimization** (`app/game/[sessionCode]/page.tsx`):
+  - Fine-tuned sizing after initial reduction for optimal mobile experience:
+  - Slightly increased padding, font sizes, and spacing
+  - Improved readability while maintaining mobile fit
+  - Better balance between compactness and usability
+  - **Sticky Timer Implementation**:
+    - Timer now sticks to the top of the viewport with `sticky top-0` positioning
+    - Added backdrop blur effect for better visibility
+    - Timer remains visible during scrolling, ensuring players always see time remaining
+    - Added 40px top padding to timer container for proper spacing
+  - **Conditional Padding**:
+    - Player name section padding adjusts based on game state:
+      - No padding when timer is active (to prevent excessive spacing)
+      - No padding when result messages are displayed
+      - Padding applied only when appropriate for optimal layout
+
+#### Hydration Error Fixes
+
+- **Fixed React Hydration Mismatches**:
+  - **SessionStorage Access**: Moved `sessionStorage` access from `useState` initializer to `useEffect` to prevent SSR/client mismatches
+    - Avatar data now loaded client-side only after component mount
+    - Prevents hydration errors from server/client state differences
+  - **Date.now() Usage**: Fixed timer percentage calculation to use `timeRemaining` state instead of `Date.now()`
+    - Eliminates hydration mismatches from server/client time differences
+    - Timer percentage now calculated from Redux state (`timeRemaining`) which is updated via `useEffect`
+    - Ensures consistent values between server and client renders
+
 ### UI/UX Enhancements
 
 - **Loading Component**: Completely redesigned with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Reusable across the application for consistent loading states. Supports both full-screen and inline modes. Used throughout the application:
