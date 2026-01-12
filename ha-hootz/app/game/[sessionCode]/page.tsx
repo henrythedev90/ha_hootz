@@ -50,20 +50,23 @@ export default function GamePage() {
   const playerName = searchParams.get("name");
 
   // Get avatar from sessionStorage (stored during join flow)
-  // Use function initializer to read synchronously on client side
-  const [playerAvatar] = useState<{ imageUrl: string } | null>(() => {
-    if (typeof window === "undefined" || !playerName || !sessionCode) {
-      return null;
+  // Initialize as null to avoid hydration mismatch, then read in useEffect
+  const [playerAvatar, setPlayerAvatar] = useState<{ imageUrl: string } | null>(
+    null
+  );
+
+  // Read avatar from sessionStorage on client side only
+  useEffect(() => {
+    if (typeof window !== "undefined" && playerName && sessionCode) {
+      const storageKey = `avatar_${sessionCode}_${playerName}`;
+      const storedAvatarUrl = sessionStorage.getItem(storageKey);
+      if (storedAvatarUrl) {
+        // Clean up after reading
+        sessionStorage.removeItem(storageKey);
+        setPlayerAvatar({ imageUrl: storedAvatarUrl });
+      }
     }
-    const storageKey = `avatar_${sessionCode}_${playerName}`;
-    const storedAvatarUrl = sessionStorage.getItem(storageKey);
-    if (storedAvatarUrl) {
-      // Clean up after reading
-      sessionStorage.removeItem(storageKey);
-      return { imageUrl: storedAvatarUrl };
-    }
-    return null;
-  });
+  }, [playerName, sessionCode]);
 
   // Redux state
   const dispatch = useAppDispatch();
@@ -634,13 +637,13 @@ export default function GamePage() {
     const displayMessage = isGoodbye ? error.replace("GOODBYE: ", "") : error;
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-4">
+        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-8 max-w-md w-full text-center"
+            className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-7 max-w-md w-full text-center"
           >
-            <h1 className="text-2xl font-bold mb-4">
+            <h1 className="text-2xl font-bold mb-3.5">
               {isGoodbye ? (
                 <span className="text-indigo">Goodbye!</span>
               ) : isCancelled ? (
@@ -649,20 +652,22 @@ export default function GamePage() {
                 <span className="text-error">Error</span>
               )}
             </h1>
-            <p className="text-text-light/70 mb-6">{displayMessage}</p>
+            <p className="text-base text-text-light/70 mb-4.5">
+              {displayMessage}
+            </p>
             {isGoodbye ? (
-              <div className="space-y-4">
-                <p className="text-sm text-text-light/50">
+              <div className="space-y-3">
+                <p className="text-xs text-text-light/50">
                   Thanks for playing! You can close this page.
                 </p>
                 {playerName && (
-                  <div className="pt-4 border-t border-indigo/30">
-                    <p className="text-sm text-text-light/70 mb-3">
+                  <div className="pt-3 border-t border-indigo/30">
+                    <p className="text-xs text-text-light/70 mb-2">
                       Hey {playerName}! Did you enjoy playing?
                     </p>
                     <button
                       onClick={() => (window.location.href = "/auth/signup")}
-                      className="w-full px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md"
+                      className="w-full px-4 py-2 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md text-sm"
                     >
                       Create Your Own Ha-Hootz Account
                     </button>
@@ -674,18 +679,18 @@ export default function GamePage() {
                 )}
               </div>
             ) : isCancelled ? (
-              <div className="space-y-4">
-                <p className="text-sm text-text-light/50">
+              <div className="space-y-3">
+                <p className="text-xs text-text-light/50">
                   The host has ended this session. You can close this page.
                 </p>
                 {playerName && (
-                  <div className="pt-4 border-t border-indigo/30">
-                    <p className="text-sm text-text-light/70 mb-3">
+                  <div className="pt-3 border-t border-indigo/30">
+                    <p className="text-xs text-text-light/70 mb-2">
                       Hey {playerName}! Did you enjoy playing?
                     </p>
                     <button
                       onClick={() => (window.location.href = "/auth/signup")}
-                      className="w-full px-6 py-3 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md"
+                      className="w-full px-4 py-2 bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors font-medium shadow-md text-sm"
                     >
                       Create Your Own Ha-Hootz Account
                     </button>
@@ -697,7 +702,7 @@ export default function GamePage() {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-text-light/50">
+              <p className="text-xs text-text-light/50">
                 Please check your connection and try again.
               </p>
             )}
@@ -737,28 +742,28 @@ export default function GamePage() {
     return (
       <>
         <CenteredLayout>
-          <div className="bg-card-bg rounded-lg shadow-md p-8 max-w-md w-full text-center">
-            <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
+          <div className="bg-card-bg rounded-lg shadow-md p-7 max-w-md w-full text-center">
+            <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-3.5">
               Game Session Ended
             </h1>
-            <p className="text-text-light/70 mb-6">
+            <p className="text-base text-text-light/70 mb-4.5">
               This game session has ended. You can close this page.
             </p>
             {hostName && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3.5">
                 Thanks for playing {hostName}'s game!
               </p>
             )}
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <a
                 href="/"
-                className="block w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+                className="block w-full px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md text-base"
               >
                 Go to Dashboard
               </a>
               <button
                 onClick={() => (window.location.href = "/auth/signup")}
-                className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium shadow-md"
+                className="w-full px-5 py-2.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium shadow-md text-base"
               >
                 Create Your Own Ha-Hootz Account
               </button>
@@ -812,10 +817,10 @@ export default function GamePage() {
   if (gameState.status === "WAITING") {
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-4">
+        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
           <button
             onClick={handleExitGame}
-            className="absolute top-4 right-4 w-10 h-10 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+            className="absolute top-3 right-3 w-9 h-9 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
             title="Exit Game"
           >
             <X className="w-5 h-5" />
@@ -826,15 +831,15 @@ export default function GamePage() {
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-md"
           >
-            <div className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-8 text-center">
+            <div className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-7 text-center">
               <motion.h1
                 initial={{ y: -20 }}
                 animate={{ y: 0 }}
-                className="text-4xl font-bold mb-4 bg-linear-to-r from-indigo to-cyan bg-clip-text text-transparent"
+                className="text-3xl font-bold mb-3.5 bg-linear-to-r from-indigo to-cyan bg-clip-text text-transparent"
               >
                 Welcome to Ha-Hootz!
               </motion.h1>
-              <p className="text-text-light/70 mb-6 text-lg">
+              <p className="text-text-light/70 mb-4.5 text-base">
                 You're all set! We're waiting for{" "}
                 {hostName ? (
                   <span className="font-semibold text-cyan">{hostName}</span>
@@ -848,12 +853,12 @@ export default function GamePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="pt-4 border-t border-indigo/30"
+                  className="pt-3.5 border-t border-indigo/30"
                 >
-                  <p className="text-text-light/50 text-sm mb-1">
+                  <p className="text-text-light/50 text-xs mb-1.5">
                     Players in lobby
                   </p>
-                  <p className="text-3xl font-semibold text-cyan">
+                  <p className="text-2xl font-semibold text-cyan">
                     {playerCount} {playerCount === 1 ? "player" : "players"}
                   </p>
                 </motion.div>
@@ -906,32 +911,34 @@ export default function GamePage() {
     const questionCount = gameState.questionCount ?? 0;
 
     // Calculate timer percentage using actual question duration
+    // Calculate from timeRemaining to avoid hydration mismatch with Date.now()
     const questionDuration = (gameState.scoringConfig as any)?.questionDuration
-      ? (gameState.scoringConfig as any).questionDuration * 1000
-      : 30000; // Default to 30 seconds
-    const timerPercentage = gameState.endAt
-      ? Math.max(0, ((gameState.endAt - Date.now()) / questionDuration) * 100)
-      : 0;
+      ? (gameState.scoringConfig as any).questionDuration
+      : 30; // Default to 30 seconds
+    const timerPercentage =
+      isQuestionActive && timeRemaining > 0
+        ? Math.max(0, (timeRemaining / questionDuration) * 100)
+        : 0;
 
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex flex-col p-4 md:p-8">
+        <div className="min-h-screen bg-deep-navy text-text-light flex flex-col p-3 md:p-5">
           {/* Exit Button */}
           <button
             onClick={handleExitGame}
-            className="absolute top-4 right-4 w-10 h-10 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+            className="absolute top-3 right-3 w-9 h-9 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
             title="Exit Game"
           >
             <X className="w-5 h-5" />
           </button>
 
-          {/* Timer */}
+          {/* Sticky Timer */}
           {isQuestionActive && (
-            <div className="mb-8">
+            <div className="sticky top-0 z-20 bg-deep-navy/95 backdrop-blur-sm pt-[40px] pb-2.5 mb-3.5">
               <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-text-light/60">
-                    Question {questionIndex + 1} of {questionCount}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-text-light/60">
+                    Q{questionIndex + 1}/{questionCount}
                   </span>
                   <span
                     className={`text-2xl font-bold ${
@@ -945,7 +952,7 @@ export default function GamePage() {
                     {timeRemaining}s
                   </span>
                 </div>
-                <div className="relative h-3 bg-card-bg rounded-full overflow-hidden">
+                <div className="relative h-2.5 bg-card-bg rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: "100%" }}
                     animate={{
@@ -972,14 +979,20 @@ export default function GamePage() {
           )}
 
           {/* Question */}
-          <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full">
+          <div className="flex-1 flex flex-col justify-start max-w-4xl mx-auto w-full">
             {playerName && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center mb-6"
+                className={`text-center mb-3.5 ${
+                  !isQuestionActive &&
+                  !gameState.answerRevealed &&
+                  !isTimerExpired
+                    ? "pt-19"
+                    : ""
+                }`}
               >
-                <h1 className="text-2xl md:text-3xl font-bold text-text-light">
+                <h1 className="text-xl md:text-2xl font-bold text-text-light">
                   {playerName}
                 </h1>
               </motion.div>
@@ -988,14 +1001,14 @@ export default function GamePage() {
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-3xl md:text-5xl font-bold text-center mb-12 text-text-light"
+              className="text-2xl md:text-4xl font-bold text-center mb-5 text-text-light"
             >
               {gameState.question.text}
             </motion.h1>
 
             {/* Answer Buttons */}
             {showAnswerButtons && answerOrder ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {(["A", "B", "C", "D"] as const).map((displayOption, index) => {
                   // Get the actual answer option that this display option represents
                   const actualOption =
@@ -1040,16 +1053,16 @@ export default function GamePage() {
                       key={displayOption}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.1 }}
-                      whileHover={!isLocked ? { scale: 1.03 } : {}}
-                      whileTap={!isLocked ? { scale: 0.97 } : {}}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={!isLocked ? { scale: 1.02 } : {}}
+                      whileTap={!isLocked ? { scale: 0.98 } : {}}
                       onClick={() => handleAnswerSelect(displayOption)}
                       disabled={isLocked}
-                      className={`relative p-6 md:p-8 rounded-2xl border-3 transition-all text-left ${
+                      className={`relative p-3.5 md:p-5 rounded-xl border-2 transition-all text-left ${
                         showCorrect
-                          ? "bg-success/20 border-success shadow-[0_0_30px_rgba(34,197,94,0.3)]"
+                          ? "bg-success/20 border-success shadow-[0_0_20px_rgba(34,197,94,0.3)]"
                           : showWrong
-                          ? "bg-error/20 border-error shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+                          ? "bg-error/20 border-error shadow-[0_0_20px_rgba(239,68,68,0.3)]"
                           : isSelectedState
                           ? "bg-card-bg/80"
                           : "bg-card-bg hover:bg-card-bg/80"
@@ -1062,14 +1075,14 @@ export default function GamePage() {
                         borderColor && glowColor
                           ? {
                               borderColor: borderColor,
-                              boxShadow: `0 0 30px ${glowColor}`,
+                              boxShadow: `0 0 20px ${glowColor}`,
                             }
                           : {}
                       }
                     >
-                      <div className="flex items-start gap-4">
+                      <div className="flex items-start gap-3">
                         <div
-                          className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl ${
+                          className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${
                             showCorrect
                               ? "bg-success text-white"
                               : showWrong
@@ -1085,16 +1098,16 @@ export default function GamePage() {
                           }
                         >
                           {showCorrect ? (
-                            <Check className="w-6 h-6" />
+                            <Check className="w-4.5 h-4.5" />
                           ) : showWrong ? (
-                            <X className="w-6 h-6" />
+                            <X className="w-5 h-5" />
                           ) : (
                             displayOption
                           )}
                         </div>
-                        <div className="flex-1 pt-2">
+                        <div className="flex-1 pt-1.5">
                           <p
-                            className={`text-lg md:text-2xl text-text-light ${
+                            className={`text-base md:text-lg text-text-light ${
                               showCorrect || showWrong ? "font-semibold" : ""
                             }`}
                           >
@@ -1108,7 +1121,7 @@ export default function GamePage() {
                         <motion.div
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          className="absolute top-4 right-4 bg-cyan text-deep-navy px-3 py-1 rounded-full text-sm font-medium"
+                          className="absolute top-2.5 right-2.5 bg-cyan text-deep-navy px-2.5 py-1 rounded-full text-xs font-medium"
                         >
                           Locked ✓
                         </motion.div>
@@ -1118,15 +1131,15 @@ export default function GamePage() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 mb-4">
-                <div className="bg-card-bg border border-indigo/30 rounded-lg p-6">
+              <div className="text-center py-5 mb-2.5">
+                <div className="bg-card-bg border border-indigo/30 rounded-lg p-5">
                   <Loading
                     message="Waiting for host to start the question..."
                     fullScreen={false}
                     variant="pulse"
                     size="medium"
                   />
-                  <p className="text-sm text-text-light/50 mt-4">
+                  <p className="text-xs text-text-light/50 mt-2.5">
                     Answer buttons will appear when the question begins
                   </p>
                 </div>
@@ -1140,10 +1153,10 @@ export default function GamePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="mt-8 text-center"
+                  className="mt-3.5 text-center"
                 >
-                  <div className="bg-card-bg border border-indigo/30 rounded-2xl p-6">
-                    <p className="text-text-light/70">
+                  <div className="bg-card-bg border border-indigo/30 rounded-xl p-3.5">
+                    <p className="text-base text-text-light/70">
                       Time's up! Your answer has been submitted.
                     </p>
                   </div>
@@ -1155,7 +1168,7 @@ export default function GamePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className={`mt-8 p-6 rounded-2xl text-center ${
+                  className={`mt-3.5 p-5 rounded-xl text-center ${
                     answerOrder.displayToActual[selectedAnswer] ===
                     gameState.correctAnswer
                       ? "bg-success/20 border-2 border-success"
@@ -1170,19 +1183,21 @@ export default function GamePage() {
                     {answerOrder.displayToActual[selectedAnswer] ===
                     gameState.correctAnswer ? (
                       <div>
-                        <div className="text-6xl mb-3">🎉</div>
-                        <h2 className="text-3xl font-bold text-success mb-2">
+                        <div className="text-5xl mb-2.5">🎉</div>
+                        <h2 className="text-2xl font-bold text-success mb-1.5">
                           Correct!
                         </h2>
-                        <p className="text-text-light/70">Great job!</p>
+                        <p className="text-base text-text-light/70">
+                          Great job!
+                        </p>
                       </div>
                     ) : (
                       <div>
-                        <div className="text-6xl mb-3">😔</div>
-                        <h2 className="text-3xl font-bold text-error mb-2">
+                        <div className="text-5xl mb-2.5">😔</div>
+                        <h2 className="text-2xl font-bold text-error mb-1.5">
                           Wrong Answer
                         </h2>
-                        <p className="text-text-light/70">
+                        <p className="text-base text-text-light/70">
                           Correct answer:{" "}
                           {gameState.correctAnswer &&
                             answerOrder.actualToDisplay[
@@ -1200,10 +1215,10 @@ export default function GamePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="mt-8 text-center"
+                  className="mt-3.5 text-center"
                 >
-                  <div className="bg-card-bg border border-indigo/30 rounded-2xl p-6">
-                    <p className="text-text-light/70">
+                  <div className="bg-card-bg border border-indigo/30 rounded-xl p-3.5">
+                    <p className="text-base text-text-light/70">
                       The correct answer has been revealed!
                     </p>
                   </div>
@@ -1216,7 +1231,7 @@ export default function GamePage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="mt-8 text-center"
+                className="mt-3.5 text-center"
               >
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -1225,9 +1240,11 @@ export default function GamePage() {
                     duration: 2,
                     ease: "linear",
                   }}
-                  className="w-12 h-12 border-4 border-indigo border-t-transparent rounded-full mx-auto mb-4"
+                  className="w-9 h-9 border-3 border-indigo border-t-transparent rounded-full mx-auto mb-2.5"
                 />
-                <p className="text-text-light/70">Waiting for results...</p>
+                <p className="text-base text-text-light/70">
+                  Waiting for results...
+                </p>
               </motion.div>
             )}
           </div>
@@ -1265,13 +1282,13 @@ export default function GamePage() {
   // Fallback: Game in progress but no question active yet
   return (
     <>
-      <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-4">
+      <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
         <button
           onClick={handleExitGame}
-          className="absolute top-4 right-4 w-10 h-10 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
+          className="absolute top-3 right-3 w-9 h-9 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
           title="Exit Game"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4.5 h-4.5" />
         </button>
 
         <motion.div
@@ -1279,13 +1296,15 @@ export default function GamePage() {
           animate={{ opacity: 1, scale: 1 }}
           className="w-full max-w-md"
         >
-          <div className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-8 text-center">
+          <div className="bg-card-bg rounded-xl border border-indigo/20 shadow-lg p-7 text-center">
             {gameState.status === "QUESTION_ENDED" ? (
               <>
-                <h2 className="text-xl font-semibold text-text-light mb-4">
+                <h2 className="text-xl font-semibold text-text-light mb-3.5">
                   Question ended
                 </h2>
-                <p className="text-text-light/70">Waiting for next question.</p>
+                <p className="text-base text-text-light/70">
+                  Waiting for next question.
+                </p>
               </>
             ) : (
               <Loading
