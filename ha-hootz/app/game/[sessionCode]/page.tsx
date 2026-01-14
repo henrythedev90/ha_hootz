@@ -650,7 +650,7 @@ export default function GamePage() {
     const displayMessage = isGoodbye ? error.replace("GOODBYE: ", "") : error;
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
+        <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -830,7 +830,7 @@ export default function GamePage() {
   if (gameState.status === "WAITING") {
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
+        <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
           <button
             onClick={handleExitGame}
             className="absolute top-3 right-3 w-9 h-9 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
@@ -935,7 +935,7 @@ export default function GamePage() {
 
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex flex-col p-3 md:p-5">
+        <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex flex-col p-3 md:p-5">
           {/* Exit Button */}
           <button
             onClick={handleExitGame}
@@ -992,7 +992,7 @@ export default function GamePage() {
           )}
 
           {/* Question */}
-          <div className="flex-1 flex flex-col justify-start max-w-4xl mx-auto w-full">
+          <div className="flex-1 flex flex-col justify-start max-w-4xl mx-auto w-full min-h-0">
             {playerName && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -1295,7 +1295,7 @@ export default function GamePage() {
   // Fallback: Game in progress but no question active yet
   return (
     <>
-      <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
+      <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
         <button
           onClick={handleExitGame}
           className="absolute top-3 right-3 w-9 h-9 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"

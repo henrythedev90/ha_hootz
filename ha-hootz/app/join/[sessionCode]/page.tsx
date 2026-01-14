@@ -166,7 +166,7 @@ export default function JoinPage() {
   if (!isValidSession && step === "nickname" && urlSessionCode) {
     // If we have URL code but validation failed, show error
     return (
-      <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-4">
+      <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -192,28 +192,30 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-4">
+    <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md flex flex-col items-center justify-center"
       >
         {/* Logo */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-4 md:mb-8">
           <motion.h1
             initial={{ y: -20 }}
             animate={{ y: 0 }}
-            className="text-6xl font-bold mb-4 bg-linear-to-r from-indigo to-cyan bg-clip-text text-transparent"
+            className="text-4xl md:text-6xl font-bold mb-2 md:mb-4 bg-linear-to-r from-indigo to-cyan bg-clip-text text-transparent"
           >
             Ha-Hootz
           </motion.h1>
-          <p className="text-xl text-text-light/70">Join the game!</p>
+          <p className="text-base md:text-xl text-text-light/70">
+            Join the game!
+          </p>
         </div>
 
         {/* Form Card */}
         <motion.div
           layout
-          className="bg-card-bg rounded-2xl p-8 border-2 border-indigo/30 shadow-xl"
+          className="bg-card-bg rounded-2xl p-4 md:p-8 border-2 border-indigo/30 shadow-xl w-full"
         >
           {step === "code" ? (
             <form onSubmit={handleSubmitCode} className="space-y-6">
@@ -325,7 +327,7 @@ export default function JoinPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="text-center mt-8 text-text-light/50"
+          className="text-center mt-3 md:mt-6 text-text-light/50 text-sm"
         >
           Get ready for an exciting trivia experience! 🎉
         </motion.p>

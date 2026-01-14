@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Presentation } from "@/types";
@@ -22,6 +22,7 @@ export default function Home() {
   const [presentationToDelete, setPresentationToDelete] =
     useState<Presentation | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -31,8 +32,12 @@ export default function Home() {
       return;
     }
 
+    // Prevent duplicate calls
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
     loadPresentations();
-  }, [session, status, router]);
+  }, [session, status]); // Removed router from dependencies - it's stable
 
   const loadPresentations = async () => {
     try {
@@ -61,6 +66,7 @@ export default function Home() {
     try {
       setDeleting(true);
       await deletePresentation(presentationToDelete.id);
+      hasLoadedRef.current = false; // Reset to allow reload after delete
       await loadPresentations();
       setDeleteModalOpen(false);
       setPresentationToDelete(null);
