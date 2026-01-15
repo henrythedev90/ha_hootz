@@ -125,6 +125,8 @@ export default function GamePage() {
   }, [sessionCode, playerName, dispatch]);
 
   // Check session status and fetch host name when component mounts
+  // Players can join at any time during active sessions (waiting, live, in-progress)
+  // Only block joining if session has ended
   useEffect(() => {
     const checkSessionStatus = async () => {
       try {
@@ -133,6 +135,7 @@ export default function GamePage() {
         );
         const validateData = await validateResponse.json();
 
+        // Only block if session has ended - players can join during active games
         if (validateData.sessionStatus === "ended") {
           dispatch(setSessionEnded(true));
           return;
@@ -247,6 +250,13 @@ export default function GamePage() {
         if (data.playerId) {
           dispatch(setPlayerId(data.playerId));
         }
+
+        // Check if player is joining mid-game (game already in progress)
+        const isJoiningMidGame =
+          data.gameState.status === "QUESTION_ACTIVE" ||
+          data.gameState.status === "IN_PROGRESS" ||
+          data.gameState.status === "QUESTION_ENDED";
+
         dispatch(
           setGameState({
             ...data.gameState,
@@ -254,6 +264,19 @@ export default function GamePage() {
             randomizeAnswers: data.gameState.randomizeAnswers ?? false,
           })
         );
+
+        // Generate answer colors if joining during an active question
+        // Players can join at any time, so generate colors immediately if question is active
+        if (
+          (data.gameState.status === "QUESTION_ACTIVE" ||
+            data.gameState.status === "QUESTION_ENDED") &&
+          data.gameState.question &&
+          mounted
+        ) {
+          const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
+          setAnswerColors(newAnswerColors);
+        }
+
         // Initialize answer order based on randomizeAnswers setting
         // Only set if there's an active question, otherwise wait for question-started
         // Only generate random values on client side (after hydration)
@@ -293,9 +316,12 @@ export default function GamePage() {
             actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
           });
         }
+
         if (data.playerCount !== undefined) {
           dispatch(setPlayerCount(data.playerCount));
         }
+
+        // Restore player's previous answer if they had one for the current question
         if (
           data.gameState.playerAnswers &&
           data.gameState.questionIndex !== undefined
@@ -306,8 +332,20 @@ export default function GamePage() {
             dispatch(setSelectedAnswer(prevAnswer as "A" | "B" | "C" | "D"));
           }
         }
+
+        // Set timer state based on current question status
         if (data.gameState.status === "QUESTION_ACTIVE") {
           dispatch(setIsTimerExpired(false));
+          // Timer will be handled by the timer effect based on endAt
+        } else if (data.gameState.status === "QUESTION_ENDED") {
+          dispatch(setIsTimerExpired(true));
+          dispatch(setTimeRemaining(0));
+        }
+
+        // Don't show welcome modal if joining mid-game
+        // Welcome modal should only show when game starts, not when joining mid-game
+        if (isJoiningMidGame) {
+          dispatch(setShowWelcomeModal(false));
         }
       }
     );

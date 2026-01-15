@@ -75,13 +75,14 @@ export async function GET(
       });
     }
 
-    // For player joins, check if session is locked/live (prevent new joins)
-    if (session.status === "live" || session.status === "ended") {
+    // For player joins, only block if session has ended
+    // Allow joining during "live" sessions (players can join anytime)
+    if (session.status === "ended") {
       return NextResponse.json(
         {
           isValid: false,
           sessionStatus: session.status,
-          error: "Game has already started. New players cannot join.",
+          error: "This game session has ended. The host has closed the game.",
         },
         { status: 200 }
       );

@@ -60,10 +60,10 @@ export default function JoinPage() {
         return;
       }
 
-      // Check if session is locked
-      if (data.sessionStatus === "live" || data.sessionStatus === "ended") {
+      // Only block if session has ended (allow joining during live sessions)
+      if (data.sessionStatus === "ended") {
         setIsSessionLocked(true);
-        setError("This game has already started. New players cannot join.");
+        setError("This game session has ended. The host has closed the game.");
         setIsValidSession(false);
         setLoading(false);
         return;

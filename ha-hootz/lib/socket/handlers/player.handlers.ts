@@ -124,13 +124,12 @@ export function registerPlayerHandlers(io: Server, socket: Socket) {
         playerId = existingPlayerId;
         isReconnection = true;
       } else {
-        // New player - check if session is locked/live (prevent new joins)
-        if (session.status === "live" || session.status === "ended") {
+        // New player - only block if session has ended
+        // Allow joining during "live" sessions (players can join anytime)
+        if (session.status === "ended") {
           socket.emit("join-error", {
             reason:
-              session.status === "ended"
-                ? "This game session has ended. The host has closed the game."
-                : "Game has already started. New players cannot join.",
+              "This game session has ended. The host has closed the game.",
           });
           return;
         }

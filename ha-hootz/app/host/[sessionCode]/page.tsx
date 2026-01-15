@@ -14,6 +14,7 @@ import LiveGameHeader from "@/components/LiveGameHeader";
 import QuestionDisplay from "@/components/QuestionDisplay";
 import GameStatsSidebar from "@/components/GameStatsSidebar";
 import ConfettiEffect from "@/components/ConfettiEffect";
+import ActiveGameJoinInfo from "@/components/ActiveGameJoinInfo";
 import { useSession } from "next-auth/react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -1033,6 +1034,7 @@ export default function HostDashboard() {
                 onRevealWinner={handleRevealWinner}
                 onViewLeaderboard={() => setShowLeaderboard(true)}
               />
+              <ActiveGameJoinInfo sessionCode={sessionCode} />
             </div>
 
             {/* Right Column - Stats/Players/Leaderboard */}
