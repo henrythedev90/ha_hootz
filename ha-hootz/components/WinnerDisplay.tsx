@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 interface Player {
   playerId: string;
@@ -38,74 +38,29 @@ export default function WinnerDisplay({
   const isThird = playerRank === 3;
   const isTopThree = playerRank !== null && playerRank <= 3;
 
-  // Get winner info
-  const winner = leaderboard.length > 0 ? leaderboard[0] : null;
+  // Check for tie
   const isTie =
     leaderboard.length > 1 &&
     leaderboard[0].score > 0 &&
     leaderboard[0].score === leaderboard[1].score;
 
-  // Confetti particles (only show for winner)
-  const confettiColors = [
-    "#FFD700",
-    "#22D3EE",
-    "#6366F1",
-    "#22C55E",
-    "#F59E0B",
-  ];
-  const confetti = isWinner
-    ? Array.from({ length: 50 }, (_, i) => ({
-        id: i,
-        color:
-          confettiColors[Math.floor(Math.random() * confettiColors.length)],
-        delay: Math.random() * 2,
-        duration: 3 + Math.random() * 2,
-        x: Math.random() * 100,
-      }))
-    : [];
+  const renderCountRef = useRef(0);
+
+  // DEBUG: Track renders
+  useEffect(() => {
+    if (isOpen) {
+      renderCountRef.current += 1;
+      console.log(`[WinnerDisplay] Render #${renderCountRef.current}`, {
+        isOpen,
+        isWinner,
+        playerRank,
+        totalPlayers,
+      });
+    }
+  }, [isOpen, isWinner, playerRank, totalPlayers]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/90 p-3 sm:p-2 md:p-4 overflow-y-auto">
-      {/* Confetti - Only for Winner */}
-      {isWinner && (
-        <div
-          className="fixed inset-0 pointer-events-none"
-          style={{ zIndex: 51 }}
-        >
-          {confetti.map((particle) => (
-            <motion.div
-              key={particle.id}
-              initial={{
-                y: "-10vh",
-                x: `${particle.x}vw`,
-                opacity: 1,
-                rotate: 0,
-              }}
-              animate={{
-                y: "110vh",
-                rotate: 360,
-                opacity: [1, 1, 0],
-              }}
-              transition={{
-                duration: particle.duration,
-                delay: particle.delay,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-              style={{
-                position: "absolute",
-                width: "8px",
-                height: "8px",
-                backgroundColor: particle.color,
-                borderRadius: "2px",
-                left: 0,
-                top: 0,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
       <div className="w-full max-w-4xl relative z-10 py-3 sm:py-4">
         {/* Winner Announcement Banner - Only for 1st Place */}
         <AnimatePresence>
@@ -125,7 +80,7 @@ export default function WinnerDisplay({
                   }}
                   transition={{
                     duration: 2,
-                    repeat: Infinity,
+                    repeat: 2, // FIX: Limited to 2 repeats instead of Infinity (prevents Chrome crashes)
                     repeatDelay: 1,
                   }}
                   className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-2 sm:mb-2 md:mb-3 lg:mb-4 text-center"
@@ -177,7 +132,7 @@ export default function WinnerDisplay({
               {isWinner ? (
                 <motion.span
                   animate={{ rotate: [0, -10, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                  transition={{ duration: 2, repeat: 2, repeatDelay: 1 }} // FIX: Limited to 2 repeats
                 >
                   👑
                 </motion.span>
@@ -256,7 +211,7 @@ export default function WinnerDisplay({
                             animate={{ rotate: [0, -5, 5, -5, 0] }}
                             transition={{
                               duration: 2,
-                              repeat: Infinity,
+                              repeat: 2, // FIX: Limited to 2 repeats instead of Infinity
                               repeatDelay: 1,
                             }}
                           >

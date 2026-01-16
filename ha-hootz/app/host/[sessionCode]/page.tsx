@@ -13,7 +13,6 @@ import LobbyView from "@/components/LobbyView";
 import LiveGameHeader from "@/components/LiveGameHeader";
 import QuestionDisplay from "@/components/QuestionDisplay";
 import GameStatsSidebar from "@/components/GameStatsSidebar";
-import ConfettiEffect from "@/components/ConfettiEffect";
 import ActiveGameJoinInfo from "@/components/ActiveGameJoinInfo";
 import { useSession } from "next-auth/react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -1050,23 +1049,6 @@ export default function HostDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Confetti for Winner */}
-      {showLeaderboard &&
-        winnerRevealed &&
-        (() => {
-          const leaderboard = players
-            .map((player) => ({
-              ...player,
-              score: stats.playerScores?.[player.playerId] || 0,
-            }))
-            .sort((a, b) => b.score - a.score);
-          const isTie =
-            leaderboard.length > 1 &&
-            leaderboard[0].score > 0 &&
-            leaderboard[0].score === leaderboard[1].score;
-          return <ConfettiEffect show={true} isTie={isTie} />;
-        })()}
 
       {/* Leaderboard/Winner Modal */}
       <LeaderboardModal

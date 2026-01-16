@@ -9,8 +9,7 @@ import Loading from "@/components/Loading";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import CenteredLayout from "@/components/CenteredLayout";
 import GameWelcomeModal from "@/components/GameWelcomeModal";
-import WinnerDisplay from "@/components/WinnerDisplay";
-import ThankYouModal from "@/components/ThankYouModal";
+import GameModals from "@/components/GameModals";
 import { generateAnswerColors } from "@/lib/utils/colorUtils";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -770,20 +769,14 @@ export default function GamePage() {
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
-
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -822,20 +815,14 @@ export default function GamePage() {
           </div>
         </CenteredLayout>
 
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
-
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -845,20 +832,15 @@ export default function GamePage() {
     return (
       <>
         <Loading message="Connecting to game..." />
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
 
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -928,20 +910,14 @@ export default function GamePage() {
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
-
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -1311,20 +1287,14 @@ export default function GamePage() {
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
-
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -1387,20 +1357,16 @@ export default function GamePage() {
         description="You won't be able to rejoin with the same name if you leave now."
       />
 
-      {playerName && playerId && (
-        <WinnerDisplay
-          isOpen={showWinnerDisplay}
-          playerName={playerName}
-          playerId={playerId}
-          leaderboard={leaderboard}
-        />
-      )}
-
-      <ThankYouModal
-        isOpen={showThankYouModal}
-        hostName={hostName}
+      {/* Render modals once using Portal - prevents React reconciliation issues */}
+      {/* Portal ensures modals are always at document.body level, regardless of component tree */}
+      <GameModals
+        showWinnerDisplay={showWinnerDisplay}
+        showThankYouModal={showThankYouModal}
         playerName={playerName}
-        onClose={() => dispatch(setShowThankYouModal(false))}
+        playerId={playerId}
+        hostName={hostName}
+        leaderboard={leaderboard}
+        onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
       />
     </>
   );
