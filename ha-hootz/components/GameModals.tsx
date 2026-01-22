@@ -1,7 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import WinnerDisplay from "@/components/WinnerDisplay";
 import ThankYouModal from "@/components/ThankYouModal";
 
@@ -25,26 +25,25 @@ export default function GameModals({
   onCloseThankYou,
 }: GameModalsProps) {
   const [mounted, setMounted] = useState(false);
+  const portalContainerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    // Ensure we have a stable reference to the portal container
+    portalContainerRef.current = document.body;
   }, []);
 
-  if (!mounted) {
-    return null;
-  }
-
-  const modals = (
+  // Portal content - both components are always rendered to maintain stable structure
+  // They handle their own visibility internally via isOpen prop
+  const portalContent = (
     <>
       <WinnerDisplay
-        key="winner-display"
         isOpen={showWinnerDisplay && !!playerName && !!playerId}
         playerName={(playerName || "") as string}
         playerId={(playerId || "") as string}
         leaderboard={leaderboard}
       />
       <ThankYouModal
-        key="thank-you-modal"
         isOpen={showThankYouModal}
         hostName={hostName}
         playerName={playerName}
@@ -53,7 +52,11 @@ export default function GameModals({
     </>
   );
 
+  if (!mounted || !portalContainerRef.current) {
+    return null;
+  }
+
   // Render modals in a portal to ensure they're always at the document body level
   // This prevents React reconciliation issues when the component tree changes
-  return createPortal(modals, document.body);
+  return createPortal(portalContent, portalContainerRef.current);
 }

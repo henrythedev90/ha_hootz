@@ -1063,6 +1063,7 @@ export default function HostDashboard() {
         winnerRevealed={winnerRevealed}
         onEndGame={() => dispatch(setShowEndGameModal(true))}
         streakThresholds={(gameState?.scoringConfig as any)?.streakThresholds}
+        isLastQuestion={questionCount > 0 && currentIndex >= questionCount - 1}
       />
 
       {/* End Game Modal */}

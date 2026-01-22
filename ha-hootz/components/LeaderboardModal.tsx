@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Modal from "./Modal";
 import { useMemo, useEffect, useRef } from "react";
+import ConfettiEffect from "./ConfettiEffect";
 
 interface Player {
   playerId: string;
@@ -19,6 +20,7 @@ interface LeaderboardModalProps {
   winnerRevealed: boolean;
   onEndGame: () => void;
   streakThresholds?: number[];
+  isLastQuestion?: boolean;
 }
 
 export default function LeaderboardModal({
@@ -29,6 +31,7 @@ export default function LeaderboardModal({
   winnerRevealed,
   onEndGame,
   streakThresholds = [3, 5, 7], // Default thresholds
+  isLastQuestion = false,
 }: LeaderboardModalProps) {
   const renderCountRef = useRef(0);
 
@@ -76,13 +79,18 @@ export default function LeaderboardModal({
     leaderboard[0].score === leaderboard[1].score;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={winnerRevealed ? "🏆 Winner!" : "Leaderboard"}
-      size="4xl"
-    >
-      <div className="space-y-6 mt-1">
+    <>
+      <ConfettiEffect
+        show={isOpen && winnerRevealed && isLastQuestion}
+        isTie={isTie}
+      />
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={winnerRevealed ? "🏆 Winner!" : "Leaderboard"}
+        size="4xl"
+      >
+        <div className="space-y-6 mt-1">
         {winnerRevealed && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: -20 }}
@@ -247,5 +255,6 @@ export default function LeaderboardModal({
         )}
       </div>
     </Modal>
+    </>
   );
 }
