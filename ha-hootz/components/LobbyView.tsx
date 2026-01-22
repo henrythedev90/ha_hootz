@@ -5,6 +5,7 @@ import { Users, QrCode, Copy, Check, Shuffle, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePlayerColors } from "@/hooks/usePlayerColors";
 import Image from "next/image";
+import Container from "./Container";
 
 interface Player {
   playerId: string;
@@ -77,7 +78,7 @@ export default function LobbyView({
   }, [sessionCode]);
 
   return (
-    <div className="h-screen bg-[#0B1020] text-[#E5E7EB] flex flex-col overflow-hidden">
+    <Container variant="h-screen" overflow="hidden">
       {/* Compact Session Info Header */}
       <div className="px-6 py-4 border-b border-[#6366F1]/10 flex items-center justify-between shrink-0">
         <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -395,6 +396,6 @@ export default function LobbyView({
           Start Game
         </motion.button>
       </div>
-    </div>
+    </Container>
   );
 }
