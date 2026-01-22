@@ -13,7 +13,7 @@ import LobbyView from "@/components/LobbyView";
 import LiveGameHeader from "@/components/LiveGameHeader";
 import QuestionDisplay from "@/components/QuestionDisplay";
 import GameStatsSidebar from "@/components/GameStatsSidebar";
-import ConfettiEffect from "@/components/ConfettiEffect";
+import ActiveGameJoinInfo from "@/components/ActiveGameJoinInfo";
 import { useSession } from "next-auth/react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -377,8 +377,18 @@ export default function HostDashboard() {
     const newSocket = io("/", {
       path: "/api/socket",
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 15,
+      reconnectionDelay: ((attemptNumber: number) => {
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
+        const baseDelay = 1000;
+        const maxDelay = 30000;
+        const delay = Math.min(
+          baseDelay * Math.pow(2, attemptNumber - 1),
+          maxDelay
+        );
+        return delay;
+      }) as any, // Socket.io types may not include function support, but it works at runtime
+      reconnectionDelayMax: 30000,
     });
 
     socketRef.current = newSocket;
@@ -1033,6 +1043,7 @@ export default function HostDashboard() {
                 onRevealWinner={handleRevealWinner}
                 onViewLeaderboard={() => setShowLeaderboard(true)}
               />
+              <ActiveGameJoinInfo sessionCode={sessionCode} />
             </div>
 
             {/* Right Column - Stats/Players/Leaderboard */}
@@ -1049,23 +1060,6 @@ export default function HostDashboard() {
         </div>
       </div>
 
-      {/* Confetti for Winner */}
-      {showLeaderboard &&
-        winnerRevealed &&
-        (() => {
-          const leaderboard = players
-            .map((player) => ({
-              ...player,
-              score: stats.playerScores?.[player.playerId] || 0,
-            }))
-            .sort((a, b) => b.score - a.score);
-          const isTie =
-            leaderboard.length > 1 &&
-            leaderboard[0].score > 0 &&
-            leaderboard[0].score === leaderboard[1].score;
-          return <ConfettiEffect show={true} isTie={isTie} />;
-        })()}
-
       {/* Leaderboard/Winner Modal */}
       <LeaderboardModal
         isOpen={showLeaderboard}
@@ -1079,6 +1073,7 @@ export default function HostDashboard() {
         winnerRevealed={winnerRevealed}
         onEndGame={() => dispatch(setShowEndGameModal(true))}
         streakThresholds={(gameState?.scoringConfig as any)?.streakThresholds}
+        isLastQuestion={questionCount > 0 && currentIndex >= questionCount - 1}
       />
 
       {/* End Game Modal */}

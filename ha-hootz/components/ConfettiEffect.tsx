@@ -65,4 +65,3 @@ export default function ConfettiEffect({ show, isTie }: ConfettiEffectProps) {
     </div>
   );
 }
-

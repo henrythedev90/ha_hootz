@@ -9,8 +9,7 @@ import Loading from "@/components/Loading";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import CenteredLayout from "@/components/CenteredLayout";
 import GameWelcomeModal from "@/components/GameWelcomeModal";
-import WinnerDisplay from "@/components/WinnerDisplay";
-import ThankYouModal from "@/components/ThankYouModal";
+import GameModals from "@/components/GameModals";
 import { generateAnswerColors } from "@/lib/utils/colorUtils";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -125,6 +124,8 @@ export default function GamePage() {
   }, [sessionCode, playerName, dispatch]);
 
   // Check session status and fetch host name when component mounts
+  // Players can join at any time during active sessions (waiting, live, in-progress)
+  // Only block joining if session has ended
   useEffect(() => {
     const checkSessionStatus = async () => {
       try {
@@ -133,6 +134,7 @@ export default function GamePage() {
         );
         const validateData = await validateResponse.json();
 
+        // Only block if session has ended - players can join during active games
         if (validateData.sessionStatus === "ended") {
           dispatch(setSessionEnded(true));
           return;
@@ -220,8 +222,18 @@ export default function GamePage() {
     const newSocket = io("/", {
       path: "/api/socket",
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 15,
+      reconnectionDelay: ((attemptNumber: number) => {
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
+        const baseDelay = 1000;
+        const maxDelay = 30000;
+        const delay = Math.min(
+          baseDelay * Math.pow(2, attemptNumber - 1),
+          maxDelay
+        );
+        return delay;
+      }) as any, // Socket.io types may not include function support, but it works at runtime
+      reconnectionDelayMax: 30000,
     });
 
     socketRef.current = newSocket;
@@ -247,6 +259,13 @@ export default function GamePage() {
         if (data.playerId) {
           dispatch(setPlayerId(data.playerId));
         }
+
+        // Check if player is joining mid-game (game already in progress)
+        const isJoiningMidGame =
+          data.gameState.status === "QUESTION_ACTIVE" ||
+          data.gameState.status === "IN_PROGRESS" ||
+          data.gameState.status === "QUESTION_ENDED";
+
         dispatch(
           setGameState({
             ...data.gameState,
@@ -254,6 +273,19 @@ export default function GamePage() {
             randomizeAnswers: data.gameState.randomizeAnswers ?? false,
           })
         );
+
+        // Generate answer colors if joining during an active question
+        // Players can join at any time, so generate colors immediately if question is active
+        if (
+          (data.gameState.status === "QUESTION_ACTIVE" ||
+            data.gameState.status === "QUESTION_ENDED") &&
+          data.gameState.question &&
+          mounted
+        ) {
+          const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
+          setAnswerColors(newAnswerColors);
+        }
+
         // Initialize answer order based on randomizeAnswers setting
         // Only set if there's an active question, otherwise wait for question-started
         // Only generate random values on client side (after hydration)
@@ -293,9 +325,12 @@ export default function GamePage() {
             actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
           });
         }
+
         if (data.playerCount !== undefined) {
           dispatch(setPlayerCount(data.playerCount));
         }
+
+        // Restore player's previous answer if they had one for the current question
         if (
           data.gameState.playerAnswers &&
           data.gameState.questionIndex !== undefined
@@ -306,8 +341,20 @@ export default function GamePage() {
             dispatch(setSelectedAnswer(prevAnswer as "A" | "B" | "C" | "D"));
           }
         }
+
+        // Set timer state based on current question status
         if (data.gameState.status === "QUESTION_ACTIVE") {
           dispatch(setIsTimerExpired(false));
+          // Timer will be handled by the timer effect based on endAt
+        } else if (data.gameState.status === "QUESTION_ENDED") {
+          dispatch(setIsTimerExpired(true));
+          dispatch(setTimeRemaining(0));
+        }
+
+        // Don't show welcome modal if joining mid-game
+        // Welcome modal should only show when game starts, not when joining mid-game
+        if (isJoiningMidGame) {
+          dispatch(setShowWelcomeModal(false));
         }
       }
     );
@@ -650,7 +697,7 @@ export default function GamePage() {
     const displayMessage = isGoodbye ? error.replace("GOODBYE: ", "") : error;
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
+        <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -732,20 +779,14 @@ export default function GamePage() {
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
-
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -784,20 +825,14 @@ export default function GamePage() {
           </div>
         </CenteredLayout>
 
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
-
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -807,20 +842,15 @@ export default function GamePage() {
     return (
       <>
         <Loading message="Connecting to game..." />
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
 
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -830,7 +860,7 @@ export default function GamePage() {
   if (gameState.status === "WAITING") {
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
+        <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
           <button
             onClick={handleExitGame}
             className="absolute top-3 right-3 w-9 h-9 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
@@ -890,20 +920,14 @@ export default function GamePage() {
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
-
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -935,7 +959,7 @@ export default function GamePage() {
 
     return (
       <>
-        <div className="min-h-screen bg-deep-navy text-text-light flex flex-col p-3 md:p-5">
+        <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex flex-col p-3 md:p-5">
           {/* Exit Button */}
           <button
             onClick={handleExitGame}
@@ -992,7 +1016,7 @@ export default function GamePage() {
           )}
 
           {/* Question */}
-          <div className="flex-1 flex flex-col justify-start max-w-4xl mx-auto w-full">
+          <div className="flex-1 flex flex-col justify-start max-w-4xl mx-auto w-full min-h-0">
             {playerName && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -1273,20 +1297,14 @@ export default function GamePage() {
           description="You won't be able to rejoin with the same name if you leave now."
         />
 
-        {playerName && playerId && (
-          <WinnerDisplay
-            isOpen={showWinnerDisplay}
-            playerName={playerName}
-            playerId={playerId}
-            leaderboard={leaderboard}
-          />
-        )}
-
-        <ThankYouModal
-          isOpen={showThankYouModal}
-          hostName={hostName}
+        <GameModals
+          showWinnerDisplay={showWinnerDisplay}
+          showThankYouModal={showThankYouModal}
           playerName={playerName}
-          onClose={() => dispatch(setShowThankYouModal(false))}
+          playerId={playerId}
+          hostName={hostName}
+          leaderboard={leaderboard}
+          onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
         />
       </>
     );
@@ -1295,7 +1313,7 @@ export default function GamePage() {
   // Fallback: Game in progress but no question active yet
   return (
     <>
-      <div className="min-h-screen bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
+      <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-3 md:p-5">
         <button
           onClick={handleExitGame}
           className="absolute top-3 right-3 w-9 h-9 bg-error/10 hover:bg-error/20 border border-error/30 text-error rounded-full flex items-center justify-center transition-colors shadow-lg z-10"
@@ -1349,20 +1367,16 @@ export default function GamePage() {
         description="You won't be able to rejoin with the same name if you leave now."
       />
 
-      {playerName && playerId && (
-        <WinnerDisplay
-          isOpen={showWinnerDisplay}
-          playerName={playerName}
-          playerId={playerId}
-          leaderboard={leaderboard}
-        />
-      )}
-
-      <ThankYouModal
-        isOpen={showThankYouModal}
-        hostName={hostName}
+      {/* Render modals once using Portal - prevents React reconciliation issues */}
+      {/* Portal ensures modals are always at document.body level, regardless of component tree */}
+      <GameModals
+        showWinnerDisplay={showWinnerDisplay}
+        showThankYouModal={showThankYouModal}
         playerName={playerName}
-        onClose={() => dispatch(setShowThankYouModal(false))}
+        playerId={playerId}
+        hostName={hostName}
+        leaderboard={leaderboard}
+        onCloseThankYou={() => dispatch(setShowThankYouModal(false))}
       />
     </>
   );

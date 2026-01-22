@@ -2,6 +2,8 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import Modal from "./Modal";
+import { useMemo, useEffect, useRef } from "react";
+import ConfettiEffect from "./ConfettiEffect";
 
 interface Player {
   playerId: string;
@@ -18,6 +20,7 @@ interface LeaderboardModalProps {
   winnerRevealed: boolean;
   onEndGame: () => void;
   streakThresholds?: number[];
+  isLastQuestion?: boolean;
 }
 
 export default function LeaderboardModal({
@@ -28,16 +31,46 @@ export default function LeaderboardModal({
   winnerRevealed,
   onEndGame,
   streakThresholds = [3, 5, 7], // Default thresholds
+  isLastQuestion = false,
 }: LeaderboardModalProps) {
+  const renderCountRef = useRef(0);
+
+  // DEBUG: Track renders
+  useEffect(() => {
+    if (isOpen) {
+      renderCountRef.current += 1;
+      console.log(`[LeaderboardModal] Render #${renderCountRef.current}`, {
+        isOpen,
+        winnerRevealed,
+        playersCount: players.length,
+      });
+    }
+  }, [isOpen, winnerRevealed, players.length]);
+
   // Get the first threshold (streak doesn't start until this many consecutive correct)
   const firstThreshold = streakThresholds.length > 0 ? streakThresholds[0] : 3;
 
-  const leaderboard = players
-    .map((player) => ({
-      ...player,
-      score: playerScores[player.playerId] || 0,
-    }))
-    .sort((a, b) => b.score - a.score);
+  // FIX: Memoize leaderboard calculation to prevent expensive re-sorts on every render
+  const leaderboard = useMemo(() => {
+    console.log("[LeaderboardModal] Calculating leaderboard (memoized)", {
+      playersCount: players.length,
+      scoresCount: Object.keys(playerScores).length,
+    });
+
+    const sorted = players
+      .map((player) => ({
+        ...player,
+        score: playerScores[player.playerId] || 0,
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    console.log(
+      "[LeaderboardModal] Leaderboard calculated:",
+      sorted.length,
+      "players"
+    );
+    return sorted;
+  }, [players, playerScores]);
 
   const winner = leaderboard.length > 0 ? leaderboard[0] : null;
   const isTie =
@@ -46,13 +79,18 @@ export default function LeaderboardModal({
     leaderboard[0].score === leaderboard[1].score;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={winnerRevealed ? "🏆 Winner!" : "Leaderboard"}
-      size="4xl"
-    >
-      <div className="space-y-6 mt-1">
+    <>
+      <ConfettiEffect
+        show={isOpen && winnerRevealed && isLastQuestion}
+        isTie={isTie}
+      />
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={winnerRevealed ? "🏆 Winner!" : "Leaderboard"}
+        size="4xl"
+      >
+        <div className="space-y-6 mt-1">
         {winnerRevealed && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: -20 }}
@@ -94,7 +132,8 @@ export default function LeaderboardModal({
             </div>
           </motion.div>
         )}
-        <motion.div className="space-y-3" layout>
+        {/* FIX: Removed layout prop to prevent expensive layout recalculations in Chrome */}
+        <motion.div className="space-y-3">
           {players.length === 0 ? (
             <p className="text-center text-text-light/50 py-8">
               No players yet
@@ -107,9 +146,9 @@ export default function LeaderboardModal({
                 const isWinner = winnerRevealed && rank === 1 && !isTie;
                 const isFirst = rank === 1;
                 return (
+                  // FIX: Removed layout prop to prevent expensive layout recalculations
                   <motion.div
                     key={player.playerId}
-                    layout
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{
                       opacity: 1,
@@ -134,8 +173,8 @@ export default function LeaderboardModal({
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <motion.div
-                        layout
+                      {/* FIX: Removed layout prop */}
+                      <div
                         className={`text-2xl font-bold ${
                           isWinner
                             ? "text-cyan"
@@ -153,11 +192,11 @@ export default function LeaderboardModal({
                           : isWinner
                           ? "👑"
                           : `#${rank}`}
-                      </motion.div>
-                      <motion.div layout className="flex-1">
+                      </div>
+                      {/* FIX: Removed layout props */}
+                      <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <motion.span
-                            layout
+                          <span
                             className={`text-lg font-semibold ${
                               isWinner ? "text-cyan" : "text-text-light"
                             }`}
@@ -168,22 +207,21 @@ export default function LeaderboardModal({
                                 - Winner!
                               </span>
                             )}
-                          </motion.span>
+                          </span>
                           {(player.streak ?? 0) >= firstThreshold && (
                             <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
                               You're on a streak! 🔥 + {player.streak}
                             </span>
                           )}
                         </div>
-                      </motion.div>
-                      <motion.span
-                        layout
+                      </div>
+                      <span
                         className={`text-xl font-bold ${
                           isWinner ? "text-cyan" : "text-indigo"
                         }`}
                       >
                         {player.score} pts
-                      </motion.span>
+                      </span>
                     </div>
                     {isFirst && winnerRevealed && !isTie && (
                       <motion.div
@@ -217,5 +255,6 @@ export default function LeaderboardModal({
         )}
       </div>
     </Modal>
+    </>
   );
 }
