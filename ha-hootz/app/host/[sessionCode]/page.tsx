@@ -377,8 +377,18 @@ export default function HostDashboard() {
     const newSocket = io("/", {
       path: "/api/socket",
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 15,
+      reconnectionDelay: ((attemptNumber: number) => {
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
+        const baseDelay = 1000;
+        const maxDelay = 30000;
+        const delay = Math.min(
+          baseDelay * Math.pow(2, attemptNumber - 1),
+          maxDelay
+        );
+        return delay;
+      }) as any, // Socket.io types may not include function support, but it works at runtime
+      reconnectionDelayMax: 30000,
     });
 
     socketRef.current = newSocket;
