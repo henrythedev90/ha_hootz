@@ -7,14 +7,16 @@ function getRedisUrl(): string {
   if (!url) {
     // During Next.js build, env vars may not be available
     // Check if we're in a build context (Next.js sets NEXT_PHASE during build)
-    const isBuildTime = 
-      process.env.NEXT_PHASE === 'phase-production-build' ||
-      (process.env.NODE_ENV === 'production' && !process.env.NEXT_RUNTIME);
-    
+    const isBuildTime =
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      (process.env.NODE_ENV === "production" && !process.env.NEXT_RUNTIME);
+
     if (isBuildTime) {
       // During build, throw an error that will be caught and handled
       // The Proxy wrapper will catch this and return a rejected promise
-      throw new Error("REDIS_URL is not set during build - this is expected. Set it at runtime.");
+      throw new Error(
+        "REDIS_URL is not set during build - this is expected. Set it at runtime."
+      );
     }
     console.error("REDIS_URL is not set", process.env.REDIS_URL);
     throw new Error("Please add your Redis URL to .env.local");
@@ -30,10 +32,10 @@ let redisPromise: Promise<RedisClientType>;
 function createRedisClient(): RedisClientType {
   // Get Redis URL (validates at runtime, not build time)
   const url = getRedisUrl();
-  
+
   // Check if URL uses TLS (rediss://)
   const isTLS = url.startsWith("rediss://");
-  
+
   const socketConfig: any = {
     reconnectStrategy: (retries: number): number | Error => {
       if (retries > 20) {
@@ -155,14 +157,21 @@ function initializeRedisClient(): Promise<RedisClientType> {
   } catch (error: any) {
     // During build, if REDIS_URL is not set, return a rejected promise
     // that will fail at runtime (when env vars are available)
-    const isBuildTime = 
-      process.env.NEXT_PHASE === 'phase-production-build' ||
-      (process.env.NODE_ENV === 'production' && !process.env.NEXT_RUNTIME);
-    
-    if (isBuildTime && error.message.includes("REDIS_URL is not set during build")) {
+    const isBuildTime =
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      (process.env.NODE_ENV === "production" && !process.env.NEXT_RUNTIME);
+
+    if (
+      isBuildTime &&
+      error.message.includes("REDIS_URL is not set during build")
+    ) {
       // Return a promise that will be rejected at runtime
       // This allows the build to complete
-      return Promise.reject(new Error("REDIS_URL is not set. Please set it in your environment variables at runtime."));
+      return Promise.reject(
+        new Error(
+          "REDIS_URL is not set. Please set it in your environment variables at runtime."
+        )
+      );
     }
     throw error;
   }
@@ -188,10 +197,11 @@ function getRedisPromise(): Promise<RedisClientType> {
 // Export a promise-like object that initializes lazily
 // This works better than Proxy for Promise compatibility
 const lazyRedisExport = {
-  then: (onFulfilled?: any, onRejected?: any) => getRedisPromise().then(onFulfilled, onRejected),
+  then: (onFulfilled?: any, onRejected?: any) =>
+    getRedisPromise().then(onFulfilled, onRejected),
   catch: (onRejected?: any) => getRedisPromise().catch(onRejected),
   finally: (onFinally?: any) => getRedisPromise().finally(onFinally),
-  [Symbol.toStringTag]: 'Promise'
+  [Symbol.toStringTag]: "Promise",
 } as Promise<RedisClientType>;
 
 export default lazyRedisExport;
