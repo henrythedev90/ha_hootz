@@ -1,0 +1,61 @@
+# fly.toml app configuration file generated for ha-hootz on 2024-12-19T00:00:00Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "ha-hootz"
+primary_region = "iad"  # Washington, D.C. - good for US East Coast latency
+
+[build]
+  # Use Dockerfile in the root directory
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  HOSTNAME = "0.0.0.0"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false  # Keep machines running for WebSocket connections
+  auto_start_machines = true
+  min_machines_running = 1     # Always keep at least 1 instance running
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/"
+
+  # WebSocket support for Socket.io
+  [[http_service.concurrency]]
+    type = "connections"
+    hard_limit = 1000
+    soft_limit = 500
+
+[processes]
+  app = "npx tsx server.ts"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+# Scaling configuration
+# Uncomment and adjust when ready to scale:
+# [[services]]
+#   internal_port = 3000
+#   processes = ["app"]
+#   protocol = "tcp"
+#   script_checks = []
+
+# Health checks
+# [[checks]]
+#   grace_period = "10s"
+#   interval = "30s"
+#   method = "GET"
+#   timeout = "5s"
+#   path = "/"

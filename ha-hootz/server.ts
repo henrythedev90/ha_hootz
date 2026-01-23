@@ -10,7 +10,8 @@ const projectDir = process.cwd();
 loadEnvConfig(projectDir);
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = process.env.HOSTNAME || "localhost";
+// Fly.io requires binding to 0.0.0.0, not localhost
+const hostname = process.env.HOSTNAME || (dev ? "localhost" : "0.0.0.0");
 const port = parseInt(process.env.PORT || "3000", 10);
 
 const app = next({ dev, hostname, port });
