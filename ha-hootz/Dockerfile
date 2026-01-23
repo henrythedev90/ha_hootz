@@ -8,6 +8,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
+# npm ci installs both dependencies and devDependencies by default
 COPY package.json package-lock.json* ./
 RUN npm ci
 
@@ -15,12 +16,15 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+# Copy all source files needed for build
 COPY . .
+# Ensure TypeScript and build tools are available
+RUN apk add --no-cache libc6-compat
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build Next.js app
 RUN npm run build
@@ -29,9 +33,9 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 # Uncomment the following line in case you want to disable telemetry during runtime.
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -41,14 +45,15 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Copy production dependencies (tsx is needed for server.ts)
+# Copy production dependencies
+# Standalone output includes minimal node_modules, but we need tsx (in devDependencies)
+# So we copy the full node_modules to ensure tsx is available
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source files needed for custom server
+# The standalone output already includes app/, but we need our custom server and lib files
 COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/lib ./lib
-COPY --from=builder /app/app ./app
-COPY --from=builder /app/components ./components
 COPY --from=builder /app/store ./store
 COPY --from=builder /app/hooks ./hooks
 COPY --from=builder /app/types ./types
@@ -60,8 +65,8 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Start the custom server using tsx (TypeScript execution)
 CMD ["npx", "tsx", "server.ts"]
