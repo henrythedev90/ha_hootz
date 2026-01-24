@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:build": "npm run build",
+    "test:deploy": "./test-deploy.sh",
+    "test:docker": "docker build -t ha-hootz-test . && docker run -p 3000:3000 --env-file .env.local ha-hootz-test"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
