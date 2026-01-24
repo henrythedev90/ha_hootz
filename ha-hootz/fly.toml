@@ -3,41 +3,41 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'ha-hootz'
-primary_region = 'iad'
+app = "ha-hootz"
+primary_region = "iad"
 
 [build]
-  dockerfile = 'Dockerfile'
+  dockerfile = "Dockerfile"
 
 [env]
-  HOSTNAME = '0.0.0.0'
-  NODE_ENV = 'production'
-  PORT = '3000'
+  HOSTNAME = "0.0.0.0"
+  NODE_ENV = "production"
+  PORT = "3000"
 
 [processes]
-  app = 'npx tsx server.ts'
+  app = "npx tsx server.ts"
 
 [http_service]
   internal_port = 3000
   force_https = true
-  auto_stop_machines = 'off'
+  auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
-  processes = ['app']
+  processes = ["app"]
 
   [http_service.concurrency]
-    type = 'connections'
+    type = "connections"
     hard_limit = 1000
     soft_limit = 500
 
   [[http_service.checks]]
-    interval = '30s'
-    timeout = '5s'
-    grace_period = '10s'
-    method = 'GET'
-    path = '/'
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/"
 
 [[vm]]
-  cpu_kind = 'shared'
+  cpu_kind = "shared"
   cpus = 1
   memory_mb = 512
