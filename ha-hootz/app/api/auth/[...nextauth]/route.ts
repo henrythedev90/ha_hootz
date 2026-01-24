@@ -4,6 +4,7 @@ import { getHostCollection } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true, // Required when binding to 0.0.0.0 (Fly.io) or using reverse proxies
   providers: [
     Credentials({
       name: "Credentials",

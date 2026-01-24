@@ -26,7 +26,21 @@ function createMongoClient(): Promise<MongoClient> {
         )
       );
     }
-    throw new Error("Please add your Mongo URI to .env.local");
+
+    // At runtime, provide a helpful error message
+    const envHint =
+      process.env.NODE_ENV === "production"
+        ? 'Set it as a Fly.io secret: flyctl secrets set MONGODB_URI="..."'
+        : "Add it to your .env.local file: MONGODB_URI=mongodb+srv://...";
+
+    console.error("MONGODB_URI is not set in environment variables.");
+    console.error(`Current NODE_ENV: ${process.env.NODE_ENV}`);
+    console.error(
+      `Available env vars starting with MONGO:`,
+      Object.keys(process.env).filter((k) => k.startsWith("MONGO"))
+    );
+
+    throw new Error(`MONGODB_URI is not set. ${envHint}`);
   }
 
   if (process.env.NODE_ENV === "development") {

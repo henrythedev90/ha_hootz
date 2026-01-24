@@ -84,13 +84,13 @@ export default function LeaderboardModal({
         show={isOpen && winnerRevealed && isLastQuestion}
         isTie={isTie}
       />
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        title={winnerRevealed ? "🏆 Winner!" : "Leaderboard"}
-        size="4xl"
-      >
-        <div className="space-y-6 mt-1">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={winnerRevealed ? "🏆 Winner!" : "Leaderboard"}
+      size="4xl"
+    >
+      <div className="space-y-6 mt-1">
         {winnerRevealed && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: -20 }}
