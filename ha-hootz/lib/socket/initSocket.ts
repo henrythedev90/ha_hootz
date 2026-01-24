@@ -13,12 +13,11 @@ export async function initSocket(io: Server) {
     throw new Error("REDIS_URL is not set");
   }
 
-  // Check if URL uses TLS (rediss://)
-  const isTLS = redisUrl.startsWith("rediss://");
-
-  // Create socket configuration with TLS support
-  const createSocketConfig = () => {
-    const config: any = {
+  // Create socket configuration
+  // Note: When using rediss://, the Redis client automatically handles TLS
+  // Don't manually set TLS config as it conflicts with protocol detection
+  const createSocketConfig = (): any => {
+    return {
       reconnectStrategy: (retries: number): number | Error => {
         if (retries > 20) {
           console.error("Redis Pub/Sub: Max reconnection attempts reached");
@@ -29,17 +28,8 @@ export async function initSocket(io: Server) {
         return delay;
       },
       connectTimeout: 10000,
-      keepAlive: 30000, // 30 seconds - prevents idle timeout
+      keepAlive: true, // Enable TCP keep-alive to prevent idle timeout
     };
-
-    // Add TLS configuration if using rediss://
-    if (isTLS) {
-      config.tls = {
-        rejectUnauthorized: false, // Required for some cloud providers like Upstash
-      };
-    }
-
-    return config;
   };
 
   const pub = createClient({

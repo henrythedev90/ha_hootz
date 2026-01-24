@@ -7,15 +7,15 @@ if (!process.env.REDIS_URL) {
 
 const url: string = process.env.REDIS_URL;
 
-// Check if URL uses TLS (rediss://)
-const isTLS = url.startsWith("rediss://");
-
 // Log Redis URL in development mode (mask password for security)
 // This will execute when the module is first imported
 let redis: RedisClientType;
 let redisPromise: Promise<RedisClientType>;
 
 function createRedisClient(): RedisClientType {
+  // Create socket configuration
+  // Note: When using rediss://, the Redis client automatically handles TLS
+  // Don't manually set TLS config as it conflicts with protocol detection
   const socketConfig: any = {
     reconnectStrategy: (retries: number): number | Error => {
       if (retries > 20) {
@@ -30,16 +30,17 @@ function createRedisClient(): RedisClientType {
       return delay;
     },
     connectTimeout: 10000, // 10 seconds
-    keepAlive: 30000, // 30 seconds - prevents idle timeout
+    keepAlive: true, // Enable TCP keep-alive to prevent idle timeout
   };
 
-  // Add TLS configuration if using rediss://
-  if (isTLS) {
-    socketConfig.tls = {
-      rejectUnauthorized: false, // Required for some cloud providers like Upstash
-    };
+  // Log connection details in development (mask sensitive info)
+  if (process.env.NODE_ENV === "development") {
+    const urlObj = new URL(url);
+    const maskedUrl = `${urlObj.protocol}//${urlObj.username}:****@${urlObj.hostname}:${urlObj.port}`;
+    console.log(`🔌 Connecting to Redis: ${maskedUrl}`);
   }
 
+  // Create client - TLS is automatically handled for rediss:// URLs
   const client = createClient({
     url,
     socket: socketConfig,
@@ -49,6 +50,15 @@ function createRedisClient(): RedisClientType {
     // Only log errors, don't spam console with reconnection attempts
     if (!err.message.includes("Socket closed")) {
       console.error("Redis Error:", err.message);
+      
+      // Provide helpful diagnostics for common errors
+      if (err.message.includes("timeout") || err.message.includes("ETIMEDOUT")) {
+        console.error("\n⚠️  Connection timeout troubleshooting:");
+        console.error("1. Check if your Upstash database is active (not paused)");
+        console.error("2. Verify your IP is whitelisted in Upstash dashboard");
+        console.error("3. Check your network/firewall settings");
+        console.error("4. Verify the REDIS_URL is correct");
+      }
     }
   });
 
