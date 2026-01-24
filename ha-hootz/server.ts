@@ -17,51 +17,61 @@ const port = parseInt(process.env.PORT || "3000", 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-app.prepare().then(async () => {
-  const httpServer = createServer(async (req, res) => {
-    try {
-      const parsedUrl = parse(req.url!, true);
-      await handle(req, res, parsedUrl);
-    } catch (err) {
-      console.error("Error occurred handling", req.url, err);
-      res.statusCode = 500;
-      res.end("internal server error");
-    }
-  });
-
-  // Initialize Socket.io server
-  const io = new Server(httpServer, {
-    path: "/api/socket",
-    addTrailingSlash: false,
-    cors: {
-      origin: process.env.NEXTAUTH_URL || "http://localhost:3000",
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
-  });
-
-  // Store io globally for access in API routes
-  (global as any).io = io;
-
-  // Initialize Socket.io handlers
-  // Use dynamic import AFTER env vars are loaded to prevent Redis client from loading too early
-  try {
-    const { initSocket } = await import("./lib/socket/initSocket");
-    await initSocket(io);
-    console.log("✅ Socket.io initialized");
-  } catch (err) {
-    console.error("❌ Error initializing Socket.io:", err);
-  }
-
-  httpServer
-    .once("error", (err) => {
-      console.error(err);
-      process.exit(1);
-    })
-    .listen(port, () => {
-      console.log(`> Ready on http://${hostname}:${port}`);
-      console.log(
-        `> Socket.io available at http://${hostname}:${port}/api/socket`
-      );
+app
+  .prepare()
+  .then(async () => {
+    const httpServer = createServer(async (req, res) => {
+      try {
+        const parsedUrl = parse(req.url!, true);
+        await handle(req, res, parsedUrl);
+      } catch (err) {
+        console.error("Error occurred handling", req.url, err);
+        res.statusCode = 500;
+        res.end("internal server error");
+      }
     });
-});
+
+    // Initialize Socket.io server
+    const io = new Server(httpServer, {
+      path: "/api/socket",
+      addTrailingSlash: false,
+      cors: {
+        origin: process.env.NEXTAUTH_URL || "http://localhost:3000",
+        methods: ["GET", "POST"],
+        credentials: true,
+      },
+    });
+
+    // Store io globally for access in API routes
+    (global as any).io = io;
+
+    // Initialize Socket.io handlers
+    // Use dynamic import AFTER env vars are loaded to prevent Redis client from loading too early
+    // Note: Server will start even if Redis fails (for graceful degradation)
+    try {
+      const { initSocket } = await import("./lib/socket/initSocket");
+      await initSocket(io);
+      console.log("✅ Socket.io initialized");
+    } catch (err) {
+      console.error("❌ Error initializing Socket.io:", err);
+      // Continue starting server even if Socket.io/Redis fails
+      // This allows the app to be accessible for debugging
+    }
+
+    // Start the server - explicitly bind to hostname (0.0.0.0 for Fly.io)
+    httpServer
+      .once("error", (err) => {
+        console.error("HTTP Server error:", err);
+        process.exit(1);
+      })
+      .listen(port, hostname, () => {
+        console.log(`> Ready on http://${hostname}:${port}`);
+        console.log(
+          `> Socket.io available at http://${hostname}:${port}/api/socket`,
+        );
+      });
+  })
+  .catch((err) => {
+    console.error("❌ Failed to prepare Next.js app:", err);
+    process.exit(1);
+  });
