@@ -33,9 +33,10 @@ function createRedisClient(): RedisClientType {
   // Get Redis URL (validates at runtime, not build time)
   const url = getRedisUrl();
 
-  // Check if URL uses TLS (rediss://)
-  const isTLS = url.startsWith("rediss://");
-
+  // Create socket configuration
+  // Note: When using rediss://, the Redis client automatically handles TLS
+  // Don't manually set TLS config in socket as it conflicts with protocol detection
+  // For Upstash, TLS is handled automatically via the rediss:// protocol
   const socketConfig: any = {
     reconnectStrategy: (retries: number): number | Error => {
       if (retries > 20) {
@@ -50,16 +51,12 @@ function createRedisClient(): RedisClientType {
       return delay;
     },
     connectTimeout: 10000, // 10 seconds
-    keepAlive: 30000, // 30 seconds - prevents idle timeout
+    keepAlive: true, // Enable TCP keep-alive to prevent idle timeout
   };
 
-  // Add TLS configuration if using rediss://
-  if (isTLS) {
-    socketConfig.tls = {
-      rejectUnauthorized: false, // Required for some cloud providers like Upstash
-    };
-  }
-
+  // Create client - TLS is automatically handled for rediss:// URLs
+  // The redis client library detects TLS from the rediss:// protocol
+  // Don't manually configure TLS as it conflicts with protocol detection
   const client = createClient({
     url,
     socket: socketConfig,
