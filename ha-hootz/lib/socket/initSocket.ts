@@ -12,10 +12,14 @@ export async function initSocket(io: Server) {
   if (!redisUrl) {
     throw new Error("REDIS_URL is not set");
   }
+  
+  // Log Redis URL (masked for security)
+  const maskedUrl = redisUrl.replace(/:[^:@]+@/, ":****@");
+  console.log(`🔗 Attempting to connect to Redis: ${maskedUrl}`);
 
   // Create socket configuration
   // Note: When using rediss://, the Redis client automatically handles TLS
-  // Don't manually set TLS config as it conflicts with protocol detection
+  // Don't manually set TLS config as it conflicts with the protocol detection
   const createSocketConfig = (): any => {
     return {
       reconnectStrategy: (retries: number): number | Error => {
@@ -32,6 +36,9 @@ export async function initSocket(io: Server) {
     };
   };
 
+  // Create Redis clients
+  // For rediss:// URLs, TLS is automatically handled by the client library
+  // Don't manually configure TLS as it conflicts with protocol detection
   const pub = createClient({
     url: redisUrl,
     socket: createSocketConfig(),
@@ -42,17 +49,36 @@ export async function initSocket(io: Server) {
     socket: createSocketConfig(),
   }) as RedisClientType;
 
-  // Add error handlers (suppress socket closed errors during reconnection)
+  // Add error handlers
   pub.on("error", (err) => {
-    if (!err.message.includes("Socket closed")) {
+    // Only log non-reconnection errors to reduce noise
+    if (!err.message.includes("Socket closed") && !err.message.includes("Connection timeout")) {
       console.error("Redis Pub Error:", err.message);
     }
   });
 
   sub.on("error", (err) => {
-    if (!err.message.includes("Socket closed")) {
+    // Only log non-reconnection errors to reduce noise
+    if (!err.message.includes("Socket closed") && !err.message.includes("Connection timeout")) {
       console.error("Redis Sub Error:", err.message);
     }
+  });
+  
+  // Log connection state changes for debugging
+  pub.on("connect", () => {
+    console.log("🔌 Redis Pub: Connecting...");
+  });
+  
+  sub.on("connect", () => {
+    console.log("🔌 Redis Sub: Connecting...");
+  });
+  
+  pub.on("reconnecting", () => {
+    console.log("🔄 Redis Pub: Reconnecting...");
+  });
+  
+  sub.on("reconnecting", () => {
+    console.log("🔄 Redis Sub: Reconnecting...");
   });
 
   pub.on("ready", () => {
@@ -63,7 +89,7 @@ export async function initSocket(io: Server) {
     console.log("✅ Redis Sub: Ready");
   });
 
-  // Connect both clients with retry logic
+  // Connect both clients with retry logic and timeout
   const connectWithRetry = async (
     client: RedisClientType,
     name: string,
@@ -72,7 +98,12 @@ export async function initSocket(io: Server) {
     for (let i = 0; i < maxRetries; i++) {
       try {
         if (!client.isOpen) {
-          await client.connect();
+          // Add a timeout to prevent hanging (8 seconds per attempt)
+          const connectPromise = client.connect();
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Connection timeout after 8s`)), 8000)
+          );
+          await Promise.race([connectPromise, timeoutPromise]);
           return;
         }
       } catch (err: any) {
@@ -98,14 +129,33 @@ export async function initSocket(io: Server) {
       connectWithRetry(pub, "Pub"),
       connectWithRetry(sub, "Sub"),
     ]);
-    console.log("✅ Redis pub/sub clients connected");
+    
+    // Verify both clients are actually connected before proceeding
+    if (!pub.isOpen || !sub.isOpen) {
+      throw new Error("Redis clients created but not connected");
+    }
+    
+    console.log("✅ Redis pub/sub clients connected and ready");
   } catch (err) {
     console.error("❌ Failed to connect Redis pub/sub clients:", err);
+    // Close clients if they were partially created
+    try {
+      if (pub.isOpen) await pub.quit();
+      if (sub.isOpen) await sub.quit();
+    } catch (closeErr) {
+      // Ignore close errors
+    }
     throw err;
   }
 
   // Set up Redis adapter for Socket.io (enables multi-server support)
-  io.adapter(createAdapter(pub, sub));
+  // Only set adapter if clients are actually connected
+  if (pub.isOpen && sub.isOpen) {
+    io.adapter(createAdapter(pub, sub));
+    console.log("✅ Socket.io Redis adapter configured");
+  } else {
+    throw new Error("Cannot set Redis adapter - clients not connected");
+  }
 
   io.on("connection", (socket) => {
     console.log("🧩 Socket connected:", socket.id);

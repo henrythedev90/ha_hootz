@@ -48,7 +48,7 @@ export default function ConfettiEffect({ show, isTie }: ConfettiEffectProps) {
           transition={{
             duration: particle.duration,
             delay: particle.delay,
-            repeat: Infinity,
+            repeat: 1, // FIX: Limited to 1 repeat instead of Infinity (prevents performance issues)
             ease: "linear",
           }}
           style={{

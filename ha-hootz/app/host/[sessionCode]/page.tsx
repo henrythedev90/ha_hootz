@@ -74,6 +74,10 @@ export default function HostDashboard() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [winnerRevealed, setWinnerRevealed] = useState(false);
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
+  
+  // Refs for timeout cleanup
+  const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const modalToggleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -97,10 +101,18 @@ export default function HostDashboard() {
 
   // Reset Redux state and set session code when sessionCode changes
   useEffect(() => {
-    // Clear any pending redirects from previous session
+    // Clear any pending timeouts from previous session
     if (redirectTimeoutRef.current) {
       clearTimeout(redirectTimeoutRef.current);
       redirectTimeoutRef.current = null;
+    }
+    if (copiedTimeoutRef.current) {
+      clearTimeout(copiedTimeoutRef.current);
+      copiedTimeoutRef.current = null;
+    }
+    if (modalToggleTimeoutRef.current) {
+      clearTimeout(modalToggleTimeoutRef.current);
+      modalToggleTimeoutRef.current = null;
     }
 
     // Reset all state when sessionCode changes (new session)
@@ -374,8 +386,19 @@ export default function HostDashboard() {
       socketRef.current.disconnect();
     }
 
-    const newSocket = io("/", {
+    // Socket.io connection configuration
+    // Use empty config object to connect to same origin (current page's origin)
+    // This is the recommended approach for same-origin connections
+    if (typeof window === "undefined") {
+      // SSR: Don't create socket on server
+      return;
+    }
+    
+    console.log(`[Socket.io Client] Connecting to same origin: ${window.location.origin}/api/socket`);
+    
+    const newSocket = io({
       path: "/api/socket",
+      // Use same origin (default behavior when no URL specified)
       reconnection: true,
       reconnectionAttempts: 15,
       reconnectionDelay: ((attemptNumber: number) => {
@@ -387,8 +410,14 @@ export default function HostDashboard() {
           maxDelay
         );
         return delay;
-      }) as any, // Socket.io types may not include function support, but it works at runtime
+      }) as any,
       reconnectionDelayMax: 30000,
+      // Ensure we use WebSocket transport (required for Fly.io)
+      transports: ["websocket", "polling"],
+      // Auto-upgrade to WebSocket
+      upgrade: true,
+      // Add timeout for connection attempts
+      timeout: 20000,
     });
 
     socketRef.current = newSocket;
@@ -783,10 +812,11 @@ export default function HostDashboard() {
   const handleStartQuestion = () => {
     if (!socket || gameState?.questionIndex === undefined) return;
 
-    const question = gameState.question || questions[gameState.questionIndex];
+    const safeQuestions = Array.isArray(questions) ? questions : [];
+    const question = gameState.question || safeQuestions[gameState.questionIndex];
 
     if (!question) {
-      console.error("No question available to start");
+      console.error("[HostDashboard] No question available to start");
       return;
     }
 
@@ -860,11 +890,18 @@ export default function HostDashboard() {
     // Close other modals first to ensure EndGameModal is visible
     dispatch(setShowPlayersModal(false));
 
+    // Clear any existing timeout
+    if (modalToggleTimeoutRef.current) {
+      clearTimeout(modalToggleTimeoutRef.current);
+      modalToggleTimeoutRef.current = null;
+    }
+
     // Force a toggle to ensure re-render even if already true
     if (showEndGameModal) {
       dispatch(setShowEndGameModal(false));
-      setTimeout(() => {
+      modalToggleTimeoutRef.current = setTimeout(() => {
         dispatch(setShowEndGameModal(true));
+        modalToggleTimeoutRef.current = null;
       }, 10);
     } else {
       dispatch(setShowEndGameModal(true));
@@ -882,11 +919,17 @@ export default function HostDashboard() {
   };
 
   const handleRevealWinner = () => {
+    // Ensure players is an array and stats.playerScores exists
+    const safePlayers = Array.isArray(players) ? players : [];
+    const safePlayerScores = stats?.playerScores && typeof stats.playerScores === "object" 
+      ? stats.playerScores 
+      : {};
+
     // Prepare leaderboard data
-    const leaderboard = players
+    const leaderboard = safePlayers
       .map((player) => ({
         ...player,
-        score: stats.playerScores?.[player.playerId] || 0,
+        score: safePlayerScores[player.playerId] || 0,
       }))
       .sort((a, b) => b.score - a.score);
 
@@ -903,10 +946,12 @@ export default function HostDashboard() {
   };
 
   // Get current question from gameState or fallback to questions array
+  // Ensure questions is an array
+  const safeQuestions = Array.isArray(questions) ? questions : [];
   const currentQuestion =
-    gameState?.question || questions[gameState?.questionIndex ?? 0];
+    gameState?.question || safeQuestions[gameState?.questionIndex ?? 0];
   const currentIndex = gameState?.questionIndex ?? 0;
-  const questionCount = gameState?.questionCount ?? questions.length;
+  const questionCount = gameState?.questionCount ?? safeQuestions.length;
   const isQuestionActive = gameState?.status === "QUESTION_ACTIVE";
   const isQuestionEnded = gameState?.status === "QUESTION_ENDED";
   const canNavigate = !isQuestionActive && gameState?.status !== "WAITING";
@@ -1007,7 +1052,7 @@ export default function HostDashboard() {
       <div className="min-h-screen bg-deep-navy">
         <LiveGameHeader
           sessionCode={sessionCode}
-          playerCount={players.length}
+          playerCount={Array.isArray(players) ? players.length : 0}
           connected={connected}
           onEndGame={handleCancelSession}
         />
@@ -1031,10 +1076,10 @@ export default function HostDashboard() {
                     ? (gameState.scoringConfig as any).questionDuration * 1000
                     : 30000
                 }
-                answerDistribution={stats.answerDistribution}
+                answerDistribution={stats?.answerDistribution || { A: 0, B: 0, C: 0, D: 0 }}
                 connected={connected}
-                playerCount={stats.playerCount}
-                answerCount={stats.answerCount}
+                playerCount={typeof stats?.playerCount === "number" ? stats.playerCount : 0}
+                answerCount={typeof stats?.answerCount === "number" ? stats.answerCount : 0}
                 randomizeAnswers={gameState?.randomizeAnswers || false}
                 onStartQuestion={handleStartQuestion}
                 onRevealAnswer={handleRevealAnswer}
@@ -1053,7 +1098,10 @@ export default function HostDashboard() {
               answerRevealed={gameState?.answerRevealed || false}
               correctAnswer={gameState?.correctAnswer}
               streakThresholds={
-                (gameState?.scoringConfig as any)?.streakThresholds
+                gameState?.scoringConfig && 
+                typeof (gameState.scoringConfig as any)?.streakThresholds !== "undefined"
+                  ? (gameState.scoringConfig as any).streakThresholds
+                  : undefined
               }
             />
           </div>

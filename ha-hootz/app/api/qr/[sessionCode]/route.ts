@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ sessionCode: string }> }
+  { params }: { params: Promise<{ sessionCode: string }> },
 ) {
   try {
     const { sessionCode } = await params;
@@ -12,13 +12,23 @@ export async function GET(
     if (!/^\d{6}$/.test(sessionCode)) {
       return NextResponse.json(
         { error: "Invalid session code format" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Get the full join URL
-    const origin = request.headers.get("origin") || request.nextUrl.origin;
-    const joinUrl = `${origin}/join/${sessionCode}`;
+    // Use NEXTAUTH_URL as the canonical base URL (set in production)
+    // Fall back to request origin for local development
+    const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+
+    // Ensure the URL is absolute and doesn't have a trailing slash
+    const cleanBaseUrl = baseUrl.replace(/\/$/, "");
+    const joinUrl = `${cleanBaseUrl}/join/${sessionCode}`;
+
+    // Log for debugging (masked in production)
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[QR Code] Generated join URL: ${joinUrl}`);
+    }
 
     // Generate QR code as data URL (PNG)
     const qrCodeDataUrl = await QRCode.toDataURL(joinUrl, {
@@ -35,7 +45,7 @@ export async function GET(
     console.error("Error generating QR code:", error);
     return NextResponse.json(
       { error: "Failed to generate QR code" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

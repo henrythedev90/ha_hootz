@@ -41,9 +41,11 @@ export default function LobbyView({
       ? `${window.location.origin}/join/${sessionCode}`
       : `/join/${sessionCode}`;
 
-  const [previousPlayerCount, setPreviousPlayerCount] = useState(
-    players.length
-  );
+  // Initialize previousPlayerCount safely (avoid hydration mismatch)
+  const [previousPlayerCount, setPreviousPlayerCount] = useState(() => {
+    // Use initial players.length, but ensure it's a number
+    return typeof players.length === "number" ? players.length : 0;
+  });
   const [shouldPulse, setShouldPulse] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(true);
@@ -53,28 +55,59 @@ export default function LobbyView({
   useEffect(() => {
     if (players.length > previousPlayerCount) {
       setShouldPulse(true);
-      setTimeout(() => setShouldPulse(false), 600);
+      const timeoutId = setTimeout(() => setShouldPulse(false), 600);
+      // Cleanup timeout on unmount or when dependencies change
+      return () => clearTimeout(timeoutId);
     }
     setPreviousPlayerCount(players.length);
   }, [players.length, previousPlayerCount]);
 
   // Fetch QR code for compact display
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchQRCode = async () => {
       try {
         const response = await fetch(`/api/qr/${sessionCode}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch QR code: ${response.status}`);
+        }
+        
         const data = await response.json();
-        if (data.qrCode) {
-          setQrCodeDataUrl(data.qrCode);
+        
+        // Only update state if component is still mounted
+        if (isMounted) {
+          if (data.qrCode) {
+            setQrCodeDataUrl(data.qrCode);
+          } else {
+            console.warn("[LobbyView] QR code API returned no qrCode data");
+          }
         }
       } catch (error) {
-        console.error("Error fetching QR code:", error);
+        console.error("[LobbyView] Error fetching QR code:", error);
+        // Only update loading state if component is still mounted
+        if (isMounted) {
+          setQrCodeDataUrl(null);
+        }
       } finally {
-        setQrLoading(false);
+        if (isMounted) {
+          setQrLoading(false);
+        }
       }
     };
 
-    fetchQRCode();
+    // Only fetch on client side
+    if (typeof window !== "undefined") {
+      fetchQRCode();
+    } else {
+      setQrLoading(false);
+    }
+
+    // Cleanup: mark component as unmounted
+    return () => {
+      isMounted = false;
+    };
   }, [sessionCode]);
 
   return (
@@ -336,6 +369,14 @@ export default function LobbyView({
                             alt={player.name}
                             fill
                             className="object-cover"
+                            unoptimized
+                            onError={(e) => {
+                              // Fallback to initial if image fails to load
+                              console.warn(
+                                `[LobbyView] Failed to load avatar for ${player.name}`,
+                              );
+                              // Image component will handle the error gracefully
+                            }}
                           />
                         </div>
                       ) : (

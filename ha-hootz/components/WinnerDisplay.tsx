@@ -26,11 +26,21 @@ export default function WinnerDisplay({
   // ALL HOOKS MUST BE CALLED FIRST - before any conditional returns
   const renderCountRef = useRef(0);
 
+  // Ensure leaderboard is an array (defensive programming)
+  const safeLeaderboard = Array.isArray(leaderboard) ? leaderboard : [];
+
+  // Ensure playerId and playerName are strings
+  const safePlayerId = typeof playerId === "string" ? playerId : "";
+  const safePlayerName = typeof playerName === "string" ? playerName : "";
+
   // Find player's rank and score
-  const playerIndex = leaderboard.findIndex((p) => p.playerId === playerId);
+  const playerIndex = safeLeaderboard.findIndex(
+    (p) => p.playerId === safePlayerId,
+  );
   const playerRank = playerIndex >= 0 ? playerIndex + 1 : null;
-  const playerScore = playerIndex >= 0 ? leaderboard[playerIndex].score : 0;
-  const totalPlayers = leaderboard.length;
+  const playerScore =
+    playerIndex >= 0 ? (safeLeaderboard[playerIndex]?.score ?? 0) : 0;
+  const totalPlayers = safeLeaderboard.length;
 
   // Determine if player is in top 3
   const isWinner = playerRank === 1;
@@ -40,13 +50,13 @@ export default function WinnerDisplay({
 
   // Check for tie
   const isTie =
-    leaderboard.length > 1 &&
-    leaderboard[0].score > 0 &&
-    leaderboard[0].score === leaderboard[1].score;
+    safeLeaderboard.length > 1 &&
+    safeLeaderboard[0]?.score > 0 &&
+    safeLeaderboard[0]?.score === safeLeaderboard[1]?.score;
 
-  // DEBUG: Track renders
+  // DEBUG: Track renders (only in development)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && process.env.NODE_ENV === "development") {
       renderCountRef.current += 1;
       console.log(`[WinnerDisplay] Render #${renderCountRef.current}`, {
         isOpen,
@@ -96,7 +106,7 @@ export default function WinnerDisplay({
                     {isTie ? "It's a Tie!" : "Congratulations!"}
                   </h1>
                   <h2 className="text-xl sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-yellow-100 mb-1.5 sm:mb-1 md:mb-2 font-semibold text-center">
-                    {playerName}
+                    {safePlayerName}
                   </h2>
                   <p className="text-lg sm:text-base md:text-lg lg:text-xl xl:text-2xl text-yellow-100 font-bold text-center">
                     You Won with {playerScore} points!
@@ -128,10 +138,10 @@ export default function WinnerDisplay({
                   isWinner
                     ? "bg-linear-to-br from-cyan to-indigo text-white shadow-lg shadow-cyan/50"
                     : isSecond
-                    ? "bg-linear-to-br from-card-bg to-deep-navy text-text-light shadow-lg border-2 border-indigo/30"
-                    : isThird
-                    ? "bg-linear-to-br from-cyan/50 to-indigo/50 text-text-light shadow-lg border-2 border-cyan/30"
-                    : "bg-linear-to-br from-indigo to-cyan text-white shadow-lg"
+                      ? "bg-linear-to-br from-card-bg to-deep-navy text-text-light shadow-lg border-2 border-indigo/30"
+                      : isThird
+                        ? "bg-linear-to-br from-cyan/50 to-indigo/50 text-text-light shadow-lg border-2 border-cyan/30"
+                        : "bg-linear-to-br from-indigo to-cyan text-white shadow-lg"
                 }`}
               >
                 {isWinner ? (
@@ -146,7 +156,7 @@ export default function WinnerDisplay({
                 )}
               </motion.div>
               <h3 className="text-xl sm:text-lg md:text-xl lg:text-2xl font-bold text-text-light mb-1.5 sm:mb-1 md:mb-2">
-                {playerName}
+                {safePlayerName}
               </h3>
               <p className="text-lg sm:text-base md:text-lg lg:text-xl text-indigo font-semibold mb-2 sm:mb-1.5 md:mb-2 lg:mb-3">
                 {playerScore} points
@@ -169,14 +179,14 @@ export default function WinnerDisplay({
               Final Leaderboard
             </h3>
             <div className="space-y-2 sm:space-y-1.5 md:space-y-2 lg:space-y-3 max-h-[55vh] sm:max-h-[40vh] md:max-h-[45vh] lg:max-h-[50vh] xl:max-h-none overflow-y-auto pr-1">
-              {leaderboard.length === 0 ? (
+              {safeLeaderboard.length === 0 ? (
                 <p className="text-center text-text-light/50 py-3 sm:py-3 md:py-4 lg:py-6">
                   No players
                 </p>
               ) : (
-                leaderboard.map((player, index) => {
+                safeLeaderboard.map((player, index) => {
                   const rank = index + 1;
-                  const isPlayer = player.playerId === playerId;
+                  const isPlayer = player.playerId === safePlayerId;
                   const isTopThree = rank <= 3;
 
                   return (
@@ -192,12 +202,12 @@ export default function WinnerDisplay({
                         isPlayer
                           ? "bg-indigo/20 border-indigo shadow-xl shadow-indigo/20"
                           : isTopThree
-                          ? rank === 1
-                            ? "bg-cyan/20 border-cyan"
-                            : rank === 2
-                            ? "bg-card-bg border-indigo/30"
-                            : "bg-cyan/10 border-cyan/50"
-                          : "bg-deep-navy border-indigo/30"
+                            ? rank === 1
+                              ? "bg-cyan/20 border-cyan"
+                              : rank === 2
+                                ? "bg-card-bg border-indigo/30"
+                                : "bg-cyan/10 border-cyan/50"
+                            : "bg-deep-navy border-indigo/30"
                       }`}
                     >
                       <div className="flex items-center gap-2 sm:gap-1.5 md:gap-2 lg:gap-3">
@@ -207,8 +217,8 @@ export default function WinnerDisplay({
                               ? rank === 1
                                 ? "text-cyan"
                                 : rank === 2
-                                ? "text-text-light/50"
-                                : "text-cyan/70"
+                                  ? "text-text-light/50"
+                                  : "text-cyan/70"
                               : "text-text-light/50"
                           }`}
                         >
