@@ -374,14 +374,19 @@ export default function HostDashboard() {
       socketRef.current.disconnect();
     }
 
-    // Determine the Socket.io server URL
-    // Use window.location.origin for same-origin connections
-    const socketUrl = typeof window !== "undefined" ? window.location.origin : "/";
+    // Socket.io connection configuration
+    // Use empty config object to connect to same origin (current page's origin)
+    // This is the recommended approach for same-origin connections
+    if (typeof window === "undefined") {
+      // SSR: Don't create socket on server
+      return;
+    }
     
-    console.log(`[Socket.io Client] Connecting to: ${socketUrl}/api/socket`);
+    console.log(`[Socket.io Client] Connecting to same origin: ${window.location.origin}/api/socket`);
     
-    const newSocket = io(socketUrl, {
+    const newSocket = io({
       path: "/api/socket",
+      // Use same origin (default behavior when no URL specified)
       reconnection: true,
       reconnectionAttempts: 15,
       reconnectionDelay: ((attemptNumber: number) => {
@@ -393,12 +398,14 @@ export default function HostDashboard() {
           maxDelay
         );
         return delay;
-      }) as any, // Socket.io types may not include function support, but it works at runtime
+      }) as any,
       reconnectionDelayMax: 30000,
       // Ensure we use WebSocket transport (required for Fly.io)
       transports: ["websocket", "polling"],
       // Auto-upgrade to WebSocket
       upgrade: true,
+      // Add timeout for connection attempts
+      timeout: 20000,
     });
 
     socketRef.current = newSocket;

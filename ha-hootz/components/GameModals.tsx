@@ -28,20 +28,26 @@ export default function GameModals({
   const portalContainerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    // Ensure we have a stable reference to the portal container
-    portalContainerRef.current = document.body;
+    // Only set mounted and portal container on client side
+    if (typeof window !== "undefined" && document.body) {
+      setMounted(true);
+      // Ensure we have a stable reference to the portal container
+      portalContainerRef.current = document.body;
+    }
   }, []);
 
   // Portal content - both components are always rendered to maintain stable structure
   // They handle their own visibility internally via isOpen prop
+  // Ensure leaderboard is an array (defensive programming)
+  const safeLeaderboard = Array.isArray(leaderboard) ? leaderboard : [];
+  
   const portalContent = (
     <>
       <WinnerDisplay
         isOpen={showWinnerDisplay && !!playerName && !!playerId}
         playerName={(playerName || "") as string}
         playerId={(playerId || "") as string}
-        leaderboard={leaderboard}
+        leaderboard={safeLeaderboard}
       />
       <ThankYouModal
         isOpen={showThankYouModal}

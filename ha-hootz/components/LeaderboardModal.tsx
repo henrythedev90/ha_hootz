@@ -35,9 +35,9 @@ export default function LeaderboardModal({
 }: LeaderboardModalProps) {
   const renderCountRef = useRef(0);
 
-  // DEBUG: Track renders
+  // DEBUG: Track renders (only in development)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && process.env.NODE_ENV === "development") {
       renderCountRef.current += 1;
       console.log(`[LeaderboardModal] Render #${renderCountRef.current}`, {
         isOpen,
@@ -52,23 +52,31 @@ export default function LeaderboardModal({
 
   // FIX: Memoize leaderboard calculation to prevent expensive re-sorts on every render
   const leaderboard = useMemo(() => {
-    console.log("[LeaderboardModal] Calculating leaderboard (memoized)", {
-      playersCount: players.length,
-      scoresCount: Object.keys(playerScores).length,
-    });
+    // Ensure players is an array and playerScores is an object
+    const safePlayers = Array.isArray(players) ? players : [];
+    const safePlayerScores = playerScores && typeof playerScores === "object" ? playerScores : {};
+    
+    if (process.env.NODE_ENV === "development") {
+      console.log("[LeaderboardModal] Calculating leaderboard (memoized)", {
+        playersCount: safePlayers.length,
+        scoresCount: Object.keys(safePlayerScores).length,
+      });
+    }
 
-    const sorted = players
+    const sorted = safePlayers
       .map((player) => ({
         ...player,
-        score: playerScores[player.playerId] || 0,
+        score: safePlayerScores[player.playerId] || 0,
       }))
       .sort((a, b) => b.score - a.score);
 
-    console.log(
-      "[LeaderboardModal] Leaderboard calculated:",
-      sorted.length,
-      "players"
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "[LeaderboardModal] Leaderboard calculated:",
+        sorted.length,
+        "players"
+      );
+    }
     return sorted;
   }, [players, playerScores]);
 
@@ -134,7 +142,7 @@ export default function LeaderboardModal({
         )}
         {/* FIX: Removed layout prop to prevent expensive layout recalculations in Chrome */}
         <motion.div className="space-y-3">
-          {players.length === 0 ? (
+          {leaderboard.length === 0 ? (
             <p className="text-center text-text-light/50 py-8">
               No players yet
             </p>

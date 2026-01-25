@@ -110,12 +110,28 @@ app
     
     // Log Socket.io connection attempts for debugging
     io.engine.on("connection_error", (err) => {
-      console.error("[Socket.io] Connection error:", err.req?.headers?.origin, err.message);
+      const origin = err.req?.headers?.origin || "no origin";
+      const userAgent = err.req?.headers?.["user-agent"] || "unknown";
+      console.error(`[Socket.io] Connection error from ${origin}:`, err.message);
+      console.error(`[Socket.io] User-Agent: ${userAgent}`);
+      if (err.context) {
+        console.error(`[Socket.io] Error context:`, err.context);
+      }
     });
     
     io.engine.on("connection", (socket) => {
-      const origin = socket.request.headers.origin;
-      console.log(`[Socket.io] New connection attempt from origin: ${origin || 'no origin'}`);
+      const origin = socket.request.headers.origin || "no origin";
+      const userAgent = socket.request.headers["user-agent"] || "unknown";
+      console.log(`[Socket.io] New connection attempt from origin: ${origin}`);
+      console.log(`[Socket.io] User-Agent: ${userAgent.substring(0, 50)}...`);
+    });
+    
+    // Log successful connections
+    io.on("connection", (socket) => {
+      console.log(`[Socket.io] ✅ Client connected: ${socket.id}`);
+      socket.on("disconnect", (reason) => {
+        console.log(`[Socket.io] Client disconnected: ${socket.id}, reason: ${reason}`);
+      });
     });
 
     // Initialize Socket.io handlers

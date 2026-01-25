@@ -51,7 +51,7 @@ export default function GamePage() {
   // Get avatar from sessionStorage (stored during join flow)
   // Initialize as null to avoid hydration mismatch, then read in useEffect
   const [playerAvatar, setPlayerAvatar] = useState<{ imageUrl: string } | null>(
-    null
+    null,
   );
 
   // Read avatar from sessionStorage on client side only
@@ -81,10 +81,10 @@ export default function GamePage() {
   const connected = useAppSelector((state) => state.socket.connected);
   const showWelcomeModal = useAppSelector((state) => state.ui.showWelcomeModal);
   const showWinnerDisplay = useAppSelector(
-    (state) => state.ui.showWinnerDisplay
+    (state) => state.ui.showWinnerDisplay,
   );
   const showThankYouModal = useAppSelector(
-    (state) => state.ui.showThankYouModal
+    (state) => state.ui.showThankYouModal,
   );
   const isExitModalOpen = useAppSelector((state) => state.ui.isExitModalOpen);
   const sessionEnded = useAppSelector((state) => state.ui.sessionEnded);
@@ -130,7 +130,7 @@ export default function GamePage() {
     const checkSessionStatus = async () => {
       try {
         const validateResponse = await fetch(
-          `/api/sessions/validate/${sessionCode}`
+          `/api/sessions/validate/${sessionCode}`,
         );
         const validateData = await validateResponse.json();
 
@@ -171,7 +171,7 @@ export default function GamePage() {
       const updateTimer = () => {
         const remaining = Math.max(
           0,
-          Math.floor((gameState.endAt! - Date.now()) / 1000)
+          Math.floor((gameState.endAt! - Date.now()) / 1000),
         );
         dispatch(setTimeRemaining(remaining));
         dispatch(setIsTimerExpired(remaining === 0));
@@ -219,15 +219,23 @@ export default function GamePage() {
       return;
     }
 
-    // Determine the Socket.io server URL
-    // Use window.location.origin for same-origin connections
-    // This ensures the connection uses the correct protocol (http/https) and domain
-    const socketUrl = typeof window !== "undefined" ? window.location.origin : "/";
-    
-    console.log(`[Socket.io Client] Connecting to: ${socketUrl}/api/socket`);
-    
-    const newSocket = io(socketUrl, {
+    // Socket.io connection configuration
+    // Use empty string or undefined to connect to same origin (current page's origin)
+    // This is the recommended approach for same-origin connections
+    // Socket.io will automatically use window.location.origin when no URL is provided
+    if (typeof window === "undefined") {
+      // SSR: Don't create socket on server
+      return;
+    }
+
+    console.log(
+      `[Socket.io Client] Connecting to same origin: ${window.location.origin}/api/socket`,
+    );
+
+    const newSocket = io({
       path: "/api/socket",
+      // Use same origin (default behavior when no URL specified)
+      // This ensures correct protocol (http/https) and domain matching
       reconnection: true,
       reconnectionAttempts: 15,
       reconnectionDelay: ((attemptNumber: number) => {
@@ -236,27 +244,39 @@ export default function GamePage() {
         const maxDelay = 30000;
         const delay = Math.min(
           baseDelay * Math.pow(2, attemptNumber - 1),
-          maxDelay
+          maxDelay,
         );
         return delay;
-      }) as any, // Socket.io types may not include function support, but it works at runtime
+      }) as any,
       reconnectionDelayMax: 30000,
       // Ensure we use WebSocket transport (required for Fly.io)
       transports: ["websocket", "polling"],
       // Auto-upgrade to WebSocket
       upgrade: true,
+      // Add timeout for connection attempts
+      timeout: 20000,
     });
 
     socketRef.current = newSocket;
     dispatch(setSocket(newSocket));
 
     newSocket.on("connect", () => {
+      console.log(`[Socket.io Client] ✅ Connected with ID: ${newSocket.id}`);
       dispatch(setConnected(true));
-      newSocket.emit("join-session", {
-        sessionCode,
-        name: playerName,
-        avatarUrl: playerAvatar?.imageUrl,
-      });
+
+      // Emit join-session after a brief delay to ensure connection is fully established
+      setTimeout(() => {
+        if (newSocket.connected) {
+          console.log(
+            `[Socket.io Client] Emitting join-session for: ${playerName}`,
+          );
+          newSocket.emit("join-session", {
+            sessionCode,
+            name: playerName,
+            avatarUrl: playerAvatar?.imageUrl,
+          });
+        }
+      }, 100);
     });
 
     newSocket.on(
@@ -282,7 +302,7 @@ export default function GamePage() {
             ...data.gameState,
             sessionId: data.sessionId || data.gameState.sessionId,
             randomizeAnswers: data.gameState.randomizeAnswers ?? false,
-          })
+          }),
         );
 
         // Generate answer colors if joining during an active question
@@ -367,7 +387,7 @@ export default function GamePage() {
         if (isJoiningMidGame) {
           dispatch(setShowWelcomeModal(false));
         }
-      }
+      },
     );
 
     newSocket.on("join-error", (data: { reason?: string } | string) => {
@@ -413,12 +433,12 @@ export default function GamePage() {
             ...data,
             status: "IN_PROGRESS",
             randomizeAnswers: data.randomizeAnswers ?? false,
-          })
+          }),
         );
         dispatch(setSelectedAnswer(null));
         dispatch(setIsTimerExpired(false));
         dispatch(setShowWelcomeModal(true));
-      }
+      },
     );
 
     newSocket.on(
@@ -477,12 +497,12 @@ export default function GamePage() {
             questionIndex: data.questionIndex,
             endAt: data.endAt,
             randomizeAnswers: shouldRandomize,
-          })
+          }),
         );
         dispatch(setSelectedAnswer(null));
         dispatch(setIsTimerExpired(false));
         dispatch(setShowWelcomeModal(false));
-      }
+      },
     );
 
     newSocket.on("question-ended", (data: any) => {
@@ -547,7 +567,7 @@ export default function GamePage() {
         if (isReviewMode && playerId) {
           try {
             const response = await fetch(
-              `/api/sessions/${sessionCode}/player-answer?questionIndex=${data.questionIndex}&playerId=${playerId}`
+              `/api/sessions/${sessionCode}/player-answer?questionIndex=${data.questionIndex}&playerId=${playerId}`,
             );
             const answerData = await response.json();
             if (
@@ -583,11 +603,11 @@ export default function GamePage() {
             endAt: undefined,
             answerRevealed: data.answerRevealed || false,
             correctAnswer: data.correctAnswer,
-          })
+          }),
         );
         dispatch(setIsTimerExpired(isReviewMode));
         dispatch(setTimeRemaining(0));
-      }
+      },
     );
 
     newSocket.on(
@@ -606,9 +626,9 @@ export default function GamePage() {
           updateGameState({
             answerRevealed: true,
             correctAnswer: data.correctAnswer,
-          })
+          }),
         );
-      }
+      },
     );
 
     newSocket.on(
@@ -622,7 +642,7 @@ export default function GamePage() {
             alert(`Answer not accepted: ${data.reason}`);
           }
         }
-      }
+      },
     );
 
     newSocket.on("session-cancelled", (data: { message?: string }) => {
@@ -642,8 +662,23 @@ export default function GamePage() {
     });
 
     newSocket.on("connect_error", (error) => {
-      console.error("Connection error:", error);
-      dispatch(setError("Failed to connect to server"));
+      console.error("[Socket.io Client] Connection error:", error);
+      console.error("[Socket.io Client] Error type:", (error as any).type);
+      console.error("[Socket.io Client] Error message:", error.message);
+
+      // Provide more specific error messages
+      let errorMessage = "Failed to connect to server";
+      if (error.message?.includes("CORS")) {
+        errorMessage =
+          "Connection blocked by security policy. Please refresh the page.";
+      } else if (error.message?.includes("timeout")) {
+        errorMessage =
+          "Connection timeout. Please check your internet connection.";
+      } else if (error.message?.includes("400")) {
+        errorMessage = "Server rejected connection. Please refresh the page.";
+      }
+
+      dispatch(setError(errorMessage));
     });
 
     newSocket.on(
@@ -653,16 +688,21 @@ export default function GamePage() {
       }) => {
         dispatch(setLeaderboard(data.leaderboard));
         dispatch(setShowWinnerDisplay(true));
-      }
+      },
     );
 
     return () => {
+      console.log("[Socket.io Client] Cleaning up socket connection");
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
       }
-      newSocket.disconnect();
+      if (newSocket.connected) {
+        newSocket.disconnect();
+      }
+      newSocket.removeAllListeners();
     };
-  }, [sessionCode, playerName, sessionEnded, playerId, dispatch]);
+  }, [sessionCode, playerName, sessionEnded, playerId, playerAvatar, dispatch]);
 
   const handleAnswerSelect = (displayAnswer: "A" | "B" | "C" | "D") => {
     if (!socket || !gameState) return;
@@ -695,8 +735,8 @@ export default function GamePage() {
     dispatch(setConnected(false));
     dispatch(
       setError(
-        "GOODBYE: You have left the game. You cannot rejoin with the same name."
-      )
+        "GOODBYE: You have left the game. You cannot rejoin with the same name.",
+      ),
     );
     dispatch(setIsExitModalOpen(false));
   };
@@ -902,7 +942,7 @@ export default function GamePage() {
                 )}{" "}
                 to start the presentation.
               </p>
-              {playerCount > 0 && (
+              {typeof playerCount === "number" && playerCount > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -993,8 +1033,8 @@ export default function GamePage() {
                       timeRemaining <= 5
                         ? "text-error"
                         : timeRemaining <= 10
-                        ? "text-cyan"
-                        : "text-indigo"
+                          ? "text-cyan"
+                          : "text-indigo"
                     } transition-colors`}
                   >
                     {timeRemaining}s
@@ -1009,8 +1049,8 @@ export default function GamePage() {
                         timeRemaining <= 5
                           ? "#EF4444"
                           : timeRemaining <= 10
-                          ? "#22D3EE"
-                          : "#6366F1",
+                            ? "#22D3EE"
+                            : "#6366F1",
                     }}
                     className="h-full rounded-full"
                   />
@@ -1110,10 +1150,10 @@ export default function GamePage() {
                         showCorrect
                           ? "bg-success/20 border-success shadow-[0_0_20px_rgba(34,197,94,0.3)]"
                           : showWrong
-                          ? "bg-error/20 border-error shadow-[0_0_20px_rgba(239,68,68,0.3)]"
-                          : isSelectedState
-                          ? "bg-card-bg/80"
-                          : "bg-card-bg hover:bg-card-bg/80"
+                            ? "bg-error/20 border-error shadow-[0_0_20px_rgba(239,68,68,0.3)]"
+                            : isSelectedState
+                              ? "bg-card-bg/80"
+                              : "bg-card-bg hover:bg-card-bg/80"
                       } ${
                         isLocked && !isSelected && !showCorrect
                           ? "opacity-50"
@@ -1134,10 +1174,10 @@ export default function GamePage() {
                             showCorrect
                               ? "bg-success text-white"
                               : showWrong
-                              ? "bg-error text-white"
-                              : isSelectedState && answerColor
-                              ? "text-white"
-                              : "bg-deep-navy text-text-light/60"
+                                ? "bg-error text-white"
+                                : isSelectedState && answerColor
+                                  ? "text-white"
+                                  : "bg-deep-navy text-text-light/60"
                           }`}
                           style={
                             isSelectedState && answerColor
