@@ -374,7 +374,13 @@ export default function HostDashboard() {
       socketRef.current.disconnect();
     }
 
-    const newSocket = io("/", {
+    // Determine the Socket.io server URL
+    // Use window.location.origin for same-origin connections
+    const socketUrl = typeof window !== "undefined" ? window.location.origin : "/";
+    
+    console.log(`[Socket.io Client] Connecting to: ${socketUrl}/api/socket`);
+    
+    const newSocket = io(socketUrl, {
       path: "/api/socket",
       reconnection: true,
       reconnectionAttempts: 15,
@@ -389,6 +395,10 @@ export default function HostDashboard() {
         return delay;
       }) as any, // Socket.io types may not include function support, but it works at runtime
       reconnectionDelayMax: 30000,
+      // Ensure we use WebSocket transport (required for Fly.io)
+      transports: ["websocket", "polling"],
+      // Auto-upgrade to WebSocket
+      upgrade: true,
     });
 
     socketRef.current = newSocket;

@@ -50,18 +50,73 @@ app
     });
 
     // Initialize Socket.io server
+    // CORS configuration: Allow connections from the app URL
+    const allowedOrigin = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    
+    console.log(`[Socket.io] Configuring CORS for origin: ${allowedOrigin}`);
+    
     const io = new Server(httpServer, {
       path: "/api/socket",
       addTrailingSlash: false,
       cors: {
-        origin: process.env.NEXTAUTH_URL || "http://localhost:3000",
+        origin: (origin, callback) => {
+          // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
+          if (!origin) {
+            console.log("[Socket.io] Allowing request with no origin");
+            return callback(null, true);
+          }
+          
+          // Normalize origins (remove trailing slashes, handle protocol variations)
+          const normalizeOrigin = (url: string) => {
+            return url.replace(/\/$/, '').toLowerCase();
+          };
+          
+          const normalizedRequestOrigin = normalizeOrigin(origin);
+          const normalizedAllowedOrigin = normalizeOrigin(allowedOrigin);
+          
+          // Check exact match
+          if (normalizedRequestOrigin === normalizedAllowedOrigin) {
+            console.log(`[Socket.io] Allowing origin: ${origin}`);
+            return callback(null, true);
+          }
+          
+          // Check if it's the same domain (http vs https)
+          const requestDomain = normalizedRequestOrigin.replace(/^https?:\/\//, '');
+          const allowedDomain = normalizedAllowedOrigin.replace(/^https?:\/\//, '');
+          
+          if (requestDomain === allowedDomain) {
+            console.log(`[Socket.io] Allowing origin (domain match): ${origin}`);
+            return callback(null, true);
+          }
+          
+          // Log blocked origin for debugging
+          console.warn(`[Socket.io] CORS blocked origin: ${origin} (allowed: ${allowedOrigin})`);
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        },
         methods: ["GET", "POST"],
         credentials: true,
+      },
+      // Allow connections even if Redis adapter isn't ready
+      allowEIO3: true,
+      // Enable connection state recovery for better reliability
+      connectionStateRecovery: {
+        maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+        skipMiddlewares: true,
       },
     });
 
     // Store io globally for access in API routes
     (global as any).io = io;
+    
+    // Log Socket.io connection attempts for debugging
+    io.engine.on("connection_error", (err) => {
+      console.error("[Socket.io] Connection error:", err.req?.headers?.origin, err.message);
+    });
+    
+    io.engine.on("connection", (socket) => {
+      const origin = socket.request.headers.origin;
+      console.log(`[Socket.io] New connection attempt from origin: ${origin || 'no origin'}`);
+    });
 
     // Initialize Socket.io handlers
     // Use dynamic import AFTER env vars are loaded to prevent Redis client from loading too early
