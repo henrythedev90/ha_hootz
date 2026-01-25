@@ -208,8 +208,8 @@ flyctl metrics
 # Export logs
 flyctl logs --json > logs.json
 
-# Stream logs
-flyctl logs --follow
+# Stream logs (tails by default)
+flyctl logs -a ha-hootz
 ```
 
 ## 🎓 Next Steps

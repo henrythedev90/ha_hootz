@@ -42,21 +42,19 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy Next.js build output
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/.next ./.next
 
-# Copy production dependencies
-# Standalone output includes minimal node_modules, but we need tsx (in devDependencies)
-# So we copy the full node_modules to ensure tsx is available
+# Copy production dependencies (needed for custom server and runtime)
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source files needed for custom server
-# The standalone output already includes app/, but we need our custom server and lib files
 COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/store ./store
 COPY --from=builder /app/hooks ./hooks
 COPY --from=builder /app/types ./types
+COPY --from=builder /app/components ./components
+COPY --from=builder /app/app ./app
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/next.config.ts ./next.config.ts

@@ -48,8 +48,8 @@ flyctl apps restart ha-hootz
 # Deploy
 flyctl deploy
 
-# View logs
-flyctl logs --follow
+# View logs (tails by default)
+flyctl logs -a ha-hootz
 
 # Check status
 flyctl status

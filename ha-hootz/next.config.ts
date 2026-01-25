@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // Enable standalone output for Docker/Fly.io deployment
-  output: "standalone",
+  // Note: We use a custom server (server.ts) for Socket.io support
+  // Standalone output is not compatible with custom servers
+  // The Dockerfile handles dependencies and file copying manually
 };
 
 export default nextConfig;

@@ -160,8 +160,8 @@ flyctl status
 # Real-time logs
 flyctl logs
 
-# Follow logs (like tail -f)
-flyctl logs --follow
+# Follow logs (tails by default, like tail -f)
+flyctl logs -a ha-hootz
 
 # Last 100 lines
 flyctl logs --limit 100
