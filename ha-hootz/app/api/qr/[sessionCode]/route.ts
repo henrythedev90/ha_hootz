@@ -17,8 +17,18 @@ export async function GET(
     }
 
     // Get the full join URL
-    const origin = request.headers.get("origin") || request.nextUrl.origin;
-    const joinUrl = `${origin}/join/${sessionCode}`;
+    // Use NEXTAUTH_URL as the canonical base URL (set in production)
+    // Fall back to request origin for local development
+    const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+    
+    // Ensure the URL is absolute and doesn't have a trailing slash
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    const joinUrl = `${cleanBaseUrl}/join/${sessionCode}`;
+    
+    // Log for debugging (masked in production)
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[QR Code] Generated join URL: ${joinUrl}`);
+    }
 
     // Generate QR code as data URL (PNG)
     const qrCodeDataUrl = await QRCode.toDataURL(joinUrl, {
