@@ -142,7 +142,9 @@ export default function HostDashboard() {
         }
         return [];
       } catch (error) {
-        console.error("Error fetching questions:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("[HostDashboard] Error fetching questions:", error);
+        }
         return [];
       }
     };
@@ -150,12 +152,19 @@ export default function HostDashboard() {
     const fetchSessionStatus = async () => {
       try {
         const response = await fetch(`/api/sessions/validate/${sessionCode}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch session status: ${response.status}`);
+        }
+        
         const data = await response.json();
         if (data.sessionStatus) {
           dispatch(setSessionStatus(data.sessionStatus));
         }
       } catch (error) {
-        console.error("Error fetching session status:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("[HostDashboard] Error fetching session status:", error);
+        }
       }
     };
 
@@ -300,6 +309,11 @@ export default function HostDashboard() {
         const response = await fetch(
           `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`
         );
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch stats: ${response.status}`);
+        }
+        
         const data = await response.json();
         if (data.success) {
           dispatch(
@@ -318,7 +332,9 @@ export default function HostDashboard() {
           );
         }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("[HostDashboard] Error fetching stats:", error);
+        }
       }
     };
 
@@ -394,7 +410,9 @@ export default function HostDashboard() {
       return;
     }
     
-    console.log(`[Socket.io Client] Connecting to same origin: ${window.location.origin}/api/socket`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[Socket.io Client] Connecting to same origin: ${window.location.origin}/api/socket`);
+    }
     
     const newSocket = io({
       path: "/api/socket",
@@ -439,7 +457,9 @@ export default function HostDashboard() {
         }>;
         gameState?: any;
       }) => {
-        dispatch(setPlayers(data.players || []));
+        // Ensure players is an array
+        const safePlayers = Array.isArray(data.players) ? data.players : [];
+        dispatch(setPlayers(safePlayers));
 
         if (data.gameState) {
           dispatch(setGameState(data.gameState));
@@ -452,6 +472,11 @@ export default function HostDashboard() {
                 const response = await fetch(
                   `/api/sessions/${sessionCode}/questions`
                 );
+                
+                if (!response.ok) {
+                  throw new Error(`Failed to fetch questions: ${response.status}`);
+                }
+                
                 const questionsData = await response.json();
                 if (questionsData.success && questionsData.questions) {
                   const questionIndex = data.gameState!.questionIndex ?? 0;
@@ -480,7 +505,9 @@ export default function HostDashboard() {
         sessionCode: string;
         playerCount?: number;
       }) => {
-        console.log("Host received player-joined event:", data);
+        if (process.env.NODE_ENV === "development") {
+          console.log("[HostDashboard] Host received player-joined event:", data);
+        }
         dispatch(
           addPlayer({
             playerId: data.playerId,
@@ -507,6 +534,11 @@ export default function HostDashboard() {
               const response = await fetch(
                 `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`
               );
+              
+              if (!response.ok) {
+                throw new Error(`Failed to fetch stats: ${response.status}`);
+              }
+              
               const statsData = await response.json();
               if (statsData.success) {
                 dispatch(
@@ -561,6 +593,11 @@ export default function HostDashboard() {
               const response = await fetch(
                 `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`
               );
+              
+              if (!response.ok) {
+                throw new Error(`Failed to fetch stats: ${response.status}`);
+              }
+              
               const statsData = await response.json();
               if (statsData.success) {
                 dispatch(
@@ -579,7 +616,9 @@ export default function HostDashboard() {
                 );
               }
             } catch (error) {
-              console.error("Error refreshing stats after player left:", error);
+              if (process.env.NODE_ENV === "development") {
+                console.error("[HostDashboard] Error refreshing stats after player left:", error);
+              }
             }
           };
           fetchStats();
@@ -664,6 +703,11 @@ export default function HostDashboard() {
             const response = await fetch(
               `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
             );
+            
+            if (!response.ok) {
+              throw new Error(`Failed to fetch stats: ${response.status}`);
+            }
+            
             const statsData = await response.json();
             if (statsData.success) {
               dispatch(
@@ -729,16 +773,20 @@ export default function HostDashboard() {
         // Update streaks for all players in Redux state
         // Use ref to get current players to avoid stale closure
         const currentPlayers = playersRef.current;
-        if (currentPlayers.length === 0) {
+        if (!Array.isArray(currentPlayers) || currentPlayers.length === 0) {
           // If players list is empty, don't update (prevents clearing players)
-          console.warn(
-            "player-streaks-updated received but players list is empty, skipping update"
-          );
+          if (process.env.NODE_ENV === "development") {
+            console.warn(
+              "[HostDashboard] player-streaks-updated received but players list is empty, skipping update"
+            );
+          }
           return;
         }
+        // Ensure streaks data is valid
+        const safeStreaks = data.streaks && typeof data.streaks === "object" ? data.streaks : {};
         const updatedPlayers = currentPlayers.map((player) => ({
           ...player,
-          streak: data.streaks[player.playerId] ?? player.streak ?? 0,
+          streak: safeStreaks[player.playerId] ?? player.streak ?? 0,
         }));
         dispatch(setPlayers(updatedPlayers));
       }
@@ -816,7 +864,9 @@ export default function HostDashboard() {
     const question = gameState.question || safeQuestions[gameState.questionIndex];
 
     if (!question) {
-      console.error("[HostDashboard] No question available to start");
+      if (process.env.NODE_ENV === "development") {
+        console.error("[HostDashboard] No question available to start");
+      }
       return;
     }
 
@@ -856,8 +906,9 @@ export default function HostDashboard() {
 
   const handleNextQuestion = () => {
     if (!socket || !gameState || !questions.length) return;
+    const safeQuestions = Array.isArray(questions) ? questions : [];
     const nextIndex = (gameState.questionIndex ?? 0) + 1;
-    if (nextIndex < questions.length) {
+    if (nextIndex < safeQuestions.length) {
       socket.emit("NAVIGATE_QUESTION", {
         sessionCode,
         questionIndex: nextIndex,
@@ -908,14 +959,55 @@ export default function HostDashboard() {
     }
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
+    // Clear any existing timeout
+    if (copiedTimeoutRef.current) {
+      clearTimeout(copiedTimeoutRef.current);
+      copiedTimeoutRef.current = null;
+    }
+    
     const fullUrl =
       typeof window !== "undefined"
         ? `${window.location.origin}/join/${sessionCode}`
         : `/join/${sessionCode}`;
-    navigator.clipboard.writeText(fullUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    
+    // Use clipboard API with error handling
+    if (typeof window !== "undefined" && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+        setCopied(true);
+        copiedTimeoutRef.current = setTimeout(() => {
+          setCopied(false);
+          copiedTimeoutRef.current = null;
+        }, 2000);
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("[HostDashboard] Failed to copy link:", error);
+        }
+        // Fallback to execCommand for older browsers
+        if (typeof document !== "undefined") {
+          try {
+            const textArea = document.createElement("textarea");
+            textArea.value = fullUrl;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            setCopied(true);
+            copiedTimeoutRef.current = setTimeout(() => {
+              setCopied(false);
+              copiedTimeoutRef.current = null;
+            }, 2000);
+          } catch (fallbackError) {
+            if (process.env.NODE_ENV === "development") {
+              console.error("[HostDashboard] Fallback copy failed:", fallbackError);
+            }
+          }
+        }
+      }
+    }
   };
 
   const handleRevealWinner = () => {
@@ -1026,7 +1118,7 @@ export default function HostDashboard() {
         />
         <LobbyView
           sessionCode={sessionCode}
-          players={players}
+          players={Array.isArray(players) ? players : []}
           connected={connected}
           copied={copied}
           randomizeAnswers={randomizeAnswers}
@@ -1093,7 +1185,7 @@ export default function HostDashboard() {
 
             {/* Right Column - Stats/Players/Leaderboard */}
             <GameStatsSidebar
-              players={players}
+              players={Array.isArray(players) ? players : []}
               stats={stats}
               answerRevealed={gameState?.answerRevealed || false}
               correctAnswer={gameState?.correctAnswer}
@@ -1116,8 +1208,8 @@ export default function HostDashboard() {
             setShowLeaderboard(false);
           }
         }}
-        players={players}
-        playerScores={stats.playerScores || {}}
+        players={Array.isArray(players) ? players : []}
+        playerScores={stats?.playerScores && typeof stats.playerScores === "object" ? stats.playerScores : {}}
         winnerRevealed={winnerRevealed}
         onEndGame={() => dispatch(setShowEndGameModal(true))}
         streakThresholds={(gameState?.scoringConfig as any)?.streakThresholds}
