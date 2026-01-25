@@ -41,6 +41,7 @@ export default function PlayersListModal({
   const countdownDurationRef = useRef<number>(5); // 5 seconds
   const hasClosedRef = useRef(false);
   const onCloseRef = useRef(onClose);
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const playerColors = usePlayerColors(players);
 
   // Update onClose ref when it changes
@@ -56,6 +57,11 @@ export default function PlayersListModal({
       setLoading(true);
       setError("");
       setPlayers([]);
+      // Clear any pending redirect timeout
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+        redirectTimeoutRef.current = null;
+      }
       return;
     }
 
@@ -76,7 +82,6 @@ export default function PlayersListModal({
       }
     };
 
-    fetchPlayers();
   }, [isOpen, sessionCode]);
 
   // Listen for player join/leave events via socket
@@ -89,12 +94,22 @@ export default function PlayersListModal({
       avatarUrl?: string;
       playerCount: number;
     }) => {
+      // Validate data before processing
+      if (!data.playerId || !data.name) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[PlayersListModal] Invalid player-joined data:", data);
+        }
+        return;
+      }
+      
       setPlayers((prev) => {
-        if (prev.some((p) => p.playerId === data.playerId)) {
-          return prev;
+        // Ensure prev is an array
+        const safePrev = Array.isArray(prev) ? prev : [];
+        if (safePrev.some((p) => p.playerId === data.playerId)) {
+          return safePrev;
         }
         return [
-          ...prev,
+          ...safePrev,
           {
             playerId: data.playerId,
             name: data.name,
@@ -108,7 +123,19 @@ export default function PlayersListModal({
       playerId: string;
       playerCount: number;
     }) => {
-      setPlayers((prev) => prev.filter((p) => p.playerId !== data.playerId));
+      // Validate data before processing
+      if (!data.playerId) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[PlayersListModal] Invalid player-left data:", data);
+        }
+        return;
+      }
+      
+      setPlayers((prev) => {
+        // Ensure prev is an array
+        const safePrev = Array.isArray(prev) ? prev : [];
+        return safePrev.filter((p) => p.playerId !== data.playerId);
+      });
     };
 
     socket.on("player-joined", handlePlayerJoined);
@@ -129,6 +156,11 @@ export default function PlayersListModal({
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
+      }
+      // Clear redirect timeout if modal closes
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+        redirectTimeoutRef.current = null;
       }
       countdownStartTimeRef.current = null;
       hasClosedRef.current = false;
@@ -236,8 +268,15 @@ export default function PlayersListModal({
     // Navigate host back to dashboard
     // The socket handler will also trigger session-cancelled event
     // which will redirect, but we'll do it here too for immediate feedback
-    setTimeout(() => {
+    // Clear any existing redirect timeout
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+    
+    redirectTimeoutRef.current = setTimeout(() => {
       router.push("/");
+      redirectTimeoutRef.current = null;
     }, 500);
   };
 
@@ -290,11 +329,11 @@ export default function PlayersListModal({
                     variant="dots"
                     size="small"
                   />
-                ) : error && !players.length ? (
+                ) : error && (!Array.isArray(players) || !players.length) ? (
                   <div className="text-center py-12">
                     <p className="text-[#EF4444]">{error}</p>
                   </div>
-                ) : players.length === 0 ? (
+                ) : !Array.isArray(players) || players.length === 0 ? (
                   <div className="text-center py-12 text-[#E5E7EB]/50">
                     <p className="text-lg">
                       No players have joined yet. Waiting for players...
@@ -303,7 +342,13 @@ export default function PlayersListModal({
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     <AnimatePresence>
-                      {players.map((player, index) => (
+                      {Array.isArray(players) && players.map((player, index) => {
+                        // Validate player data
+                        if (!player || !player.playerId || !player.name) {
+                          return null;
+                        }
+                        
+                        return (
                         <motion.div
                           key={player.playerId}
                           initial={{ opacity: 0, scale: 0.8, y: 10 }}
@@ -356,6 +401,16 @@ export default function PlayersListModal({
                                 alt={player.name}
                                 fill
                                 className="object-cover"
+                                unoptimized
+                                onError={(e) => {
+                                  // Fallback to initial if image fails to load
+                                  if (process.env.NODE_ENV === "development") {
+                                    console.warn(
+                                      `[PlayersListModal] Failed to load avatar for ${player.name}`,
+                                    );
+                                  }
+                                  // Image component will handle the error gracefully
+                                }}
                               />
                             </div>
                           ) : (
@@ -383,7 +438,8 @@ export default function PlayersListModal({
                             className="w-1.5 h-1.5 bg-[#22C55E] rounded-full shadow-sm shadow-[#22C55E]/50"
                           />
                         </motion.div>
-                      ))}
+                        );
+                      })}
                     </AnimatePresence>
                   </div>
                 )}
@@ -421,7 +477,7 @@ export default function PlayersListModal({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleStartNow}
-                    disabled={players.length === 0}
+                    disabled={!Array.isArray(players) || players.length === 0}
                     className="flex-1 px-6 py-4 bg-linear-to-r from-[#6366F1] to-[#5558E3] hover:from-[#5558E3] hover:to-[#4F46E5] text-white rounded-xl font-semibold shadow-lg shadow-[#6366F1]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-[#6366F1] disabled:hover:to-[#5558E3]"
                   >
                     Start Now
