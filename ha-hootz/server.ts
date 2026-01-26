@@ -11,32 +11,24 @@ loadEnvConfig(projectDir);
 
 const dev = process.env.NODE_ENV !== "production";
 // Fly.io requires binding to 0.0.0.0, not localhost
-// In production or when PORT is set (Fly.io always sets PORT), use 0.0.0.0
-// This ensures the server is reachable from outside the container
-const hostname = process.env.HOSTNAME || (process.env.PORT ? "0.0.0.0" : (dev ? "localhost" : "0.0.0.0"));
-const port = parseInt(process.env.PORT || "3000", 10);
+// CRITICAL: Always use 0.0.0.0 (hardcoded for Fly.io compatibility)
+// Don't pass hostname/port to next() - let our custom server handle it
+const PORT = parseInt(process.env.PORT || "3000", 10);
+const HOST = "0.0.0.0"; // Always 0.0.0.0 for Fly.io compatibility
 
 // Log configuration for debugging
 console.log(`🚀 Starting server...`);
 console.log(`   NODE_ENV: ${process.env.NODE_ENV || "development"}`);
-console.log(`   HOSTNAME: ${hostname}`);
-console.log(`   PORT: ${port}`);
+console.log(`   HOST: ${HOST}`);
+console.log(`   PORT: ${PORT}`);
 
-const app = next({ dev, hostname, port });
+const app = next({ dev });
 const handle = app.getRequestHandler();
 
 app
   .prepare()
   .then(async () => {
     console.log("✅ Next.js app prepared");
-    
-    // Ensure we're binding to the correct address for Fly.io
-    if (hostname !== "0.0.0.0" && process.env.PORT) {
-      console.warn(`⚠️  WARNING: Hostname is "${hostname}" but PORT is set. Fly.io requires 0.0.0.0`);
-      console.warn(`⚠️  Overriding hostname to 0.0.0.0 for Fly.io compatibility`);
-      // Note: We can't change hostname here, but we'll log the warning
-      // The actual binding will use the hostname variable
-    }
     
     const httpServer = createServer(async (req, res) => {
       try {
@@ -157,30 +149,37 @@ app
       }
     };
     
-    // Initialize Socket.io in the background (don't block server startup)
-    initSocketWithTimeout();
-
-    // Start the server - explicitly bind to hostname (0.0.0.0 for Fly.io)
-    // CRITICAL: This must complete for Fly.io to route traffic
+    // Start the server FIRST - this is critical for Fly.io health checks
+    // CRITICAL: Must bind to 0.0.0.0 for Fly.io to route traffic
+    console.log(`🔧 Binding server to ${HOST}:${PORT}...`);
+    
     httpServer
       .once("error", (err) => {
-        console.error("HTTP Server error:", err);
-        console.error("Server failed to bind - Fly.io cannot route traffic");
+        console.error("❌ HTTP Server error:", err);
+        console.error("❌ Server failed to bind - Fly.io cannot route traffic");
+        console.error(`❌ Attempted to bind to: ${HOST}:${PORT}`);
         process.exit(1);
       })
-      .listen(port, hostname, () => {
+      .listen(PORT, HOST, () => {
         const address = httpServer.address();
-        console.log(`✅ Server listening on http://${hostname}:${port}`);
+        console.log(`✅ Server listening on http://${HOST}:${PORT}`);
         if (address && typeof address === 'object') {
           console.log(`   Bound to: ${address.address}:${address.port}`);
+          // Verify the binding is correct
+          if (address.address !== "0.0.0.0") {
+            console.error(`❌ WARNING: Server bound to ${address.address} but Fly.io requires 0.0.0.0`);
+          } else {
+            console.log(`✅ Binding verified: ${address.address} is correct for Fly.io`);
+          }
         }
-        console.log(
-          `> Socket.io available at http://${hostname}:${port}/api/socket`,
-        );
-        // Log that server is ready for health checks
+        console.log(`> Socket.io available at http://${HOST}:${PORT}/api/socket`);
         console.log("✅ Server is ready to accept connections");
         console.log("✅ Fly.io proxy can now route traffic to this server");
       });
+
+    // Initialize Socket.io in the background AFTER server starts listening
+    // This ensures the server is ready for health checks even if Socket.io fails
+    initSocketWithTimeout();
   })
   .catch((err) => {
     console.error("❌ Failed to prepare Next.js app:", err);
