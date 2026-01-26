@@ -25,9 +25,17 @@ console.log(`   PORT: ${PORT}`);
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
+// Add timeout to ensure server starts even if prepare takes too long
+const prepareTimeout = setTimeout(() => {
+  console.error("❌ Next.js prepare() timed out after 30 seconds");
+  console.error("❌ This may indicate a build or initialization issue");
+  process.exit(1);
+}, 30000);
+
 app
   .prepare()
   .then(async () => {
+    clearTimeout(prepareTimeout);
     console.log("✅ Next.js app prepared");
     
     const httpServer = createServer(async (req, res) => {
