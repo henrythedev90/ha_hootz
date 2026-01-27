@@ -6,7 +6,7 @@ interface LoadingProps {
   message?: string;
   fullScreen?: boolean;
   variant?: "dots" | "pulse" | "bars" | "orbit" | "wave";
-  size?: "small" | "medium" | "large";
+  size?: "small" | "medium" | "large" | "jumbo";
 }
 
 export default function Loading({
@@ -38,25 +38,61 @@ export default function Loading({
       bar: { width: 8, height: 56 },
       fontSize: "text-lg",
     },
+    jumbo: {
+      container: "55vh", // 55% of viewport height
+      dot: 24,
+      bar: { width: 12, height: 120 },
+      fontSize: "text-2xl",
+    },
   };
 
   const currentSize = sizes[size];
+  
+  // For jumbo size, calculate numeric value for animations (55% of viewport height)
+  // Use a reasonable default if window is not available (SSR)
+  const getContainerSize = () => {
+    if (typeof currentSize.container === "string") {
+      // For jumbo, use 55vh which is approximately 55% of viewport height
+      // Calculate numeric value for animations: assume typical viewport height of 800px
+      if (typeof window !== "undefined") {
+        return window.innerHeight * 0.55;
+      }
+      return 440; // Fallback for SSR
+    }
+    return currentSize.container;
+  };
+  
+  const containerSize = getContainerSize();
+  const containerSizeStyle =
+    typeof currentSize.container === "string"
+      ? currentSize.container
+      : `${currentSize.container}px`;
 
   return (
     <div className={containerClasses}>
       <div className="flex flex-col items-center justify-center gap-4">
         <div
           style={{
-            width: currentSize.container,
-            height: currentSize.container,
+            width: containerSizeStyle,
+            height: containerSizeStyle,
           }}
           className="relative flex items-center justify-center"
         >
-          {variant === "dots" && <DotsAnimation size={currentSize} />}
-          {variant === "pulse" && <PulseAnimation size={currentSize} />}
-          {variant === "bars" && <BarsAnimation size={currentSize} />}
-          {variant === "orbit" && <OrbitAnimation size={currentSize} />}
-          {variant === "wave" && <WaveAnimation size={currentSize} />}
+          {variant === "dots" && (
+            <DotsAnimation size={{ ...currentSize, container: containerSize }} />
+          )}
+          {variant === "pulse" && (
+            <PulseAnimation size={{ ...currentSize, container: containerSize }} />
+          )}
+          {variant === "bars" && (
+            <BarsAnimation size={{ ...currentSize, container: containerSize }} />
+          )}
+          {variant === "orbit" && (
+            <OrbitAnimation size={{ ...currentSize, container: containerSize }} />
+          )}
+          {variant === "wave" && (
+            <WaveAnimation size={{ ...currentSize, container: containerSize }} />
+          )}
         </div>
         {message && (
           <motion.p
@@ -116,14 +152,18 @@ function DotsAnimation({ size }: any) {
 
 // Variant 2: Pulsing Ring (Thinking/Syncing)
 function PulseAnimation({ size }: any) {
+  const containerSize = typeof size.container === "number" ? size.container : parseFloat(size.container) || 440;
+  const borderWidth = containerSize > 200 ? 8 : 4;
+  
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       {/* Outer ring */}
       <motion.div
-        className="absolute rounded-full border-4 border-[#6366F1]/30"
+        className="absolute rounded-full border-[#6366F1]/30"
         style={{
-          width: size.container * 0.9,
-          height: size.container * 0.9,
+          width: containerSize * 0.9,
+          height: containerSize * 0.9,
+          borderWidth: `${borderWidth}px`,
         }}
         animate={{
           scale: [1, 1.2, 1],
@@ -143,10 +183,11 @@ function PulseAnimation({ size }: any) {
 
       {/* Middle ring */}
       <motion.div
-        className="absolute rounded-full border-4 border-[#22D3EE]/50"
+        className="absolute rounded-full border-[#22D3EE]/50"
         style={{
-          width: size.container * 0.6,
-          height: size.container * 0.6,
+          width: containerSize * 0.6,
+          height: containerSize * 0.6,
+          borderWidth: `${borderWidth}px`,
         }}
         animate={{
           scale: [1, 1.15, 1],
@@ -167,7 +208,7 @@ function PulseAnimation({ size }: any) {
 
       {/* Center question mark */}
       <motion.div
-        className="text-4xl"
+        className={containerSize > 200 ? "text-8xl" : "text-4xl"}
         animate={{
           scale: [1, 1.1, 1],
           rotate: [0, 5, -5, 0],
@@ -226,7 +267,8 @@ function BarsAnimation({ size }: any) {
 // Variant 4: Orbiting Dots (Score Charging)
 function OrbitAnimation({ size }: any) {
   const dotSize = size.dot;
-  const orbitRadius = size.container * 0.35;
+  const containerSize = typeof size.container === "number" ? size.container : parseFloat(size.container) || 440;
+  const orbitRadius = containerSize * 0.35;
   const colors = ["#6366F1", "#22D3EE", "#F59E0B"];
 
   return (
