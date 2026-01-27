@@ -52,8 +52,10 @@ app
     // Initialize Socket.io server
     // CORS configuration: Allow connections from the app URL
     const allowedOrigin = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const isDevelopment = process.env.NODE_ENV !== "production";
     
     console.log(`[Socket.io] Configuring CORS for origin: ${allowedOrigin}`);
+    console.log(`[Socket.io] Environment: ${isDevelopment ? "development" : "production"}`);
     
     const io = new Server(httpServer, {
       path: "/api/socket",
@@ -66,6 +68,15 @@ app
             return callback(null, true);
           }
           
+          // In development, be more lenient - allow localhost variations
+          if (isDevelopment) {
+            const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+            if (isLocalhost) {
+              console.log(`[Socket.io] Allowing localhost origin in development: ${origin}`);
+              return callback(null, true);
+            }
+          }
+          
           // Normalize origins (remove trailing slashes, handle protocol variations)
           const normalizeOrigin = (url: string) => {
             return url.replace(/\/$/, '').toLowerCase();
@@ -76,7 +87,7 @@ app
           
           // Check exact match
           if (normalizedRequestOrigin === normalizedAllowedOrigin) {
-            console.log(`[Socket.io] Allowing origin: ${origin}`);
+            console.log(`[Socket.io] Allowing origin (exact match): ${origin}`);
             return callback(null, true);
           }
           
@@ -89,8 +100,17 @@ app
             return callback(null, true);
           }
           
+          // In development, allow any origin to help with debugging
+          if (isDevelopment) {
+            console.log(`[Socket.io] Allowing origin in development mode: ${origin}`);
+            return callback(null, true);
+          }
+          
           // Log blocked origin for debugging
-          console.warn(`[Socket.io] CORS blocked origin: ${origin} (allowed: ${allowedOrigin})`);
+          console.error(`[Socket.io] ❌ CORS blocked origin: ${origin}`);
+          console.error(`[Socket.io] ❌ Allowed origin: ${allowedOrigin}`);
+          console.error(`[Socket.io] ❌ Request domain: ${requestDomain}`);
+          console.error(`[Socket.io] ❌ Allowed domain: ${allowedDomain}`);
           callback(new Error(`Origin ${origin} not allowed by CORS`));
         },
         methods: ["GET", "POST"],

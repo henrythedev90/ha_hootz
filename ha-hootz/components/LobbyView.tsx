@@ -5,7 +5,6 @@ import { Users, QrCode, Copy, Check, Shuffle, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePlayerColors } from "@/hooks/usePlayerColors";
 import Image from "next/image";
-import Container from "./Container";
 
 interface Player {
   playerId: string;
@@ -111,7 +110,7 @@ export default function LobbyView({
   }, [sessionCode]);
 
   return (
-    <Container variant="h-screen" overflow="hidden">
+    <div className="bg-[#0B1020] text-[#E5E7EB] flex flex-col h-screen overflow-hidden md:px-50">
       {/* Compact Session Info Header */}
       <div className="px-6 py-4 border-b border-[#6366F1]/10 flex items-center justify-between shrink-0">
         <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -160,129 +159,136 @@ export default function LobbyView({
       {/* Main Content Area - Single Viewport Grid */}
       <div className="flex-[0.8] grid grid-cols-12 gap-6 px-6 py-5 min-h-0 overflow-hidden">
         {/* Left Side - Session Info & Settings */}
-        <div className="col-span-12 lg:col-span-6 flex flex-col gap-4 min-h-0 lg:border-r lg:border-[#6366F1] lg:pr-6">
-          {/* Session Info Area */}
-          <div className="flex-1 flex items-center justify-center px-4">
-            <div className="flex items-center gap-7">
-              {/* Session Code */}
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col">
-                  <span className="text-sm text-[#E5E7EB]/60 uppercase tracking-wider">
-                    Session Code
-                  </span>
-                  <motion.span
-                    className="text-4xl font-mono font-bold text-[#22D3EE]"
-                    animate={shouldPulse ? { scale: [1, 1.05, 1] } : {}}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {sessionCode}
-                  </motion.span>
+        <div 
+          className="col-span-12 lg:col-span-6 flex flex-col gap-4 min-h-0 lg:pr-6 overflow-hidden"
+        >
+          <div 
+            className="lg:border-r h-full flex flex-col gap-4 pr-6 -mr-6 overflow-hidden"
+            style={{ borderRightColor: 'rgba(99, 102, 241, 1)', borderRightWidth: '1px' }}
+          >
+            {/* Session Info Area */}
+            <div className="flex-1 flex items-center justify-center px-4 overflow-hidden">
+              <div className="flex flex-row min-[1024px]:flex-col min-[1474px]:flex-row items-center justify-center gap-4 min-[1024px]:gap-[0.7rem] min-[1474px]:gap-7 max-w-full overflow-hidden">
+                {/* Session Code */}
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-[#E5E7EB]/60 uppercase tracking-wider">
+                      Session Code
+                    </span>
+                    <motion.span
+                      className="text-2xl min-[1024px]:text-4xl font-mono font-bold text-[#22D3EE]"
+                      animate={shouldPulse ? { scale: [1, 1.05, 1] } : {}}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {sessionCode}
+                    </motion.span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Divider */}
-              <div className="h-14 w-px bg-[#6366F1]/20" />
+                {/* Divider - Vertical on small/very large, Horizontal on medium */}
+                <div className="w-px h-14 min-[1024px]:w-full min-[1024px]:h-px min-[1474px]:w-px min-[1474px]:h-14 bg-[#6366F1]/20" />
 
-              {/* QR Code - Medium Size */}
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col items-center">
-                  <QrCode className="w-5 h-5 text-[#22D3EE] mb-2" />
-                  <div className="relative w-[134px] h-[134px] bg-white rounded-lg p-2.5 flex items-center justify-center">
-                    {qrLoading ? (
-                      <div className="text-[#0B1020]/40 text-sm">
-                        Loading...
-                      </div>
-                    ) : qrCodeDataUrl ? (
-                      <Image
-                        src={qrCodeDataUrl}
-                        alt="QR Code"
-                        fill
-                        className="object-contain p-2"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="text-red-500 text-sm text-center px-2">
-                        Failed to load
-                      </div>
-                    )}
+                {/* QR Code - Medium Size */}
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-center">
+                    <QrCode className="w-5 h-5 text-[#22D3EE] mb-2" />
+                    <div className="relative w-[100px] h-[100px] min-[1024px]:w-[134px] min-[1024px]:h-[134px] bg-white rounded-lg p-2.5 flex items-center justify-center">
+                      {qrLoading ? (
+                        <div className="text-[#0B1020]/40 text-sm">
+                          Loading...
+                        </div>
+                      ) : qrCodeDataUrl ? (
+                        <Image
+                          src={qrCodeDataUrl}
+                          alt="QR Code"
+                          fill
+                          className="object-contain p-2"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="text-red-500 text-sm text-center px-2">
+                          Failed to load
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Divider - Vertical on small/very large, Horizontal on medium */}
+                <div className="w-px h-14 min-[1024px]:w-full min-[1024px]:h-px min-[1474px]:w-px min-[1474px]:h-14 bg-[#6366F1]/20" />
+
+                {/* Player Count Indicator */}
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-[#E5E7EB]/60 uppercase tracking-wider">
+                      Players
+                    </span>
+                    <motion.div
+                      className="flex items-center gap-2"
+                      animate={shouldPulse ? { scale: [1, 1.1, 1] } : {}}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Users className="w-5 h-5 min-[1024px]:w-6 min-[1024px]:h-6 text-[#22D3EE]" />
+                      <span className="text-2xl min-[1024px]:text-3xl font-bold text-[#E5E7EB]">
+                        {players.length}
+                      </span>
+                    </motion.div>
                   </div>
                 </div>
               </div>
-
-              {/* Divider */}
-              <div className="h-14 w-px bg-[#6366F1]/20" />
-
-              {/* Player Count Indicator */}
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col">
-                  <span className="text-sm text-[#E5E7EB]/60 uppercase tracking-wider">
-                    Players
-                  </span>
-                  <motion.div
-                    className="flex items-center gap-2"
-                    animate={shouldPulse ? { scale: [1, 1.1, 1] } : {}}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Users className="w-6 h-6 text-[#22D3EE]" />
-                    <span className="text-3xl font-bold text-[#E5E7EB]">
-                      {players.length}
-                    </span>
-                  </motion.div>
-                </div>
-              </div>
             </div>
-          </div>
 
-          {/* Settings Row - Horizontal */}
-          <div className="flex items-center justify-center gap-6 px-4 py-3 border-t border-[#6366F1]/10">
-            {/* Randomize Answers Toggle */}
-            <div className="flex items-center gap-3">
-              <Shuffle className="w-4 h-4 text-[#E5E7EB]/60" />
-              <span className="text-sm text-[#E5E7EB]/80">
-                Randomize Answers
-              </span>
-              <button
-                onClick={() => onRandomizeAnswersChange(!randomizeAnswers)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  randomizeAnswers
-                    ? "bg-linear-to-r from-[#6366F1] to-[#22D3EE]"
-                    : "bg-[#E5E7EB]/20 border border-[#6366F1]/30"
+            {/* Settings Row - Horizontal */}
+            <div className="flex items-center justify-center gap-6 px-4 py-3 border-t border-[#6366F1]/10 overflow-hidden shrink-0">
+              {/* Randomize Answers Toggle */}
+              <div className="flex items-center gap-3">
+                <Shuffle className="w-4 h-4 text-[#E5E7EB]/60" />
+                <span className="text-sm text-[#E5E7EB]/80">
+                  Randomize Answers
+                </span>
+                <button
+                  onClick={() => onRandomizeAnswersChange(!randomizeAnswers)}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${
+                    randomizeAnswers
+                      ? "bg-linear-to-r from-[#6366F1] to-[#22D3EE]"
+                      : "bg-[#E5E7EB]/20 border border-[#6366F1]/30"
+                  }`}
+                >
+                  <motion.div
+                    animate={{
+                      x: randomizeAnswers ? 20 : 2,
+                    }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"
+                  />
+                </button>
+              </div>
+
+              {/* Copy Link Button */}
+              <div className="h-6 w-px bg-[#6366F1]/20" />
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onCopyLink}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                  copied
+                    ? "bg-[#22C55E] text-white"
+                    : "bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#E5E7EB] border border-[#6366F1]/30"
                 }`}
               >
-                <motion.div
-                  animate={{
-                    x: randomizeAnswers ? 20 : 2,
-                  }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"
-                />
-              </button>
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </motion.button>
             </div>
-
-            {/* Copy Link Button */}
-            <div className="h-6 w-px bg-[#6366F1]/20" />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onCopyLink}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                copied
-                  ? "bg-[#22C55E] text-white"
-                  : "bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#E5E7EB] border border-[#6366F1]/30"
-              }`}
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span>Copy Link</span>
-                </>
-              )}
-            </motion.button>
           </div>
         </div>
 
@@ -437,6 +443,6 @@ export default function LobbyView({
           Start Game
         </motion.button>
       </div>
-    </Container>
+    </div>
   );
 }

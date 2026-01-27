@@ -74,7 +74,20 @@ export default function HostDashboard() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [winnerRevealed, setWinnerRevealed] = useState(false);
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
-  
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Random loading variant for visual variety
+  const loadingVariants: Array<"dots" | "pulse" | "bars" | "orbit" | "wave"> = [
+    "dots",
+    "pulse",
+    "bars",
+    "orbit",
+    "wave",
+  ];
+  const randomLoadingVariant = useRef(
+    loadingVariants[Math.floor(Math.random() * loadingVariants.length)],
+  ).current;
+
   // Refs for timeout cleanup
   const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const modalToggleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -124,6 +137,9 @@ export default function HostDashboard() {
     dispatch(setShowPlayersModal(false));
     dispatch(setShowEndGameModal(false));
 
+    // Reset loading state for new session
+    setIsInitializing(true);
+
     if (sessionCode) {
       dispatch(setSessionCode(sessionCode));
       dispatch(setSocketSessionCode(sessionCode));
@@ -132,6 +148,10 @@ export default function HostDashboard() {
 
   // Fetch questions and game state when component mounts
   useEffect(() => {
+    if (!sessionCode) return;
+
+    setIsInitializing(true);
+
     const fetchQuestions = async () => {
       try {
         const response = await fetch(`/api/sessions/${sessionCode}/questions`);
@@ -152,18 +172,21 @@ export default function HostDashboard() {
     const fetchSessionStatus = async () => {
       try {
         const response = await fetch(`/api/sessions/validate/${sessionCode}`);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch session status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         if (data.sessionStatus) {
           dispatch(setSessionStatus(data.sessionStatus));
         }
       } catch (error) {
         if (process.env.NODE_ENV === "development") {
-          console.error("[HostDashboard] Error fetching session status:", error);
+          console.error(
+            "[HostDashboard] Error fetching session status:",
+            error,
+          );
         }
       }
     };
@@ -194,7 +217,7 @@ export default function HostDashboard() {
                 ? false
                 : data.gameState.isReviewMode || false,
               scoringConfig: data.gameState.scoringConfig,
-            })
+            }),
           );
           // Explicitly close all modals when fetching game state for a new session
           if (isWaiting) {
@@ -208,7 +231,7 @@ export default function HostDashboard() {
               status: "WAITING",
               questionIndex: 0,
               questionCount: questionCount || 0,
-            })
+            }),
           );
           // Close all modals for new sessions
           dispatch(setShowPlayersModal(false));
@@ -222,7 +245,7 @@ export default function HostDashboard() {
             status: "WAITING",
             questionIndex: 0,
             questionCount: questionCount || 0,
-          })
+          }),
         );
         // Close all modals on error
         dispatch(setShowPlayersModal(false));
@@ -230,13 +253,17 @@ export default function HostDashboard() {
       }
     };
 
-    if (sessionCode) {
+    // Fetch all initial data
+    Promise.all([
       fetchQuestions().then(async (questionsData) => {
         const questionCount = questionsData?.length || 0;
         await fetchGameState(questionCount);
-      });
-      fetchSessionStatus();
-    }
+      }),
+      fetchSessionStatus(),
+    ]).finally(() => {
+      // Mark initialization as complete after all data is fetched
+      setIsInitializing(false);
+    });
   }, [sessionCode, dispatch]);
 
   // Timer countdown effect
@@ -255,7 +282,7 @@ export default function HostDashboard() {
       const updateTimer = () => {
         const remaining = Math.max(
           0,
-          Math.floor((gameState.endAt! - Date.now()) / 1000)
+          Math.floor((gameState.endAt! - Date.now()) / 1000),
         );
         dispatch(setTimeRemaining(remaining));
 
@@ -271,7 +298,7 @@ export default function HostDashboard() {
                 answerRevealed: true,
                 correctAnswer: gameState.question?.correct,
                 status: "QUESTION_ENDED",
-              })
+              }),
             );
           }
         }
@@ -307,13 +334,13 @@ export default function HostDashboard() {
     const fetchStats = async () => {
       try {
         const response = await fetch(
-          `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`
+          `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`,
         );
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch stats: ${response.status}`);
         }
-        
+
         const data = await response.json();
         if (data.success) {
           dispatch(
@@ -328,7 +355,7 @@ export default function HostDashboard() {
               },
               playersWithAnswers: data.playersWithAnswers || [],
               playerScores: data.playerScores || {},
-            })
+            }),
           );
         }
       } catch (error) {
@@ -359,7 +386,7 @@ export default function HostDashboard() {
 
       try {
         const response = await fetch(
-          `/api/sessions/validate/${sessionCode}?hostCheck=true`
+          `/api/sessions/validate/${sessionCode}?hostCheck=true`,
         );
         const data = await response.json();
 
@@ -409,11 +436,13 @@ export default function HostDashboard() {
       // SSR: Don't create socket on server
       return;
     }
-    
+
     if (process.env.NODE_ENV === "development") {
-      console.log(`[Socket.io Client] Connecting to same origin: ${window.location.origin}/api/socket`);
+      console.log(
+        `[Socket.io Client] Connecting to same origin: ${window.location.origin}/api/socket`,
+      );
     }
-    
+
     const newSocket = io({
       path: "/api/socket",
       // Use same origin (default behavior when no URL specified)
@@ -425,7 +454,7 @@ export default function HostDashboard() {
         const maxDelay = 30000;
         const delay = Math.min(
           baseDelay * Math.pow(2, attemptNumber - 1),
-          maxDelay
+          maxDelay,
         );
         return delay;
       }) as any,
@@ -442,7 +471,19 @@ export default function HostDashboard() {
     dispatch(setSocket(newSocket));
 
     newSocket.on("connect", () => {
+      console.log(
+        `[HostDashboard] ✅ Socket connected with ID: ${newSocket.id}`,
+      );
       dispatch(setConnected(true));
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error(
+        `[HostDashboard] ❌ Socket connection error:`,
+        error.message,
+      );
+      console.error(`[HostDashboard] Error type:`, (error as any).type);
+      dispatch(setConnected(false));
     });
 
     newSocket.on(
@@ -470,13 +511,15 @@ export default function HostDashboard() {
             const fetchQuestion = async () => {
               try {
                 const response = await fetch(
-                  `/api/sessions/${sessionCode}/questions`
+                  `/api/sessions/${sessionCode}/questions`,
                 );
-                
+
                 if (!response.ok) {
-                  throw new Error(`Failed to fetch questions: ${response.status}`);
+                  throw new Error(
+                    `Failed to fetch questions: ${response.status}`,
+                  );
                 }
-                
+
                 const questionsData = await response.json();
                 if (questionsData.success && questionsData.questions) {
                   const questionIndex = data.gameState!.questionIndex ?? 0;
@@ -492,7 +535,7 @@ export default function HostDashboard() {
             fetchQuestion();
           }
         }
-      }
+      },
     );
 
     newSocket.on(
@@ -506,7 +549,10 @@ export default function HostDashboard() {
         playerCount?: number;
       }) => {
         if (process.env.NODE_ENV === "development") {
-          console.log("[HostDashboard] Host received player-joined event:", data);
+          console.log(
+            "[HostDashboard] Host received player-joined event:",
+            data,
+          );
         }
         dispatch(
           addPlayer({
@@ -514,7 +560,7 @@ export default function HostDashboard() {
             name: data.name,
             avatarUrl: data.avatarUrl,
             streak: data.streak || 0,
-          })
+          }),
         );
 
         if (data.playerCount !== undefined) {
@@ -532,13 +578,13 @@ export default function HostDashboard() {
           const fetchStats = async () => {
             try {
               const response = await fetch(
-                `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`
+                `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`,
               );
-              
+
               if (!response.ok) {
                 throw new Error(`Failed to fetch stats: ${response.status}`);
               }
-              
+
               const statsData = await response.json();
               if (statsData.success) {
                 dispatch(
@@ -553,7 +599,7 @@ export default function HostDashboard() {
                     playersWithAnswers: statsData.playersWithAnswers || [],
                     playerScores:
                       statsData.playerScores || stats.playerScores || {},
-                  })
+                  }),
                 );
               }
             } catch (error) {
@@ -562,7 +608,7 @@ export default function HostDashboard() {
           };
           fetchStats();
         }
-      }
+      },
     );
 
     newSocket.on(
@@ -591,13 +637,13 @@ export default function HostDashboard() {
           const fetchStats = async () => {
             try {
               const response = await fetch(
-                `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`
+                `/api/sessions/${sessionCode}/stats?questionIndex=${questionIndex}`,
               );
-              
+
               if (!response.ok) {
                 throw new Error(`Failed to fetch stats: ${response.status}`);
               }
-              
+
               const statsData = await response.json();
               if (statsData.success) {
                 dispatch(
@@ -612,18 +658,21 @@ export default function HostDashboard() {
                     playersWithAnswers: statsData.playersWithAnswers || [],
                     playerScores:
                       statsData.playerScores || stats.playerScores || {},
-                  })
+                  }),
                 );
               }
             } catch (error) {
               if (process.env.NODE_ENV === "development") {
-                console.error("[HostDashboard] Error refreshing stats after player left:", error);
+                console.error(
+                  "[HostDashboard] Error refreshing stats after player left:",
+                  error,
+                );
               }
             }
           };
           fetchStats();
         }
-      }
+      },
     );
 
     newSocket.on(
@@ -634,9 +683,9 @@ export default function HostDashboard() {
           updateGameState({
             status: "IN_PROGRESS",
             questionIndex: data.questionIndex ?? 0,
-          })
+          }),
         );
-      }
+      },
     );
 
     newSocket.on(
@@ -649,9 +698,9 @@ export default function HostDashboard() {
             questionIndex: data.questionIndex,
             endAt: data.endAt,
             answerRevealed: false,
-          })
+          }),
         );
-      }
+      },
     );
 
     newSocket.on("question-ended", (data: { questionIndex: number }) => {
@@ -681,7 +730,7 @@ export default function HostDashboard() {
               answerRevealed: answerRevealed,
               correctAnswer: data.correctAnswer,
               isReviewMode: isReviewMode,
-            })
+            }),
           );
         } else {
           dispatch(
@@ -693,7 +742,7 @@ export default function HostDashboard() {
               correctAnswer: data.correctAnswer,
               isReviewMode: isReviewMode,
               endAt: undefined,
-            })
+            }),
           );
         }
 
@@ -701,13 +750,13 @@ export default function HostDashboard() {
         if (isReviewMode) {
           try {
             const response = await fetch(
-              `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`
+              `/api/sessions/${sessionCode}/stats?questionIndex=${data.questionIndex}`,
             );
-            
+
             if (!response.ok) {
               throw new Error(`Failed to fetch stats: ${response.status}`);
             }
-            
+
             const statsData = await response.json();
             if (statsData.success) {
               dispatch(
@@ -722,13 +771,13 @@ export default function HostDashboard() {
                   },
                   playersWithAnswers: statsData.playersWithAnswers || [],
                   playerScores: statsData.playerScores || {},
-                })
+                }),
               );
             }
           } catch (error) {
             console.error(
               "Error fetching stats for navigated question:",
-              error
+              error,
             );
           }
         } else {
@@ -738,10 +787,10 @@ export default function HostDashboard() {
               answerCount: 0,
               answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
               playersWithAnswers: [],
-            })
+            }),
           );
         }
-      }
+      },
     );
 
     newSocket.on(
@@ -761,10 +810,10 @@ export default function HostDashboard() {
                 data.playersWithAnswers ||
                 statsRef.current.playersWithAnswers ||
                 [],
-            })
+            }),
           );
         }
-      }
+      },
     );
 
     newSocket.on(
@@ -777,19 +826,20 @@ export default function HostDashboard() {
           // If players list is empty, don't update (prevents clearing players)
           if (process.env.NODE_ENV === "development") {
             console.warn(
-              "[HostDashboard] player-streaks-updated received but players list is empty, skipping update"
+              "[HostDashboard] player-streaks-updated received but players list is empty, skipping update",
             );
           }
           return;
         }
         // Ensure streaks data is valid
-        const safeStreaks = data.streaks && typeof data.streaks === "object" ? data.streaks : {};
+        const safeStreaks =
+          data.streaks && typeof data.streaks === "object" ? data.streaks : {};
         const updatedPlayers = currentPlayers.map((player) => ({
           ...player,
           streak: safeStreaks[player.playerId] ?? player.streak ?? 0,
         }));
         dispatch(setPlayers(updatedPlayers));
-      }
+      },
     );
 
     newSocket.on("session-cancelled", () => {
@@ -852,7 +902,7 @@ export default function HostDashboard() {
     dispatch(
       updateGameState({
         randomizeAnswers: randomizeAnswers,
-      })
+      }),
     );
     socket.emit("START_GAME", { sessionCode, randomizeAnswers });
   };
@@ -861,7 +911,8 @@ export default function HostDashboard() {
     if (!socket || gameState?.questionIndex === undefined) return;
 
     const safeQuestions = Array.isArray(questions) ? questions : [];
-    const question = gameState.question || safeQuestions[gameState.questionIndex];
+    const question =
+      gameState.question || safeQuestions[gameState.questionIndex];
 
     if (!question) {
       if (process.env.NODE_ENV === "development") {
@@ -900,7 +951,7 @@ export default function HostDashboard() {
         answerRevealed: true,
         correctAnswer: gameState.question?.correct,
         status: "QUESTION_ENDED",
-      })
+      }),
     );
   };
 
@@ -965,12 +1016,12 @@ export default function HostDashboard() {
       clearTimeout(copiedTimeoutRef.current);
       copiedTimeoutRef.current = null;
     }
-    
+
     const fullUrl =
       typeof window !== "undefined"
         ? `${window.location.origin}/join/${sessionCode}`
         : `/join/${sessionCode}`;
-    
+
     // Use clipboard API with error handling
     if (typeof window !== "undefined" && navigator.clipboard) {
       try {
@@ -1002,7 +1053,10 @@ export default function HostDashboard() {
             }, 2000);
           } catch (fallbackError) {
             if (process.env.NODE_ENV === "development") {
-              console.error("[HostDashboard] Fallback copy failed:", fallbackError);
+              console.error(
+                "[HostDashboard] Fallback copy failed:",
+                fallbackError,
+              );
             }
           }
         }
@@ -1013,9 +1067,10 @@ export default function HostDashboard() {
   const handleRevealWinner = () => {
     // Ensure players is an array and stats.playerScores exists
     const safePlayers = Array.isArray(players) ? players : [];
-    const safePlayerScores = stats?.playerScores && typeof stats.playerScores === "object" 
-      ? stats.playerScores 
-      : {};
+    const safePlayerScores =
+      stats?.playerScores && typeof stats.playerScores === "object"
+        ? stats.playerScores
+        : {};
 
     // Prepare leaderboard data
     const leaderboard = safePlayers
@@ -1089,8 +1144,26 @@ export default function HostDashboard() {
     );
   }
 
+  // Show loading while initializing (fetching questions, game state, session status)
+  if (isInitializing) {
+    return (
+      <Loading
+        message="Loading session..."
+        variant={randomLoadingVariant}
+        size="jumbo"
+      />
+    );
+  }
+
+  // Show loading if game state is not ready yet (shouldn't happen after initialization, but safety check)
   if (!gameState && connected && socket) {
-    return <Loading message="Restoring game state..." />;
+    return (
+      <Loading
+        message="Restoring game state..."
+        variant={randomLoadingVariant}
+        size="jumbo"
+      />
+    );
   }
 
   // Lobby view (before game starts)
@@ -1168,10 +1241,16 @@ export default function HostDashboard() {
                     ? (gameState.scoringConfig as any).questionDuration * 1000
                     : 30000
                 }
-                answerDistribution={stats?.answerDistribution || { A: 0, B: 0, C: 0, D: 0 }}
+                answerDistribution={
+                  stats?.answerDistribution || { A: 0, B: 0, C: 0, D: 0 }
+                }
                 connected={connected}
-                playerCount={typeof stats?.playerCount === "number" ? stats.playerCount : 0}
-                answerCount={typeof stats?.answerCount === "number" ? stats.answerCount : 0}
+                playerCount={
+                  typeof stats?.playerCount === "number" ? stats.playerCount : 0
+                }
+                answerCount={
+                  typeof stats?.answerCount === "number" ? stats.answerCount : 0
+                }
                 randomizeAnswers={gameState?.randomizeAnswers || false}
                 onStartQuestion={handleStartQuestion}
                 onRevealAnswer={handleRevealAnswer}
@@ -1190,8 +1269,9 @@ export default function HostDashboard() {
               answerRevealed={gameState?.answerRevealed || false}
               correctAnswer={gameState?.correctAnswer}
               streakThresholds={
-                gameState?.scoringConfig && 
-                typeof (gameState.scoringConfig as any)?.streakThresholds !== "undefined"
+                gameState?.scoringConfig &&
+                typeof (gameState.scoringConfig as any)?.streakThresholds !==
+                  "undefined"
                   ? (gameState.scoringConfig as any).streakThresholds
                   : undefined
               }
@@ -1209,7 +1289,11 @@ export default function HostDashboard() {
           }
         }}
         players={Array.isArray(players) ? players : []}
-        playerScores={stats?.playerScores && typeof stats.playerScores === "object" ? stats.playerScores : {}}
+        playerScores={
+          stats?.playerScores && typeof stats.playerScores === "object"
+            ? stats.playerScores
+            : {}
+        }
         winnerRevealed={winnerRevealed}
         onEndGame={() => dispatch(setShowEndGameModal(true))}
         streakThresholds={(gameState?.scoringConfig as any)?.streakThresholds}
