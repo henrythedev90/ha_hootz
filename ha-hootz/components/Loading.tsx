@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRef } from "react";
 
 interface LoadingProps {
   message?: string;
@@ -9,12 +10,28 @@ interface LoadingProps {
   size?: "small" | "medium" | "large" | "jumbo";
 }
 
+// Available loading variants for random selection
+const loadingVariants: Array<"dots" | "pulse" | "bars" | "orbit" | "wave"> = [
+  "dots",
+  "pulse",
+  "bars",
+  "orbit",
+  "wave",
+];
+
 export default function Loading({
   message = "Loading...",
   fullScreen = true,
-  variant = "dots",
+  variant,
   size = "medium",
 }: LoadingProps) {
+  // Random loading variant for visual variety (only calculated once per component instance)
+  const randomLoadingVariant = useRef(
+    loadingVariants[Math.floor(Math.random() * loadingVariants.length)],
+  ).current;
+
+  // Use provided variant or fall back to random variant
+  const selectedVariant = variant || randomLoadingVariant;
   const containerClasses = fullScreen
     ? "min-h-screen bg-[#0B1020] flex items-center justify-center"
     : "flex items-center justify-center p-8";
@@ -78,19 +95,19 @@ export default function Loading({
           }}
           className="relative flex items-center justify-center"
         >
-          {variant === "dots" && (
+          {selectedVariant === "dots" && (
             <DotsAnimation size={{ ...currentSize, container: containerSize }} />
           )}
-          {variant === "pulse" && (
+          {selectedVariant === "pulse" && (
             <PulseAnimation size={{ ...currentSize, container: containerSize }} />
           )}
-          {variant === "bars" && (
+          {selectedVariant === "bars" && (
             <BarsAnimation size={{ ...currentSize, container: containerSize }} />
           )}
-          {variant === "orbit" && (
+          {selectedVariant === "orbit" && (
             <OrbitAnimation size={{ ...currentSize, container: containerSize }} />
           )}
-          {variant === "wave" && (
+          {selectedVariant === "wave" && (
             <WaveAnimation size={{ ...currentSize, container: containerSize }} />
           )}
         </div>

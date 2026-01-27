@@ -76,18 +76,6 @@ export default function HostDashboard() {
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Random loading variant for visual variety
-  const loadingVariants: Array<"dots" | "pulse" | "bars" | "orbit" | "wave"> = [
-    "dots",
-    "pulse",
-    "bars",
-    "orbit",
-    "wave",
-  ];
-  const randomLoadingVariant = useRef(
-    loadingVariants[Math.floor(Math.random() * loadingVariants.length)],
-  ).current;
-
   // Refs for timeout cleanup
   const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const modalToggleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1149,7 +1137,6 @@ export default function HostDashboard() {
     return (
       <Loading
         message="Loading session..."
-        variant={randomLoadingVariant}
         size="jumbo"
       />
     );
@@ -1160,7 +1147,6 @@ export default function HostDashboard() {
     return (
       <Loading
         message="Restoring game state..."
-        variant={randomLoadingVariant}
         size="jumbo"
       />
     );
