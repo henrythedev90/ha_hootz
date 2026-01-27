@@ -51,11 +51,25 @@ function AuthPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setIsSignUp(mode === "signup");
-  }, [mode]);
+    
+    // Handle URL query parameters for verification status
+    const verified = searchParams.get("verified");
+    const errorParam = searchParams.get("error");
+    
+    if (verified === "true") {
+      setSuccess("Email verified successfully! You can now sign in.");
+      setError("");
+    } else if (errorParam === "invalid_token" || errorParam === "missing_token") {
+      setError("Invalid or expired verification link. Please request a new one.");
+    } else if (errorParam === "verification_failed") {
+      setError("Email verification failed. Please try again.");
+    }
+  }, [mode, searchParams]);
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -87,7 +101,10 @@ function AuthPageContent() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        // Check if error is due to unverified email
+        // NextAuth doesn't expose this directly, so we'll show a generic message
+        // and provide option to resend verification
+        setError("Invalid email or password. If you just signed up, please verify your email first.");
       } else {
         router.push("/");
         router.refresh();
@@ -125,21 +142,13 @@ function AuthPageContent() {
         return;
       }
 
-      // Auto sign in after registration
-      const result = await signIn("credentials", {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError(
-          "Registration successful, but sign in failed. Please try signing in."
-        );
-      } else {
-        router.push("/");
-        router.refresh();
-      }
+      // Registration successful - show success message about email verification
+      setSuccess(registerData.message || "Account created! Please check your email to verify your account.");
+      setError("");
+      signUpForm.reset();
+      
+      // Don't auto sign in - user must verify email first
+      setLoading(false);
     } catch (err) {
       setError("An error occurred. Please try again.");
     } finally {
@@ -449,6 +458,15 @@ function AuthPageContent() {
                       className="bg-error/10 border border-error/30 text-error px-4 py-3 rounded-lg"
                     >
                       {error}
+                    </motion.div>
+                  )}
+                  {success && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg"
+                    >
+                      {success}
                     </motion.div>
                   )}
                   <div className="space-y-5">

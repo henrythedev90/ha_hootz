@@ -48,6 +48,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
+          // Check if email is verified
+          // Users must verify their email before they can sign in
+          if (!host.emailVerified) {
+            // Return null to deny access, but don't reveal the reason
+            // The frontend should show a message about email verification
+            return null;
+          }
+
           return {
             id: host._id.toString(),
             email: host.email,
