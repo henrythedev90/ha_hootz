@@ -74,6 +74,7 @@ export default function HostDashboard() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [winnerRevealed, setWinnerRevealed] = useState(false);
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   
   // Refs for timeout cleanup
   const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -124,6 +125,9 @@ export default function HostDashboard() {
     dispatch(setShowPlayersModal(false));
     dispatch(setShowEndGameModal(false));
 
+    // Reset loading state for new session
+    setIsInitializing(true);
+
     if (sessionCode) {
       dispatch(setSessionCode(sessionCode));
       dispatch(setSocketSessionCode(sessionCode));
@@ -132,6 +136,10 @@ export default function HostDashboard() {
 
   // Fetch questions and game state when component mounts
   useEffect(() => {
+    if (!sessionCode) return;
+    
+    setIsInitializing(true);
+    
     const fetchQuestions = async () => {
       try {
         const response = await fetch(`/api/sessions/${sessionCode}/questions`);
@@ -230,13 +238,17 @@ export default function HostDashboard() {
       }
     };
 
-    if (sessionCode) {
+    // Fetch all initial data
+    Promise.all([
       fetchQuestions().then(async (questionsData) => {
         const questionCount = questionsData?.length || 0;
         await fetchGameState(questionCount);
-      });
-      fetchSessionStatus();
-    }
+      }),
+      fetchSessionStatus(),
+    ]).finally(() => {
+      // Mark initialization as complete after all data is fetched
+      setIsInitializing(false);
+    });
   }, [sessionCode, dispatch]);
 
   // Timer countdown effect
@@ -442,7 +454,14 @@ export default function HostDashboard() {
     dispatch(setSocket(newSocket));
 
     newSocket.on("connect", () => {
+      console.log(`[HostDashboard] ✅ Socket connected with ID: ${newSocket.id}`);
       dispatch(setConnected(true));
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error(`[HostDashboard] ❌ Socket connection error:`, error.message);
+      console.error(`[HostDashboard] Error type:`, error.type);
+      dispatch(setConnected(false));
     });
 
     newSocket.on(
@@ -1089,6 +1108,12 @@ export default function HostDashboard() {
     );
   }
 
+  // Show loading while initializing (fetching questions, game state, session status)
+  if (isInitializing) {
+    return <Loading message="Loading session..." />;
+  }
+
+  // Show loading if game state is not ready yet (shouldn't happen after initialization, but safety check)
   if (!gameState && connected && socket) {
     return <Loading message="Restoring game state..." />;
   }
