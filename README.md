@@ -11,10 +11,9 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 ### 🎯 Deployment Readiness Improvements
 
 #### Socket.io Connection Architecture
-
 - **Optimized Connection Method**: Changed from `io(socketUrl)` to `io({ path: "/api/socket" })` for same-origin connections, following Socket.io best practices
 - **SSR Safety**: Added `typeof window === "undefined"` checks to prevent server-side socket creation
-- **Enhanced Error Handling**:
+- **Enhanced Error Handling**: 
   - Specific error messages for CORS, timeout, and 400 errors
   - Detailed error logging with error type and message
   - User-friendly error messages for different failure scenarios
@@ -29,7 +28,6 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
   - Better error context logging for debugging
 
 #### Memory Leak Prevention
-
 - **Timeout Cleanup**: All `setTimeout` calls now have proper cleanup:
   - `copiedTimeoutRef` for copy link feedback
   - `modalToggleTimeoutRef` for modal state toggles
@@ -40,12 +38,11 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 - **Effect Cleanup**: All useEffect hooks have proper cleanup functions
 
 #### Array & Type Safety
-
 - **Defensive Programming**: All array operations validate input:
   - `Array.isArray()` checks before calling array methods
   - Safe defaults for empty arrays (`[]`)
   - Optional chaining for array access (`array[0]?.property`)
-- **Type Validation**:
+- **Type Validation**: 
   - Type checks for `playerCount`, `playerScores`, `streakThresholds`
   - Safe defaults for all object properties
   - Type guards for number/string/object types
@@ -55,25 +52,22 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
   - Stats object validation with safe defaults
 
 #### SSR Compatibility
-
 - **Portal Safety**: GameModals portal checks for `document.body` existence
 - **Window Checks**: All `window` and `navigator` usage wrapped in existence checks
 - **Client-Only Operations**: Socket connections, clipboard operations, and DOM manipulations only run on client
 
 #### Error Handling Enhancements
-
-- **Clipboard API**:
+- **Clipboard API**: 
   - Try-catch for `navigator.clipboard.writeText()`
   - Fallback to `document.execCommand("copy")` for older browsers
   - Availability checks before use
-- **QR Code Fetching**:
+- **QR Code Fetching**: 
   - Response status checking
   - `isMounted` flag to prevent state updates after unmount
   - Graceful fallback when QR code fails to load
 - **Image Loading**: Error handlers for avatar images with graceful fallback
 
 #### Performance Optimizations
-
 - **ConfettiEffect**: Limited animation repeats from `Infinity` to `1` to prevent performance issues
 - **Production Logging**: All debug `console.log` statements wrapped in `process.env.NODE_ENV === "development"` checks
 - **Memoization**: Leaderboard calculations memoized to prevent expensive re-sorts
@@ -81,7 +75,6 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 #### Component-Specific Fixes
 
 **LobbyView Component**:
-
 - Memory leak fix: setTimeout cleanup for pulse animation
 - QR code fetch: Improved error handling with `isMounted` flag
 - SSR safety: Safe `previousPlayerCount` initialization
@@ -89,26 +82,22 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 - Type safety: Player count validation
 
 **WinnerDisplay Component**:
-
 - Array safety: `safeLeaderboard` validation
 - Type safety: `playerId` and `playerName` validation
 - Optional chaining: Safe array access throughout
 - Production logging: Debug logs only in development
 
 **LeaderboardModal Component**:
-
 - Array safety: Players and `playerScores` validation in `useMemo`
 - Type safety: Streak value type checking
 - Memoization: Leaderboard calculation memoized
 - Production logging: Debug logs only in development
 
 **GameModals Component**:
-
 - SSR safety: Portal container existence check
 - Array safety: Leaderboard validation before passing to WinnerDisplay
 
 **Host Dashboard**:
-
 - Memory leak fixes: All timeouts properly cleaned up
 - Clipboard API: Error handling with fallback
 - Array safety: Players, questions, and stats validation
@@ -117,7 +106,6 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 ### 📋 Deployment Checklist
 
 All components now meet production standards:
-
 - ✅ No memory leaks (all timers cleaned up)
 - ✅ SSR compatible (no server-side errors)
 - ✅ Type safe (comprehensive type checking)
@@ -148,7 +136,6 @@ All components now meet production standards:
 ### 🚀 Ready for Production
 
 Version 1.0 is fully tested and ready for deployment to production environments including:
-
 - Fly.io (primary deployment target)
 - Any Node.js hosting platform
 - Docker containers
@@ -156,11 +143,236 @@ Version 1.0 is fully tested and ready for deployment to production environments 
 
 ---
 
+## Recent Updates
+
+#### Test Coverage Improvements
+
+- **Enhanced Jest Test Coverage**: Significantly improved test coverage for high-value game logic areas:
+  - **Scoring Calculations** (`lib/scoring/calculateScore.test.ts`): Added comprehensive tests for:
+    - Time bonus calculations with various configurations
+    - Streak bonus calculations with different thresholds
+    - Combined bonus scenarios (time + streak)
+    - Edge cases and boundary values
+    - Score calculation with disabled bonuses
+  - **Redis Operations** (`lib/redis/triviaRedis.test.ts`): Added tests for:
+    - Player streak management (`getPlayerStreak`, `updatePlayerStreak`)
+    - Answer timestamp tracking (`storeAnswerTimestamp`, `getAnswerTimestamp`)
+    - Score calculations (`calculatePlayerScore`, `calculateQuestionScores`)
+  - **Socket Handlers** (`lib/socket/handlers/player.handlers.test.ts`): Added tests for:
+    - Answer submission and validation
+    - Answer change handling
+    - Expiration logic
+    - Error handling for invalid submissions
+  - **Redis Mock Extensions**: Extended `__mocks__/redis.ts` to support additional Redis operations:
+    - `hExists`, `hSetNX`, `zRangeWithScores`
+    - `sAdd`, `sRem`, `sMembers` (set operations)
+    - `exists`, `expire` (key management)
+
+#### Mobile UI Optimizations
+
+- **Game Page Mobile Optimization** (`app/game/[sessionCode]/page.tsx`):
+  - Fine-tuned sizing after initial reduction for optimal mobile experience:
+  - Slightly increased padding, font sizes, and spacing
+  - Improved readability while maintaining mobile fit
+  - Better balance between compactness and usability
+  - **Sticky Timer Implementation**:
+    - Timer now sticks to the top of the viewport with `sticky top-0` positioning
+    - Added backdrop blur effect for better visibility
+    - Timer remains visible during scrolling, ensuring players always see time remaining
+    - Added 40px top padding to timer container for proper spacing
+  - **Conditional Padding**:
+    - Player name section padding adjusts based on game state:
+      - No padding when timer is active (to prevent excessive spacing)
+      - No padding when result messages are displayed
+      - Padding applied only when appropriate for optimal layout
+
+#### Hydration Error Fixes
+
+- **Fixed React Hydration Mismatches**:
+  - **SessionStorage Access**: Moved `sessionStorage` access from `useState` initializer to `useEffect` to prevent SSR/client mismatches
+    - Avatar data now loaded client-side only after component mount
+    - Prevents hydration errors from server/client state differences
+  - **Date.now() Usage**: Fixed timer percentage calculation to use `timeRemaining` state instead of `Date.now()`
+    - Eliminates hydration mismatches from server/client time differences
+    - Timer percentage now calculated from Redux state (`timeRemaining`) which is updated via `useEffect`
+    - Ensures consistent values between server and client renders
+
+### UI/UX Enhancements
+
+- **Loading Component**: Completely redesigned with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Reusable across the application for consistent loading states. Supports both full-screen and inline modes. Used throughout the application:
+
+  - Players list modal shows animated loading when fetching players
+  - Game page shows pulse animation when waiting for host to start question
+  - Game in progress state displays animated loading indicator
+
+- **Game Welcome Modal**: Enhanced with smooth Framer Motion entrance animations using spring physics, countdown timer (auto-closes after 5 seconds), and improved visual design matching app theme. Features:
+
+  - Staggered content reveals with spring animations
+  - Animated CheckCircle icon from lucide-react
+  - Countdown display showing "Closing automatically in X seconds"
+  - Dark background with indigo color scheme
+  - Improved button effects and hover states
+
+- **Thank You Modal**: Redesigned with modern Framer Motion animations, gradient call-to-action card, and improved visual hierarchy. Features:
+
+  - Staggered entrance animations with spring physics
+  - Animated celebration emoji with rotation effects
+  - ArrowRight and X icons from lucide-react
+  - Optional close button in top-right corner
+  - "Maybe later" button for skipping account creation
+  - Smooth transitions and improved button effects
+
+- **Lobby View**: Complete redesign with improved layout and organization:
+
+  - Single viewport, compact layout optimized for presentation-ready styling
+  - Two-column grid layout with vertical divider between sections
+  - Left column: Player preview with scrollable list
+  - Right column: Session info (QR code, session code, settings)
+  - Players list with bordered container (2px solid indigo border, 24px border-radius)
+  - Randomized colors and glow effects for player avatars
+  - Player avatars displayed with initials fallback
+  - Streak indicators (🔥) shown when players achieve streak thresholds
+  - Compact header with border-bottom and connection status indicator
+  - Copy Link section in dedicated card with 3:1 flex ratio layout
+  - QR Code section with centered display
+  - Randomize Answer Choices toggle integrated into QR card
+  - Players list with header, scrollable content area, and footer
+  - Bottom action bar with border-top for Start Game and Cancel Session buttons
+  - All content fits on screen without scrolling
+  - Responsive padding and spacing throughout
+
+- **Presentation Editor**: Made fully responsive for mobile devices:
+
+  - Grid layout stacks on mobile (1 column) and expands on desktop (4 columns)
+  - Questions section stacks vertically on mobile, horizontally on desktop
+  - Responsive padding adjustments for all screen sizes
+  - Desktop layout remains unchanged (lg: breakpoints)
+
+- **Question Navigation Sidebar**: Enhanced with multiple improvements:
+
+  - Sticky "Question Bank" heading that stays in place on scroll with backdrop blur
+  - Drag-and-drop functionality for reordering questions (HTML5 Drag and Drop API)
+  - Visual feedback during drag operations (draggedIndex, dragOverIndex states)
+  - GripVertical icon as drag handle
+  - Improved styling with gradient backgrounds for unselected items
+  - Text color changes on hover (light text on dark background)
+  - Responsive width adjustments for mobile/desktop
+
+- **Answer Choice Randomization**: Enhanced visual experience for players:
+
+  - Host can toggle "Randomize Answer Choices" option in lobby view
+  - Each player sees answer options in a unique random order
+  - Random border colors from palette: [#6366F1, #22D3EE, #F59E0B, #A855F7]
+  - Glow effects matching GameStatsSidebar style (shadow-[0_0_30px_rgba(...)])
+  - Selected answers use the same random color as their border
+  - Colors only apply in default state (correct/wrong/selected states take precedence)
+  - Randomization setting persists through game state
+
+- **Game Stats Sidebar**: Enhanced player list with visual feedback:
+
+  - Players who have submitted answers show their selected avatar (or initial) instead of lightbulb emoji
+  - Players who have submitted answers glow with success color (#22C55E)
+  - Glow effect matches answer choice styling (shadow-[0_0_30px_rgba(34,197,94,0.3)])
+  - Success-colored background and border for submitted players
+  - Real-time visual indication of answer submission status
+  - Streak indicators (🔥) displayed when players achieve streak thresholds (configurable, default: 3+ consecutive correct)
+  - Players automatically appear in real-time without requiring page refresh
+  - Active players with streaks are highlighted during gameplay
+
+- **Winner Display**: Improved mobile experience:
+
+  - Increased mobile proportions by ~56% (two 25% increases)
+  - Responsive text sizes, padding, and spacing
+  - Larger rank badges and improved touch targets
+  - Desktop sizes remain unchanged
+
+- **Host Dashboard**: Responsive improvements:
+
+  - Compact header with responsive padding and text sizes
+  - Grid layout that fits content without scrolling
+  - Improved spacing and padding for mobile devices
+  - All content accessible without page scrolling
+
+- **Answer Choices Visual Design**: Enhanced with random colors and glow effects:
+
+  - Each answer option gets a random color from the palette when question starts
+  - Glow effects create visual interest and improve UX
+  - Colors regenerate for each new question
+  - Maintains all existing functionality (correct/wrong/selected states)
+
+- **Question Editor & List Components**: Optimized component sizing and spacing to ensure all elements fit on screen without scrolling. Reduced padding, margins, and font sizes while maintaining readability and usability.
+
+- **Leaderboard Modal**: Enhanced animation system with Framer Motion layout animations and spring physics for smoother, more dynamic transitions when players reorder. Added visual enhancements including medal emojis (🥇🥈🥉) for top 3 positions and improved visual hierarchy with ring effects and leader banners.
+
+- **Modal Component**: Added configurable padding prop for flexible content spacing customization. Centered title text alignment.
+
+- **Presentation Card**: Fixed button sizing inconsistencies and improved button dimensions for better usability and visual consistency.
+
+- **Avatar Selection System**: New player avatar selection feature:
+
+  - Players select an avatar after entering their nickname via `AvatarSelectionModal`
+  - Dark-themed modal with smooth animations and category filtering
+  - Avatar selection is required (modal cannot be closed without selection)
+  - Avatars stored in sessionStorage for clean URLs (no long URL parameters)
+  - Player avatars displayed throughout the game:
+    - Lobby view with randomized colors and glow effects
+    - GameStatsSidebar for submitted answers
+    - PlayersListModal with matching layout and styling
+    - Leaderboard displays with streak indicators
+  - Fallback to player initials if avatar not available
+  - Randomized border colors and glow effects for visual distinction
+
+- **Streak Feature UI**: Comprehensive streak tracking and display:
+
+  - Streak badges (🔥) appear when players achieve configurable streak thresholds
+  - Default threshold: 3+ consecutive correct answers (customizable in scoring config)
+  - Streaks displayed in:
+    - LobbyView player list
+    - GameStatsSidebar (Players and Leaderboard tabs)
+    - LeaderboardModal
+  - Streaks update in real-time when answers are revealed
+  - Host dashboard automatically receives streak updates via socket events
+  - Streak thresholds configurable per game session via scoring configuration
+
+### Code Quality & Maintenance
+
+- **Component Cleanup**: Removed 42+ unused UI components from `components/ui` folder, keeping only actively used components (button, form, input, toggle-switch, utils) to reduce bundle size and improve maintainability.
+- **TypeScript Improvements**: Resolved type errors in QuestionDisplay component by removing redundant boolean comparisons that were causing type overlap issues.
+- **Next.js Compliance**: Fixed Suspense boundary requirement for `useSearchParams()` hook in authentication page to comply with Next.js 13+ requirements, ensuring proper static rendering support.
+- **Custom Hooks Refactoring**: Created reusable hooks for color generation:
+  - `useRandomColors`: Generic hook for generating random colors for any list of items
+  - `usePlayerColors`: Specific hook for player avatar color generation using `useRandomColors`
+  - Both hooks used in LobbyView and PlayersListModal for consistent color generation
+- **Utility Functions**: Created `generateAnswerColors` utility function in `lib/utils/colorUtils.ts` for answer option color generation, replacing redundant inline logic in game page.
+- **State Management Improvements**:
+  - Fixed stale closure issues in socket event handlers using `useRef` to track latest player state
+  - Updated `addPlayer` reducer to handle player updates (e.g., streak changes) instead of only adding new players
+  - Improved real-time synchronization between server and client for player data, avatars, and streaks
+- **URL Optimization**: Switched from passing avatar data in URL parameters to using sessionStorage, resulting in cleaner, shorter URLs and improved UX.
+- **Unit Testing Setup**: Comprehensive Jest testing environment configured:
+  - **Testing Framework**: Jest with TypeScript support via `ts-jest` and `next/jest`
+  - **React Testing**: React Testing Library for component testing with `@testing-library/react`, `@testing-library/jest-dom`, and `@testing-library/user-event`
+  - **Test Environment**: jsdom environment for browser-like APIs in tests
+  - **Configuration**:
+    - `jest.config.ts`: Configured for Next.js App Router with path aliases, CSS/image mocking, and coverage collection
+    - `jest.setup.ts`: Global mocks for Next.js router, Image component, and extended Jest matchers
+  - **Mocks**: Created mocks for external dependencies:
+    - `__mocks__/socket.io-client.ts`: Mock Socket.io client to prevent real connections
+    - `__mocks__/redis.ts`: In-memory Redis mock for testing without real Redis instance
+    - `__mocks__/fileMock.js`: Mock for static file imports (images, fonts)
+  - **Test Coverage**: Unit tests for:
+    - Scoring logic (`lib/scoring/calculateScore.test.ts`): Tests for time bonuses, streak bonuses, and total score calculation
+    - Redux reducers (`store/slices/__tests__/gameSlice.test.ts`): Tests for game state management and reducer actions
+  - **Test Scripts**: Added `test`, `test:watch`, and `test:coverage` scripts to package.json
+  - **Documentation**: Created `TESTING_SETUP.md` and `JEST_FLOW.md` for comprehensive testing documentation
+  - **Next.js Image Component**: Replaced all `<img>` elements with Next.js `Image` component for automatic optimization, lazy loading, and better performance
+
 ## Features
 
 ### ✅ Host-Created Presentations (MVP)
 
 - **Presentation Management**
+
   - Create and manage trivia game presentations
   - Add multiple-choice questions (4 options required)
   - Edit and delete questions
@@ -174,6 +386,7 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Start game sessions from saved presentations
 
 - **Game Sessions**
+
   - Start live game sessions from presentations
   - 6-digit session codes for easy player joining
   - QR code generation for quick mobile access
@@ -195,7 +408,7 @@ Version 1.0 is fully tested and ready for deployment to production environments 
     - Shows leaderboard with player scores
     - "Reveal Winner" button on last question
     - "End Game" button after winner is revealed
-  - **Real-Time Answer Tracking**: Lightbulb (💡) indicator shows which players have submitted answers
+  - **Real-Time Answer Tracking**: Player avatars (or initials) with success glow show which players have submitted answers
   - **Smart Answer Reveal**: Button only enabled when all connected players have submitted
   - **Timer Control**: Timer automatically stops (set to 0) when answer is revealed
   - **Question Navigation**: Navigate between questions with automatic state reset
@@ -225,7 +438,13 @@ Version 1.0 is fully tested and ready for deployment to production environments 
     - Prevents old game state from appearing in new sessions
 
 - **Player Experience (Mobile-First)**
+
   - **Nickname Entry**: Full-screen form for entering player nickname with validation
+  - **Avatar Selection**: After entering nickname, players select an avatar from a curated collection:
+    - Dark-themed modal with smooth animations
+    - Category filtering (animals, tech, nature, etc.)
+    - Avatar selection required before joining game
+    - Avatars displayed throughout the game experience
   - **Lobby/Waiting Room**: Shows welcome message with host name and live player count
   - **Game Welcome Modal**: Displays when game session starts, welcoming player to the active game
   - **Active Question View**:
@@ -252,12 +471,18 @@ Version 1.0 is fully tested and ready for deployment to production environments 
     - Question status shows as ended (no timer)
 
 - **User Authentication**
+
   - Secure user registration and login
+  - **Email Verification**: New users must verify their email address via magic link before signing in
+  - **Forgot Password**: Secure password reset flow via email links
+  - **Email Verification Alert**: Yellow alert shown when users with unverified emails attempt to sign in
   - Password visibility toggle on sign in/sign up
   - User profiles with MongoDB Atlas storage
   - Session management with NextAuth.js
+  - Asynchronous email delivery via shell script worker
 
 - **Host Dashboard Features**
+
   - Desktop-first two-column layout (question control on left, live monitoring on right)
   - Real-time player count and answer submission tracking
   - Live answer distribution visualization
@@ -275,7 +500,10 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - **End Game**: Confirmation modal to end game session, disconnects all players
   - Session status checks (prevents access to ended sessions)
   - Real-time stats updates via Socket.io events
-  - Visual indicators (💡) showing which players have submitted answers
+  - Visual indicators showing which players have submitted answers (player avatars with success glow)
+  - **Player Avatars**: Displays player-selected avatars with randomized colors and glow effects
+  - **Streak Indicators**: Shows streak badges (🔥) when players achieve streak thresholds
+  - **Automatic Player Updates**: Players appear automatically in real-time without requiring page refresh
 
 - **User Experience**
   - Custom loading animations
@@ -295,6 +523,7 @@ Version 1.0 is fully tested and ready for deployment to production environments 
 - **State Management**: Redux Toolkit with React-Redux for centralized state management
 - **Authentication**: NextAuth.js v5
 - **Styling**: Tailwind CSS v4
+- **Testing**: Jest with React Testing Library, jsdom environment, ts-jest for TypeScript support
 - **Password Hashing**: bcryptjs
 - **QR Code Generation**: qrcode (server-side)
 - **Server Runtime**: tsx for TypeScript server execution
@@ -323,6 +552,7 @@ npm install
 ```
 
 3. Set up MongoDB Atlas (see [MONGODB_SETUP.md](./MONGODB_SETUP.md) for detailed instructions):
+
    - Create a MongoDB Atlas account
    - Create a cluster
    - Create a database user
@@ -330,6 +560,7 @@ npm install
    - Get your connection string
 
 4. Set up Redis (see [REDIS_SETUP.md](./REDIS_SETUP.md) for detailed instructions):
+
    - Create a Redis instance (Upstash recommended for serverless)
    - Get your Redis connection URL
    - Redis is used for real-time game session management and Socket.io adapter
@@ -342,6 +573,9 @@ MONGODB_DB_NAME=ha-hootz
 REDIS_URL=redis://default:<password>@<host>:<port>
 NEXTAUTH_SECRET=your_generated_secret_here
 NEXTAUTH_URL=http://localhost:3000
+APP_URL=http://localhost:3000
+RESEND_API_KEY=re_your_resend_api_key
+RESEND_FROM_EMAIL=onboarding@resend.dev
 ```
 
 Generate a secret:
@@ -359,6 +593,7 @@ npm run dev
 **Note**: This project uses a custom server (`server.ts`) to properly integrate Socket.io with Next.js. The server automatically loads environment variables from `.env.local`.
 
 7. Open [http://localhost:3000](http://localhost:3000) in your browser
+
    - You should see a Redis connection log in your terminal: `✅ Redis configured - URL: redis://...`
    - You should see Socket.io initialization logs: `✅ Socket.io initialized`
 
@@ -367,8 +602,12 @@ npm run dev
 1. **Create an Account**: Navigate to `/auth/signup` to create your host profile
    - Use the eye icon to toggle password visibility while typing
    - Both password fields have visibility toggles for convenience
+   - After registration, check your email for a verification link
+   - You must verify your email before you can sign in
 2. **Sign In**: Use your credentials to sign in at `/auth/signin`
    - Password visibility toggle available for easy verification
+   - If your email is not verified, you'll see a yellow alert with option to resend verification
+   - Click "Forgot password?" to reset your password via email
 3. **Create a Presentation**: Click "New Presentation" to start creating your trivia game
 4. **Add Questions**: Add multiple-choice questions to your presentation
    - Each question must have exactly 4 answer options
@@ -389,10 +628,13 @@ npm run dev
 7. **Join as Player**:
    - Navigate to `/join/[sessionCode]` or scan QR code
    - Enter a unique nickname (validated in real-time)
+   - Select an avatar from the avatar selection modal
    - Join the lobby and wait for host to start
+   - Your avatar will be displayed throughout the game
    - Answer questions with large, touch-friendly buttons
    - See countdown timer and change answers while time is active
    - Answers auto-submit when timer expires
+   - Streak badges appear when you achieve consecutive correct answers
 
 ## Project Structure
 
@@ -402,7 +644,13 @@ ha-hootz/
 │   ├── api/
 │   │   ├── auth/
 │   │   │   ├── [...nextauth]/route.ts    # NextAuth configuration
-│   │   │   └── register/route.ts         # User registration
+│   │   │   ├── register/route.ts         # User registration with email verification
+│   │   │   ├── verify-email/route.ts     # Email verification handler (legacy redirect)
+│   │   │   ├── verify-email-json/route.ts # Email verification handler (JSON response)
+│   │   │   ├── forgot-password/route.ts  # Password reset request
+│   │   │   ├── reset-password/route.ts   # Password reset completion
+│   │   │   ├── resend-verification/route.ts # Resend verification email
+│   │   │   └── check-verification/route.ts  # Check email verification status
 │   │   ├── presentations/
 │   │   │   ├── route.ts                   # GET all, POST new
 │   │   │   └── [id]/route.ts              # GET, PUT, DELETE by ID
@@ -418,8 +666,11 @@ ha-hootz/
 │   │   │   │   └── stats/route.ts          # GET - Get game statistics
 │   │   └── qr/[sessionCode]/route.ts      # GET - Generate QR code for session
 │   ├── auth/
-│   │   ├── signin/page.tsx                # Sign in page
-│   │   └── signup/page.tsx                # Sign up page
+│   │   ├── page.tsx                        # Main auth page (sign in/sign up with email verification)
+│   │   ├── signin/page.tsx                # Sign in page (redirects to /auth?mode=signin)
+│   │   ├── signup/page.tsx                # Sign up page (redirects to /auth?mode=signup)
+│   │   ├── verify-email/page.tsx          # Email verification page (magic link handler)
+│   │   └── reset-password/page.tsx        # Password reset page (reset link handler)
 │   ├── presentations/
 │   │   └── [id]/page.tsx                  # Presentation editor
 │   ├── host/[sessionCode]/page.tsx        # Host dashboard for game session
@@ -436,19 +687,26 @@ ha-hootz/
 │   ├── Loading.tsx                        # Loading component with animation
 │   ├── SessionQRCode.tsx                  # QR code display component
 │   ├── PlayersListModal.tsx               # Modal showing joined players with countdown
+│   ├── AvatarSelectionModal.tsx          # Modal for players to select avatars
 │   ├── GameWelcomeModal.tsx               # Welcome modal for players when game starts
 │   ├── AnswerRevealModal.tsx              # Modal showing correct answer and distribution
 │   ├── WinnerDisplay.tsx                   # Full-screen winner announcement for players
 │   ├── ThankYouModal.tsx                  # Thank you modal when host ends game
 │   ├── CenteredLayout.tsx                 # Reusable centered layout component
+│   ├── LobbyView.tsx                      # Host lobby view with player list, QR code, and session info
+│   ├── GameStatsSidebar.tsx               # Host dashboard sidebar with player stats, leaderboard, and answer tracking
+│   ├── LeaderboardModal.tsx               # Full leaderboard modal with streak indicators
 │   └── Providers.tsx                      # Session provider wrapper
 ├── lib/
 │   ├── auth.ts                            # Session helper
 │   ├── db.ts                               # Database helpers
 │   ├── mongodb.ts                          # MongoDB connection
+│   ├── auth-tokens.ts                      # Token generation and verification for email auth
+│   ├── email-jobs.ts                      # Email job management for async delivery
+│   ├── email-templates.ts                 # Email template generation (verification, reset)
 │   ├── redis/
 │   │   ├── client.ts                       # Redis connection (serverless-safe)
-│   │   ├── keys.ts                         # Redis key generators
+│   │   ├── keys.ts                         # Redis key generators (includes playerAvatarsKey, playerStreaksKey)
 │   │   └── triviaRedis.ts                  # Redis helpers for trivia sessions
 │   ├── socket/
 │   │   ├── server.ts                       # Socket.io server getter (accesses global instance)
@@ -456,20 +714,42 @@ ha-hootz/
 │   │   └── handlers/
 │   │       ├── host.handlers.ts            # Host event handlers (host-join, START_GAME, START_QUESTION, CANCEL_SESSION)
 │   │       └── player.handlers.ts         # Player event handlers (join-session, SUBMIT_ANSWER)
+│   ├── scoring/
+│   │   ├── calculateScore.ts               # Scoring calculation functions (time bonus, streak bonus, total score)
+│   │   └── calculateScore.test.ts         # Unit tests for scoring logic
 │   ├── types.ts                            # Trivia session types
 │   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
-│   └── utils.ts                            # Utility functions (generateId, formatDate)
+│   ├── utils.ts                            # Utility functions (generateId, formatDate)
+│   └── utils/
+│       └── colorUtils.ts                   # Color generation utilities (generateAnswerColors)
 ├── store/
 │   ├── index.ts                            # Redux store configuration
 │   ├── hooks.ts                            # Typed Redux hooks (useAppDispatch, useAppSelector)
 │   ├── StoreProvider.tsx                   # Redux Provider component for Next.js App Router
 │   └── slices/
 │       ├── gameSlice.ts                    # Game state slice (status, questions, review mode)
-│       ├── hostSlice.ts                    # Host state slice (players, stats, leaderboard)
+│       ├── __tests__/
+│       │   └── gameSlice.test.ts           # Unit tests for gameSlice reducer
+│       ├── hostSlice.ts                    # Host state slice (players with avatars and streaks, stats, leaderboard)
 │       ├── playerSlice.ts                  # Player state slice (answers, timer, leaderboard)
 │       ├── socketSlice.ts                  # Socket connection state slice
 │       └── uiSlice.ts                      # UI state slice (modals, errors, loading)
+├── hooks/
+│   ├── usePlayerColors.ts                  # Hook for generating random colors for player avatars
+│   └── useRandomColors.ts                  # Generic hook for generating random colors for any list
+├── __mocks__/
+│   ├── socket.io-client.ts                 # Mock Socket.io client for testing
+│   ├── redis.ts                            # In-memory Redis mock for testing
+│   └── fileMock.js                         # Mock for static file imports (images, fonts)
+├── jest.config.ts                          # Jest configuration for Next.js App Router
+├── jest.setup.ts                           # Jest setup file with global mocks and matchers
+├── TESTING_SETUP.md                        # Comprehensive testing setup documentation
+├── JEST_FLOW.md                            # Detailed Jest execution flow documentation
+├── scripts/
+│   ├── email-worker.sh                     # Email worker script (polls and sends emails)
+│   ├── email-worker-helper.js              # Node.js helper for MongoDB operations
+│   └── send-email.sh                       # Standalone email sending script
 ├── server.ts                               # Custom Next.js server with Socket.io integration
 └── types/
     ├── index.ts                            # TypeScript types
@@ -482,12 +762,13 @@ ha-hootz/
 
 - **`Modal.tsx`**: Base reusable modal component with customizable size, title, and content
 - **`DeleteConfirmationModal.tsx`**: Specialized modal for delete confirmations with customizable messages (supports player mode)
-- **`PlayersListModal.tsx`**: Modal showing joined players with countdown timer before starting game
-- **`GameWelcomeModal.tsx`**: Welcome modal for players when game session starts
+- **`PlayersListModal.tsx`**: Modal showing joined players with countdown timer before starting game. Displays player avatars with randomized colors and glow effects, matching LobbyView styling.
+- **`AvatarSelectionModal.tsx`**: Modal for players to select an avatar after entering their nickname. Features dark theme, category filtering, smooth animations, and requires selection before proceeding.
+- **`GameWelcomeModal.tsx`**: Enhanced welcome modal for players when game session starts. Features smooth animations, countdown timer (auto-closes after 5 seconds), animated icon, and staggered content reveals.
 - **`AnswerRevealModal.tsx`**: Modal displaying correct answer, answer distribution, leaderboard, and navigation controls
 - **`WinnerDisplay.tsx`**: Full-screen winner announcement component showing player rank and full leaderboard
-- **`ThankYouModal.tsx`**: Thank you modal displayed to players when host ends game, encourages account creation
-- **`Loading.tsx`**: Loading component with custom animation, supports full-screen or inline modes
+- **`ThankYouModal.tsx`**: Enhanced thank you modal displayed to players when host ends game. Features modern animations, gradient call-to-action card, animated celebration emoji, and encourages account creation with smooth transitions.
+- **`Loading.tsx`**: Enhanced loading component with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Supports both full-screen and inline modes with customizable messages.
 
 ### Layout Components
 
@@ -513,6 +794,8 @@ ha-hootz/
 
 // Loading State
 <Loading message="Loading presentations..." />
+<Loading message="Loading players..." fullScreen={false} variant="dots" size="small" />
+<Loading message="Game in progress..." fullScreen={false} variant="pulse" size="medium" />
 
 // Centered Layout
 <CenteredLayout>
@@ -530,7 +813,13 @@ ha-hootz/
 
 ### Authentication
 
-- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/register` - Register a new user (creates unverified account, sends verification email)
+- `GET /api/auth/verify-email?token=...` - Verify email address via magic link (legacy redirect endpoint)
+- `GET /api/auth/verify-email-json?token=...` - Verify email address via magic link (JSON response)
+- `POST /api/auth/forgot-password` - Request password reset email
+- `POST /api/auth/reset-password` - Complete password reset with token
+- `POST /api/auth/resend-verification` - Resend email verification link
+- `POST /api/auth/check-verification` - Check if user's email is verified (requires valid credentials)
 - `GET/POST /api/auth/[...nextauth]` - NextAuth endpoints
 
 ### Presentations
@@ -581,7 +870,7 @@ ha-hootz/
 
 **Player Events (Client → Server):**
 
-- `join-session` - Join a game session (requires `sessionCode`, `name`)
+- `join-session` - Join a game session (requires `sessionCode`, `name`, `avatarUrl` optional)
 - `SUBMIT_ANSWER` - Submit or update an answer (requires `gameId`, `questionIndex`, `answer`)
 - `leave-game` - Player explicitly leaves the game (requires `sessionCode`)
 
@@ -597,7 +886,8 @@ ha-hootz/
   - `isReviewMode`: Boolean indicating if question is in review mode (previously answered)
   - `answerRevealed`: Boolean indicating if correct answer should be shown
   - `correctAnswer`: The correct answer option (A, B, C, or D) if in review mode
-- `player-joined` - Player joined session (includes `playerId`, `name`, `playerCount`)
+- `player-joined` - Player joined session (includes `playerId`, `name`, `avatarUrl`, `streak`, `playerCount`)
+- `player-streaks-updated` - Player streaks updated after answer reveal (includes `sessionCode`, `streaks` object mapping playerId to streak count)
 - `player-left` - Player left session (includes `playerId`, `playerCount`)
 - `answer-stats-updated` - Answer statistics updated (includes `questionIndex`, `answerCount`, `answerDistribution`, `playersWithAnswers`, `playerScores`)
 - `session-cancelled` - Session was cancelled (includes `sessionCode`, `message`)
@@ -605,9 +895,9 @@ ha-hootz/
 
 **Player Events:**
 
-- `joined-session` - Successfully joined session (includes `gameState`, `playerCount`, `playerAnswers`)
+- `joined-session` - Successfully joined session (includes `gameState`, `playerCount`, `playerAnswers`, `avatarUrl`)
 - `join-error` - Failed to join (includes `reason`)
-- `player-joined` - Another player joined (includes `playerId`, `name`, `playerCount`)
+- `player-joined` - Another player joined (includes `playerId`, `name`, `avatarUrl`, `streak`, `playerCount`)
 - `player-left` - A player left (includes `playerId`, `name`, `playerCount`)
 - `game-started` - Game has started (includes `status`, `questionIndex`)
 - `question-started` - New question is active (includes `question`, `questionIndex`, `endAt`)
@@ -623,7 +913,7 @@ ha-hootz/
 
 ## Database Schema
 
-### Users Collection
+### Users Collection (hosts)
 
 ```typescript
 {
@@ -631,8 +921,38 @@ ha-hootz/
   email: string,
   password: string (hashed),
   name?: string,
+  emailVerified: boolean,  // New: Email verification status
   createdAt: string,
   updatedAt: string
+}
+```
+
+### auth_tokens Collection
+
+```typescript
+{
+  _id: ObjectId,
+  userId: ObjectId,
+  type: "verify_email" | "reset_password",
+  tokenHash: string,  // Hashed with bcrypt
+  expiresAt: Date,
+  usedAt?: Date,
+  createdAt: Date
+}
+```
+
+### email_jobs Collection
+
+```typescript
+{
+  _id: ObjectId,
+  toEmail: string,
+  template: "verify_email" | "reset_password",
+  payload: object,  // JSON payload (token, name, etc.)
+  status: "pending" | "sent" | "failed",
+  attempts: number,
+  lastError?: string,
+  createdAt: Date
 }
 ```
 
@@ -668,6 +988,9 @@ ha-hootz/
 | `REDIS_URL`       | Redis connection URL (Upstash compatible) | Yes      |
 | `NEXTAUTH_SECRET` | Secret for JWT signing                    | Yes      |
 | `NEXTAUTH_URL`    | Base URL of your application              | Yes      |
+| `APP_URL`         | Base URL for email links (defaults to NEXTAUTH_URL) | No       |
+| `RESEND_API_KEY`  | Resend API key for email delivery         | Yes      |
+| `RESEND_FROM_EMAIL` | From email address for emails (defaults to onboarding@resend.dev) | No       |
 
 ## Development
 
@@ -683,12 +1006,166 @@ npm start
 
 # Run linter
 npm run lint
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
 ```
+
+## Testing
+
+This project uses Jest with React Testing Library for unit testing. The testing setup is configured for Next.js App Router and TypeScript.
+
+### Test Structure
+
+- **Unit Tests**: Located in `__tests__` directories or files ending in `.test.ts`/`.test.tsx`
+- **Test Configuration**: `jest.config.ts` and `jest.setup.ts`
+- **Mocks**: Located in `__mocks__` directory for external dependencies
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (re-runs on file changes)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Test Coverage
+
+Current test coverage includes:
+
+- **Scoring Logic** (`lib/scoring/calculateScore.test.ts`):
+
+  - Time bonus calculations
+  - Streak bonus calculations
+  - Total score calculations with various configurations
+
+- **Redux Reducers** (`store/slices/__tests__/gameSlice.test.ts`):
+  - Game state management
+  - Session code management
+  - Question state updates
+  - Answer reveal state
+
+### Testing Documentation
+
+For detailed information about the testing setup, see:
+
+- **`TESTING_SETUP.md`**: Complete guide to the testing environment, dependencies, configuration, and example tests
+- **`JEST_FLOW.md`**: Detailed explanation of how Jest executes tests, including the execution timeline and common issues
+
+### Mocked Dependencies
+
+The following external dependencies are automatically mocked in tests:
+
+- **Next.js Router** (`next/navigation`): Mocked to prevent router errors
+- **Next.js Image** (`next/image`): Mocked to prevent image optimization in tests
+- **Socket.io Client**: Mocked to prevent real socket connections
+- **Redis**: In-memory mock for testing without a real Redis instance
+- **CSS Modules**: Mocked using `identity-obj-proxy`
+- **Static Files**: Images and fonts are mocked
+
+### Writing Tests
+
+When writing new tests:
+
+1. Place test files next to the code they test or in `__tests__` directories
+2. Use descriptive test names that explain what is being tested
+3. Test user behavior, not implementation details
+4. Use React Testing Library queries (`getByRole`, `getByText`, etc.)
+5. Mock external dependencies (Socket.io, Redis, etc.)
+6. Keep tests isolated and independent
+
+Example test structure:
+
+```typescript
+import { render, screen } from "@testing-library/react";
+import { calculateScore } from "./calculateScore";
+
+describe("calculateScore", () => {
+  it("should return base points for correct answer", () => {
+    const score = calculateScore({
+      /* ... */
+    });
+    expect(score).toBe(100);
+  });
+});
+```
+
+## Email Authentication
+
+Ha-Hootz includes a comprehensive email-based authentication system with email verification and password reset functionality.
+
+### Features
+
+- **Email Verification**: New users receive a magic link via email to verify their account
+- **Password Reset**: Users can request a password reset link via email
+- **Asynchronous Email Delivery**: Emails are sent asynchronously via a shell script worker
+- **Security**: Tokens are hashed before storage, single-use, and expire after 15-30 minutes
+- **Rate Limiting**: Prevents token spam (max 3 tokens per user per type per hour)
+- **Email Enumeration Protection**: Same response for all requests to prevent email discovery
+
+### Email Worker
+
+The email worker (`scripts/email-worker.sh`) is a shell script that:
+- Polls the `email_jobs` collection for pending emails
+- Sends emails via Resend API using `curl`
+- Handles retries with exponential backoff
+- Updates job status (sent/failed) in the database
+
+**Running the Email Worker:**
+
+```bash
+# Development
+./scripts/email-worker.sh
+
+# Production (Fly.io)
+# Configure as a separate process in fly.toml
+```
+
+### Email Templates
+
+Email templates are generated using `lib/email-templates.ts`:
+- **Verification Email**: Magic link to verify email address
+- **Password Reset Email**: Secure link to reset password
+
+Both templates include:
+- HTML and plaintext versions
+- Responsive design
+- Clear call-to-action buttons
+- Security warnings
+
+### User Flow
+
+1. **Registration**: User signs up → receives verification email → clicks link → email verified
+2. **Sign In (Unverified)**: User attempts sign in → yellow alert shown → can resend verification email
+3. **Forgot Password**: User clicks "Forgot password?" → enters email → receives reset link → sets new password
+
+### Documentation
+
+For detailed setup and implementation information, see:
+- `docs/EMAIL_AUTH_SETUP.md` - Setup and usage guide
+- `docs/EMAIL_AUTH_SCHEMA.md` - Database schema documentation
+- `docs/EMAIL_AUTH_IMPLEMENTATION.md` - Implementation details
+- `docs/RESEND_INTEGRATION.md` - Resend email provider integration
 
 ## Security Notes
 
 - Passwords are hashed using bcryptjs before storage
-- All API routes require authentication
+- Authentication tokens are hashed with bcrypt before database storage
+- Tokens are single-use and expire after 15-30 minutes
+- Rate limiting prevents token spam and abuse
+- Email enumeration protection (same response for all requests)
+- All API routes require authentication (except public auth endpoints)
 - Users can only access their own presentations
 - MongoDB connection uses secure connection strings
 - Environment variables should never be committed to version control
