@@ -292,24 +292,38 @@ process_job() {
     
     log_info "Processing job ${job_id} - Template: ${template}, To: ${to_email}"
     
-    # Generate email content
-    local email_content=$(generate_email_content "$template" "$payload_str")
-    if [ $? -ne 0 ]; then
-        update_job_status "$job_id" "pending" "Failed to generate email content"
+    # Parse payload to extract token and name
+    local token=$(echo "$payload_str" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d.token || '')")
+    local name=$(echo "$payload_str" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d.name || '')")
+    
+    # Use the dedicated send-email.sh script for sending emails
+    # This provides better separation of concerns and reusability
+    local send_script="${SCRIPT_DIR}/send-email.sh"
+    
+    if [ ! -f "$send_script" ]; then
+        log_error "send-email.sh script not found at ${send_script}"
+        update_job_status "$job_id" "pending" "send-email.sh script not found"
         return 1
     fi
     
-    local subject=$(echo "$email_content" | node -e "const c=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(c.subject)")
-    local html=$(echo "$email_content" | node -e "const c=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(c.html)")
-    local text=$(echo "$email_content" | node -e "const c=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(c.text)")
+    # Call send-email.sh with appropriate arguments
+    # Format: ./send-email.sh <recipient_email> <template_type> <token> [name]
+    local send_result
+    if [ -n "$name" ]; then
+        "$send_script" "$to_email" "$template" "$token" "$name" 2>&1
+        send_result=$?
+    else
+        "$send_script" "$to_email" "$template" "$token" 2>&1
+        send_result=$?
+    fi
     
-    # Send email
-    if send_email "$to_email" "$subject" "$html" "$text"; then
+    # Check result
+    if [ $send_result -eq 0 ]; then
         update_job_status "$job_id" "sent" ""
         log_success "Job ${job_id} completed successfully"
         return 0
     else
-        local error_msg="Failed to send email via Resend API"
+        local error_msg="Failed to send email via Resend API (exit code: $send_result)"
         update_job_status "$job_id" "pending" "$error_msg"
         log_warning "Job ${job_id} failed, will retry"
         return 1
