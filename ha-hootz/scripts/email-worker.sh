@@ -30,6 +30,39 @@ set -euo pipefail
 
 # Get script directory for helper script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Load environment variables from .env.local if it exists
+# This allows the script to work with Next.js .env.local files
+# Shell scripts don't automatically load .env files, so we do it here
+if [ -f "${PROJECT_ROOT}/.env.local" ]; then
+    # Export variables from .env.local
+    # This handles comments, empty lines, and quoted/unquoted values
+    set -a  # Automatically export all variables
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip comments and empty lines
+        case "$line" in
+            \#*|'') continue ;;
+            *)
+                # Remove any leading/trailing whitespace
+                line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                # Parse KEY=VALUE format
+                if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+                    key="${BASH_REMATCH[1]}"
+                    value="${BASH_REMATCH[2]}"
+                    # Remove surrounding quotes if present
+                    value="${value#\"}"
+                    value="${value%\"}"
+                    value="${value#\'}"
+                    value="${value%\'}"
+                    # Export the variable
+                    export "$key=$value"
+                fi
+                ;;
+        esac
+    done < "${PROJECT_ROOT}/.env.local"
+    set +a  # Stop auto-exporting
+fi
 
 # Configuration
 POLL_INTERVAL=${POLL_INTERVAL:-10}  # Poll every 10 seconds
@@ -249,7 +282,7 @@ send_email() {
     local subject="$2"
     local html_content="$3"
     local text_content="$4"
-    local from_email="${RESEND_FROM_EMAIL:-noreply@ha-hootz.com}"
+    local from_email="${RESEND_FROM_EMAIL:-onboarding@resend.dev}"
     
     # Escape JSON special characters
     local escaped_html=$(echo "$html_content" | node -e "console.log(JSON.stringify(require('fs').readFileSync(0,'utf8')))")
@@ -306,26 +339,48 @@ process_job() {
         return 1
     fi
     
+    # Verify Resend API key is available
+    if [ -z "${RESEND_API_KEY:-}" ]; then
+        log_error "RESEND_API_KEY is not set"
+        update_job_status "$job_id" "pending" "RESEND_API_KEY environment variable not set"
+        return 1
+    fi
+    
     # Call send-email.sh with appropriate arguments
     # Format: ./send-email.sh <recipient_email> <template_type> <token> [name]
+    # Capture both stdout and stderr for logging
+    local send_output
     local send_result
+    
+    log_info "Calling send-email.sh for job ${job_id}..."
     if [ -n "$name" ]; then
-        "$send_script" "$to_email" "$template" "$token" "$name" 2>&1
+        send_output=$("$send_script" "$to_email" "$template" "$token" "$name" 2>&1)
         send_result=$?
     else
-        "$send_script" "$to_email" "$template" "$token" 2>&1
+        send_output=$("$send_script" "$to_email" "$template" "$token" 2>&1)
         send_result=$?
+    fi
+    
+    # Log the output from send-email.sh
+    if [ -n "$send_output" ]; then
+        echo "$send_output"
     fi
     
     # Check result
     if [ $send_result -eq 0 ]; then
         update_job_status "$job_id" "sent" ""
-        log_success "Job ${job_id} completed successfully"
+        log_success "Job ${job_id} completed successfully - email sent to ${to_email}"
         return 0
     else
-        local error_msg="Failed to send email via Resend API (exit code: $send_result)"
+        # Extract error message from send-email.sh output if available
+        local error_msg
+        if echo "$send_output" | grep -q "Error:"; then
+            error_msg=$(echo "$send_output" | grep "Error:" | head -1)
+        else
+            error_msg="Failed to send email via Resend API (exit code: $send_result)"
+        fi
         update_job_status "$job_id" "pending" "$error_msg"
-        log_warning "Job ${job_id} failed, will retry"
+        log_warning "Job ${job_id} failed: $error_msg"
         return 1
     fi
 }

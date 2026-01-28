@@ -18,7 +18,7 @@
 #
 # Environment Variables:
 #   RESEND_API_KEY   - Resend API key (required)
-#   RESEND_FROM_EMAIL - From email address (optional, defaults to noreply@ha-hootz.com)
+#   RESEND_FROM_EMAIL - From email address (optional, defaults to onboarding@resend.dev)
 #   APP_URL          - Base URL for generating links (optional, defaults to http://localhost:3000)
 #
 # Exit Codes:
@@ -36,6 +36,38 @@
 
 set -euo pipefail
 
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Load environment variables from .env.local if it exists (same as email-worker.sh)
+if [ -f "${PROJECT_ROOT}/.env.local" ]; then
+    set -a  # Automatically export all variables
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip comments and empty lines
+        case "$line" in
+            \#*|'') continue ;;
+            *)
+                # Remove any leading/trailing whitespace
+                line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                # Parse KEY=VALUE format
+                if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+                    key="${BASH_REMATCH[1]}"
+                    value="${BASH_REMATCH[2]}"
+                    # Remove surrounding quotes if present
+                    value="${value#\"}"
+                    value="${value%\"}"
+                    value="${value#\'}"
+                    value="${value%\'}"
+                    # Export the variable
+                    export "$key=$value"
+                fi
+                ;;
+        esac
+    done < "${PROJECT_ROOT}/.env.local"
+    set +a  # Stop auto-exporting
+fi
+
 # Colors for output (optional, can be removed for production)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -44,7 +76,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 RESEND_API_URL="https://api.resend.com/emails"
-DEFAULT_FROM_EMAIL="noreply@ha-hootz.com"
+DEFAULT_FROM_EMAIL="onboarding@resend.dev"
 DEFAULT_APP_URL="https://ha-hootz.fly.dev"
 
 # Parse arguments
@@ -213,15 +245,25 @@ EOF
     
     # Check HTTP status code
     if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-        # Success
-        echo "Email sent successfully to $recipient"
-        # Extract email ID if jq is available
+        # Success - extract and log email ID
+        local email_id
         if command -v jq >/dev/null 2>&1; then
-            echo "$response_body" | jq -r '.id // empty' >&2  # Print email ID to stderr for logging
+            email_id=$(echo "$response_body" | jq -r '.id // empty' 2>/dev/null)
         else
             # Fallback: try to extract ID manually
-            echo "$response_body" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 >&2 2>/dev/null || true
+            email_id=$(echo "$response_body" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
         fi
+        
+        # Print success message with email ID (this will be captured by the worker)
+        if [ -n "$email_id" ]; then
+            echo "Email sent successfully to $recipient (Resend ID: $email_id)"
+        else
+            echo "Email sent successfully to $recipient"
+        fi
+        
+        # Also print to stderr for separate logging if needed
+        echo "Resend email ID: $email_id" >&2
+        
         return 0
     else
         # Error - parse and display error message
