@@ -24,7 +24,9 @@ export function generateVerifyEmailContent(
   name?: string,
 ): { subject: string; html: string; text: string } {
   const baseUrl = getBaseUrl();
-  const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+  // Point to the auth page with token parameter - the page will handle verification
+  const verificationUrl = `${baseUrl}/auth/verify-email?token=${encodeURIComponent(token)}`;
+  
   const greeting = name ? `Hi ${name},` : "Hi there,";
 
   const html = `

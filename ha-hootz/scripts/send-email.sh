@@ -77,7 +77,7 @@ NC='\033[0m' # No Color
 # Configuration
 RESEND_API_URL="https://api.resend.com/emails"
 DEFAULT_FROM_EMAIL="onboarding@resend.dev"
-DEFAULT_APP_URL="https://ha-hootz.fly.dev"
+DEFAULT_APP_URL="http://localhost:3000"
 
 # Parse arguments
 if [ $# -lt 3 ]; then
@@ -154,7 +154,7 @@ generate_email_content() {
         local encoded_token
         encoded_token=$(url_encode "$token_or_url")
         if [ "$template" = "verify_email" ]; then
-            magic_link="${app_url}/api/auth/verify-email?token=${encoded_token}"
+            magic_link="${app_url}/auth/verify-email?token=${encoded_token}"
         else
             magic_link="${app_url}/auth/reset-password?token=${encoded_token}"
         fi

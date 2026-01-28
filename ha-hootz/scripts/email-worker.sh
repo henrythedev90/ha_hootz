@@ -177,7 +177,7 @@ generate_email_content() {
         let subject, html, text;
         
         if (template === 'verify_email') {
-            const verificationUrl = \`\${baseUrl}/api/auth/verify-email?token=\${encodeURIComponent(token)}\`;
+            const verificationUrl = \`\${baseUrl}/auth/verify-email?token=\${encodeURIComponent(token)}\`;
             const greeting = name ? \`Hi \${name},\` : 'Hi there,';
             
             subject = 'Verify Your Email Address - Ha-Hootz';

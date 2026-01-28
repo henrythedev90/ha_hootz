@@ -7,7 +7,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock, User, Sparkles } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+} from "lucide-react";
+import Modal from "@/components/Modal";
 import {
   Form,
   FormControl,
@@ -53,19 +63,28 @@ function AuthPageContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showEmailVerificationModal, setShowEmailVerificationModal] =
+    useState(false);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   useEffect(() => {
     setIsSignUp(mode === "signup");
-    
+
     // Handle URL query parameters for verification status
     const verified = searchParams.get("verified");
     const errorParam = searchParams.get("error");
-    
+
     if (verified === "true") {
       setSuccess("Email verified successfully! You can now sign in.");
       setError("");
-    } else if (errorParam === "invalid_token" || errorParam === "missing_token") {
-      setError("Invalid or expired verification link. Please request a new one.");
+    } else if (
+      errorParam === "invalid_token" ||
+      errorParam === "missing_token"
+    ) {
+      setError(
+        "Invalid or expired verification link. Please request a new one.",
+      );
     } else if (errorParam === "verification_failed") {
       setError("Email verification failed. Please try again.");
     }
@@ -91,6 +110,8 @@ function AuthPageContent() {
 
   const onSignIn = async (data: SignInFormData) => {
     setError("");
+    setEmailNotVerified(false);
+    setUnverifiedEmail("");
     setLoading(true);
 
     try {
@@ -102,12 +123,68 @@ function AuthPageContent() {
 
       if (result?.error) {
         // Check if error is due to unverified email
-        // NextAuth doesn't expose this directly, so we'll show a generic message
-        // and provide option to resend verification
-        setError("Invalid email or password. If you just signed up, please verify your email first.");
+        // We need to verify credentials first to check verification status
+        try {
+          const checkResponse = await fetch("/api/auth/check-verification", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: data.email,
+              password: data.password,
+            }),
+          });
+
+          if (checkResponse.ok) {
+            const checkData = await checkResponse.json();
+            if (checkData.exists && !checkData.verified) {
+              // Email exists, password is correct, but email is not verified
+              setEmailNotVerified(true);
+              setUnverifiedEmail(data.email);
+              setError("");
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (checkErr) {
+          // If check fails, fall through to generic error
+          console.error("Error checking verification:", checkErr);
+        }
+
+        // Generic error for invalid credentials or other issues
+        setError("Invalid email or password.");
       } else {
         router.push("/");
         router.refresh();
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: unverifiedEmail,
+        }),
+      });
+
+      if (response.ok) {
+        setSuccess("Verification email sent! Please check your inbox.");
+        setEmailNotVerified(false);
+      } else {
+        setError("Failed to resend verification email. Please try again.");
       }
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -142,11 +219,13 @@ function AuthPageContent() {
         return;
       }
 
-      // Registration successful - show success message about email verification
-      setSuccess(registerData.message || "Account created! Please check your email to verify your account.");
+      // Registration successful - show modal about email verification
+      // Since registerResponse.ok is true, we know registration succeeded
       setError("");
       signUpForm.reset();
-      
+      // Show modal for successful registration
+      setShowEmailVerificationModal(true);
+
       // Don't auto sign in - user must verify email first
       setLoading(false);
     } catch (err) {
@@ -160,6 +239,9 @@ function AuthPageContent() {
     const newMode = isSignUp ? "signin" : "signup";
     router.push(`/auth?mode=${newMode}`);
     setError("");
+    setSuccess("");
+    setEmailNotVerified(false);
+    setUnverifiedEmail("");
     signInForm.reset();
     signUpForm.reset();
     setShowPassword(false);
@@ -469,6 +551,37 @@ function AuthPageContent() {
                       {success}
                     </motion.div>
                   )}
+                  {emailNotVerified && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 px-4 py-3 rounded-lg"
+                    >
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <p className="font-semibold mb-1">
+                            Email Verification Required
+                          </p>
+                          <p className="text-sm text-yellow-400/90 mb-3">
+                            Your email address has not been verified yet. Please
+                            check your inbox and click the verification link to
+                            activate your account.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleResendVerification}
+                            disabled={loading}
+                            className="text-sm font-medium text-yellow-400 hover:text-yellow-300 underline transition-colors disabled:opacity-50"
+                          >
+                            {loading
+                              ? "Sending..."
+                              : "Resend verification email"}
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                   <div className="space-y-5">
                     <FormField
                       control={signInForm.control}
@@ -590,6 +703,39 @@ function AuthPageContent() {
           )}
         </motion.p>
       </motion.div>
+
+      {/* Email Verification Success Modal */}
+      <Modal
+        isOpen={showEmailVerificationModal}
+        onClose={() => setShowEmailVerificationModal(false)}
+        title="Congrats! Check Your Email!"
+        size="md"
+      >
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-2">
+            <CheckCircle2 className="w-10 h-10 text-green-400" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-lg font-semibold text-text-light">
+              You're one step closer to enjoying Ha-Hootz!
+            </p>
+            <p className="text-text-light/70">
+              We've sent a verification link to your email address. Please check
+              your inbox and click the link to verify your account.
+            </p>
+            <p className="text-sm text-text-light/60 mt-4">
+              Once verified, you'll be able to sign in and start creating
+              amazing trivia presentations!
+            </p>
+          </div>
+          <button
+            onClick={() => setShowEmailVerificationModal(false)}
+            className="mt-4 w-full py-3 bg-linear-to-r from-indigo to-indigo/80 hover:from-indigo/90 hover:to-indigo/70 text-white rounded-xl font-semibold transition-all"
+          >
+            Got it!
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
