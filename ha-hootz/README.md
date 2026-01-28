@@ -473,9 +473,13 @@ Version 1.0 is fully tested and ready for deployment to production environments 
 - **User Authentication**
 
   - Secure user registration and login
+  - **Email Verification**: New users must verify their email address via magic link before signing in
+  - **Forgot Password**: Secure password reset flow via email links
+  - **Email Verification Alert**: Yellow alert shown when users with unverified emails attempt to sign in
   - Password visibility toggle on sign in/sign up
   - User profiles with MongoDB Atlas storage
   - Session management with NextAuth.js
+  - Asynchronous email delivery via shell script worker
 
 - **Host Dashboard Features**
 
@@ -569,6 +573,9 @@ MONGODB_DB_NAME=ha-hootz
 REDIS_URL=redis://default:<password>@<host>:<port>
 NEXTAUTH_SECRET=your_generated_secret_here
 NEXTAUTH_URL=http://localhost:3000
+APP_URL=http://localhost:3000
+RESEND_API_KEY=re_your_resend_api_key
+RESEND_FROM_EMAIL=onboarding@resend.dev
 ```
 
 Generate a secret:
@@ -595,8 +602,12 @@ npm run dev
 1. **Create an Account**: Navigate to `/auth/signup` to create your host profile
    - Use the eye icon to toggle password visibility while typing
    - Both password fields have visibility toggles for convenience
+   - After registration, check your email for a verification link
+   - You must verify your email before you can sign in
 2. **Sign In**: Use your credentials to sign in at `/auth/signin`
    - Password visibility toggle available for easy verification
+   - If your email is not verified, you'll see a yellow alert with option to resend verification
+   - Click "Forgot password?" to reset your password via email
 3. **Create a Presentation**: Click "New Presentation" to start creating your trivia game
 4. **Add Questions**: Add multiple-choice questions to your presentation
    - Each question must have exactly 4 answer options
@@ -633,7 +644,13 @@ ha-hootz/
 │   ├── api/
 │   │   ├── auth/
 │   │   │   ├── [...nextauth]/route.ts    # NextAuth configuration
-│   │   │   └── register/route.ts         # User registration
+│   │   │   ├── register/route.ts         # User registration with email verification
+│   │   │   ├── verify-email/route.ts     # Email verification handler (legacy redirect)
+│   │   │   ├── verify-email-json/route.ts # Email verification handler (JSON response)
+│   │   │   ├── forgot-password/route.ts  # Password reset request
+│   │   │   ├── reset-password/route.ts   # Password reset completion
+│   │   │   ├── resend-verification/route.ts # Resend verification email
+│   │   │   └── check-verification/route.ts  # Check email verification status
 │   │   ├── presentations/
 │   │   │   ├── route.ts                   # GET all, POST new
 │   │   │   └── [id]/route.ts              # GET, PUT, DELETE by ID
@@ -649,8 +666,11 @@ ha-hootz/
 │   │   │   │   └── stats/route.ts          # GET - Get game statistics
 │   │   └── qr/[sessionCode]/route.ts      # GET - Generate QR code for session
 │   ├── auth/
-│   │   ├── signin/page.tsx                # Sign in page
-│   │   └── signup/page.tsx                # Sign up page
+│   │   ├── page.tsx                        # Main auth page (sign in/sign up with email verification)
+│   │   ├── signin/page.tsx                # Sign in page (redirects to /auth?mode=signin)
+│   │   ├── signup/page.tsx                # Sign up page (redirects to /auth?mode=signup)
+│   │   ├── verify-email/page.tsx          # Email verification page (magic link handler)
+│   │   └── reset-password/page.tsx        # Password reset page (reset link handler)
 │   ├── presentations/
 │   │   └── [id]/page.tsx                  # Presentation editor
 │   ├── host/[sessionCode]/page.tsx        # Host dashboard for game session
@@ -681,6 +701,9 @@ ha-hootz/
 │   ├── auth.ts                            # Session helper
 │   ├── db.ts                               # Database helpers
 │   ├── mongodb.ts                          # MongoDB connection
+│   ├── auth-tokens.ts                      # Token generation and verification for email auth
+│   ├── email-jobs.ts                      # Email job management for async delivery
+│   ├── email-templates.ts                 # Email template generation (verification, reset)
 │   ├── redis/
 │   │   ├── client.ts                       # Redis connection (serverless-safe)
 │   │   ├── keys.ts                         # Redis key generators (includes playerAvatarsKey, playerStreaksKey)
@@ -691,6 +714,9 @@ ha-hootz/
 │   │   └── handlers/
 │   │       ├── host.handlers.ts            # Host event handlers (host-join, START_GAME, START_QUESTION, CANCEL_SESSION)
 │   │       └── player.handlers.ts         # Player event handlers (join-session, SUBMIT_ANSWER)
+│   ├── scoring/
+│   │   ├── calculateScore.ts               # Scoring calculation functions (time bonus, streak bonus, total score)
+│   │   └── calculateScore.test.ts         # Unit tests for scoring logic
 │   ├── types.ts                            # Trivia session types
 │   ├── questionConverter.ts                # Question format converters
 │   ├── storage.ts                          # API client for presentations
@@ -709,10 +735,6 @@ ha-hootz/
 │       ├── playerSlice.ts                  # Player state slice (answers, timer, leaderboard)
 │       ├── socketSlice.ts                  # Socket connection state slice
 │       └── uiSlice.ts                      # UI state slice (modals, errors, loading)
-├── lib/
-│   └── scoring/
-│       ├── calculateScore.ts               # Scoring calculation functions (time bonus, streak bonus, total score)
-│       └── calculateScore.test.ts         # Unit tests for scoring logic
 ├── hooks/
 │   ├── usePlayerColors.ts                  # Hook for generating random colors for player avatars
 │   └── useRandomColors.ts                  # Generic hook for generating random colors for any list
@@ -724,6 +746,10 @@ ha-hootz/
 ├── jest.setup.ts                           # Jest setup file with global mocks and matchers
 ├── TESTING_SETUP.md                        # Comprehensive testing setup documentation
 ├── JEST_FLOW.md                            # Detailed Jest execution flow documentation
+├── scripts/
+│   ├── email-worker.sh                     # Email worker script (polls and sends emails)
+│   ├── email-worker-helper.js              # Node.js helper for MongoDB operations
+│   └── send-email.sh                       # Standalone email sending script
 ├── server.ts                               # Custom Next.js server with Socket.io integration
 └── types/
     ├── index.ts                            # TypeScript types
@@ -787,7 +813,13 @@ ha-hootz/
 
 ### Authentication
 
-- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/register` - Register a new user (creates unverified account, sends verification email)
+- `GET /api/auth/verify-email?token=...` - Verify email address via magic link (legacy redirect endpoint)
+- `GET /api/auth/verify-email-json?token=...` - Verify email address via magic link (JSON response)
+- `POST /api/auth/forgot-password` - Request password reset email
+- `POST /api/auth/reset-password` - Complete password reset with token
+- `POST /api/auth/resend-verification` - Resend email verification link
+- `POST /api/auth/check-verification` - Check if user's email is verified (requires valid credentials)
 - `GET/POST /api/auth/[...nextauth]` - NextAuth endpoints
 
 ### Presentations
@@ -881,7 +913,7 @@ ha-hootz/
 
 ## Database Schema
 
-### Users Collection
+### Users Collection (hosts)
 
 ```typescript
 {
@@ -889,8 +921,38 @@ ha-hootz/
   email: string,
   password: string (hashed),
   name?: string,
+  emailVerified: boolean,  // New: Email verification status
   createdAt: string,
   updatedAt: string
+}
+```
+
+### auth_tokens Collection
+
+```typescript
+{
+  _id: ObjectId,
+  userId: ObjectId,
+  type: "verify_email" | "reset_password",
+  tokenHash: string,  // Hashed with bcrypt
+  expiresAt: Date,
+  usedAt?: Date,
+  createdAt: Date
+}
+```
+
+### email_jobs Collection
+
+```typescript
+{
+  _id: ObjectId,
+  toEmail: string,
+  template: "verify_email" | "reset_password",
+  payload: object,  // JSON payload (token, name, etc.)
+  status: "pending" | "sent" | "failed",
+  attempts: number,
+  lastError?: string,
+  createdAt: Date
 }
 ```
 
@@ -926,6 +988,9 @@ ha-hootz/
 | `REDIS_URL`       | Redis connection URL (Upstash compatible) | Yes      |
 | `NEXTAUTH_SECRET` | Secret for JWT signing                    | Yes      |
 | `NEXTAUTH_URL`    | Base URL of your application              | Yes      |
+| `APP_URL`         | Base URL for email links (defaults to NEXTAUTH_URL) | No       |
+| `RESEND_API_KEY`  | Resend API key for email delivery         | Yes      |
+| `RESEND_FROM_EMAIL` | From email address for emails (defaults to onboarding@resend.dev) | No       |
 
 ## Development
 
@@ -1036,10 +1101,71 @@ describe("calculateScore", () => {
 });
 ```
 
+## Email Authentication
+
+Ha-Hootz includes a comprehensive email-based authentication system with email verification and password reset functionality.
+
+### Features
+
+- **Email Verification**: New users receive a magic link via email to verify their account
+- **Password Reset**: Users can request a password reset link via email
+- **Asynchronous Email Delivery**: Emails are sent asynchronously via a shell script worker
+- **Security**: Tokens are hashed before storage, single-use, and expire after 15-30 minutes
+- **Rate Limiting**: Prevents token spam (max 3 tokens per user per type per hour)
+- **Email Enumeration Protection**: Same response for all requests to prevent email discovery
+
+### Email Worker
+
+The email worker (`scripts/email-worker.sh`) is a shell script that:
+- Polls the `email_jobs` collection for pending emails
+- Sends emails via Resend API using `curl`
+- Handles retries with exponential backoff
+- Updates job status (sent/failed) in the database
+
+**Running the Email Worker:**
+
+```bash
+# Development
+./scripts/email-worker.sh
+
+# Production (Fly.io)
+# Configure as a separate process in fly.toml
+```
+
+### Email Templates
+
+Email templates are generated using `lib/email-templates.ts`:
+- **Verification Email**: Magic link to verify email address
+- **Password Reset Email**: Secure link to reset password
+
+Both templates include:
+- HTML and plaintext versions
+- Responsive design
+- Clear call-to-action buttons
+- Security warnings
+
+### User Flow
+
+1. **Registration**: User signs up → receives verification email → clicks link → email verified
+2. **Sign In (Unverified)**: User attempts sign in → yellow alert shown → can resend verification email
+3. **Forgot Password**: User clicks "Forgot password?" → enters email → receives reset link → sets new password
+
+### Documentation
+
+For detailed setup and implementation information, see:
+- `docs/EMAIL_AUTH_SETUP.md` - Setup and usage guide
+- `docs/EMAIL_AUTH_SCHEMA.md` - Database schema documentation
+- `docs/EMAIL_AUTH_IMPLEMENTATION.md` - Implementation details
+- `docs/RESEND_INTEGRATION.md` - Resend email provider integration
+
 ## Security Notes
 
 - Passwords are hashed using bcryptjs before storage
-- All API routes require authentication
+- Authentication tokens are hashed with bcrypt before database storage
+- Tokens are single-use and expire after 15-30 minutes
+- Rate limiting prevents token spam and abuse
+- Email enumeration protection (same response for all requests)
+- All API routes require authentication (except public auth endpoints)
 - Users can only access their own presentations
 - MongoDB connection uses secure connection strings
 - Environment variables should never be committed to version control

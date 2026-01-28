@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAndConsumeToken, cleanupExpiredTokens } from "@/lib/auth-tokens";
 import { getHostCollection } from "@/lib/db";
+import { ObjectId } from "mongodb";
 
 /**
  * GET /api/auth/verify-email?token=...
- * 
+ *
  * Verifies an email address using a magic link token.
  * This endpoint is called when the user clicks the verification link in their email.
- * 
+ *
  * Security:
  * - Tokens are single-use and expire after 30 minutes
  * - Never reveals whether an email exists (same response for invalid/expired tokens)
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Mark user's email as verified
     const hostsCollection = await getHostCollection();
     const updateResult = await hostsCollection.updateOne(
-      { _id: userId },
+      { _id: new ObjectId(userId) },
       {
         $set: {
           emailVerified: true,
