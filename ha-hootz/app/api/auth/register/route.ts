@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getHostCollection, getPresentationsCollection } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { createToken } from "@/lib/auth-tokens";
+import { createEmailJob } from "@/lib/email-jobs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,12 +37,14 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user with emailVerified: false
+    // User must verify email before they can sign in
     const now = new Date().toISOString();
     const result = await hostsCollection.insertOne({
       email,
       password: hashedPassword,
       name: name || null,
+      emailVerified: false, // Require email verification
       createdAt: now,
       updatedAt: now,
     });
@@ -108,10 +112,26 @@ export async function POST(request: NextRequest) {
       // Continue with successful user creation
     }
 
+    // Generate email verification token and create email job
+    // This is done asynchronously - the email will be sent by the worker script
+    try {
+      const verificationToken = await createToken(userId, "verify_email");
+      await createEmailJob(email, "verify_email", {
+        token: verificationToken,
+        name: name || undefined,
+      });
+    } catch (tokenError: any) {
+      // Log error but don't fail registration
+      // User can request a new verification email later
+      console.error("Error creating verification email:", tokenError);
+    }
+
+    // Always return success to prevent email enumeration
+    // Even if email job creation fails, we don't reveal this to the user
     return NextResponse.json(
       {
-        message: "User created successfully",
-        userId,
+        message:
+          "Account created successfully. Please check your email to verify your account.",
       },
       { status: 201 },
     );
