@@ -67,16 +67,22 @@ function AuthPageContent() {
     useState(false);
   const [emailNotVerified, setEmailNotVerified] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
 
   useEffect(() => {
     setIsSignUp(mode === "signup");
 
     // Handle URL query parameters for verification status
     const verified = searchParams.get("verified");
+    const passwordReset = searchParams.get("password_reset");
     const errorParam = searchParams.get("error");
 
     if (verified === "true") {
       setSuccess("Email verified successfully! You can now sign in.");
+      setError("");
+    } else if (passwordReset === "true") {
+      setSuccess("Password reset successfully! You can now sign in with your new password.");
       setError("");
     } else if (
       errorParam === "invalid_token" ||
@@ -185,6 +191,38 @@ function AuthPageContent() {
         setEmailNotVerified(false);
       } else {
         setError("Failed to resend verification email. Please try again.");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: forgotPasswordEmail,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(data.message || "Password reset link sent! Please check your email.");
+        setForgotPasswordEmail("");
+        setShowForgotPasswordModal(false);
+      } else {
+        setError(data.error || "Failed to send password reset email. Please try again.");
       }
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -652,6 +690,7 @@ function AuthPageContent() {
                   <div className="text-right">
                     <button
                       type="button"
+                      onClick={() => setShowForgotPasswordModal(true)}
                       className="text-sm text-cyan hover:text-cyan/80 transition-colors"
                     >
                       Forgot password?
@@ -735,6 +774,79 @@ function AuthPageContent() {
             Got it!
           </button>
         </div>
+      </Modal>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        isOpen={showForgotPasswordModal}
+        onClose={() => {
+          setShowForgotPasswordModal(false);
+          setForgotPasswordEmail("");
+          setError("");
+        }}
+        title="Reset Your Password"
+        size="md"
+      >
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-error/10 border border-error/30 text-error px-4 py-3 rounded-lg text-sm"
+            >
+              {error}
+            </motion.div>
+          )}
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg text-sm"
+            >
+              {success}
+            </motion.div>
+          )}
+          <div>
+            <label className="block text-sm text-text-light/80 mb-2">
+              Email address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40" />
+              <Input
+                type="email"
+                autoComplete="email"
+                placeholder="Enter your email address"
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                required
+                className="h-12 pl-12 bg-deep-navy/50 border-2 border-indigo/20 focus:border-indigo rounded-xl text-text-light placeholder:text-text-light/30"
+              />
+            </div>
+            <p className="text-xs text-text-light/60 mt-2">
+              We'll send you a link to reset your password.
+            </p>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowForgotPasswordModal(false);
+                setForgotPasswordEmail("");
+                setError("");
+              }}
+              className="flex-1 py-3 bg-deep-navy/50 hover:bg-deep-navy/70 text-text-light rounded-xl font-semibold transition-all border border-indigo/20"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !forgotPasswordEmail}
+              className="flex-1 py-3 bg-linear-to-r from-indigo to-indigo/80 hover:from-indigo/90 hover:to-indigo/70 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Sending..." : "Send Reset Link"}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

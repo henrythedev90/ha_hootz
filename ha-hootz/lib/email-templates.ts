@@ -9,7 +9,9 @@ export type EmailTemplate = "verify_email" | "reset_password";
  * Base URL for the application (from environment or default).
  */
 function getBaseUrl(): string {
-  return process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000";
+  return (
+    process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
+  );
 }
 
 /**
@@ -26,7 +28,7 @@ export function generateVerifyEmailContent(
   const baseUrl = getBaseUrl();
   // Point to the auth page with token parameter - the page will handle verification
   const verificationUrl = `${baseUrl}/auth/verify-email?token=${encodeURIComponent(token)}`;
-  
+
   const greeting = name ? `Hi ${name},` : "Hi there,";
 
   const html = `

@@ -2,18 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getHostCollection } from "@/lib/db";
 import { verifyAndConsumeToken, cleanupExpiredTokens } from "@/lib/auth-tokens";
 import bcrypt from "bcryptjs";
+import { ObjectId } from "mongodb";
 
 /**
  * POST /api/auth/reset-password
- * 
+ *
  * Completes the password reset flow by verifying the token and updating the password.
- * 
+ *
  * Security:
  * - Tokens are single-use and expire after 15 minutes
  * - Password is hashed before storage
  * - Token is invalidated after successful use
  * - Never reveals whether token is valid until after successful reset
- * 
+ *
  * Request body:
  * {
  *   "token": "reset_token_from_email",
@@ -26,10 +27,7 @@ export async function POST(request: NextRequest) {
     const { token, password } = body;
 
     if (!token || typeof token !== "string") {
-      return NextResponse.json(
-        { error: "Token is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Token is required" }, { status: 400 });
     }
 
     if (!password || typeof password !== "string") {
@@ -67,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Update user's password
     const hostsCollection = await getHostCollection();
     const updateResult = await hostsCollection.updateOne(
-      { _id: userId },
+      { _id: new ObjectId(userId) },
       {
         $set: {
           password: hashedPassword,
@@ -78,10 +76,7 @@ export async function POST(request: NextRequest) {
 
     if (updateResult.matchedCount === 0) {
       // User doesn't exist (shouldn't happen if token was valid)
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Success - password has been reset
