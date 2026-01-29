@@ -134,7 +134,7 @@ function ResetPasswordContent() {
           </div>
         )}
 
-        {status !== "success" && status !== "error" && token && (
+        {status !== "success" && token && (
           <>
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-text-light mb-2">Reset Your Password</h2>

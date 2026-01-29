@@ -18,7 +18,11 @@ primary_region = "iad"
   app = "npx tsx server.ts"
 
 [http_service]
+  # CRITICAL: internal_port must match PORT env var (3000)
+  # Fly.io proxy routes external 80/443 -> internal 3000
   internal_port = 3000
+  # force_https = true means HTTP -> HTTPS redirect, but TLS validation needs HTTP first
+  # Set to false temporarily if TLS validation is stuck, then re-enable after certs are issued
   force_https = true
   auto_stop_machines = false
   auto_start_machines = true
@@ -30,12 +34,16 @@ primary_region = "iad"
     hard_limit = 1000
     soft_limit = 500
 
+  # Health check configuration
+  # CRITICAL: Health check must pass for TLS validation to proceed
   [[http_service.checks]]
-    interval = "30s"
-    timeout = "10s"
-    grace_period = "60s"
+    interval = "15s"      # Check every 15 seconds
+    timeout = "5s"        # 5 second timeout (faster than default)
+    grace_period = "90s"  # Extended grace period for Next.js prepare()
     method = "GET"
     path = "/api/health"
+    protocol = "http"      # Explicitly use HTTP (not HTTPS) for health checks
+    tls_skip_verify = false
 
 [[vm]]
   cpu_kind = "shared"
