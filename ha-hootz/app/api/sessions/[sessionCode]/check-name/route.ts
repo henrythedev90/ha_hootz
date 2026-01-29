@@ -47,7 +47,7 @@ export async function POST(
   } catch (error: unknown) {
     console.error("Error checking name:", error);
     return NextResponse.json(
-      { isAvailable: false, error: error.message || "Internal server error" },
+      { isAvailable: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
     );
   }
