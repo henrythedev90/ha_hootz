@@ -76,7 +76,7 @@ export async function GET(
   } catch (error: unknown) {
     console.error("Error fetching stats:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
     );
   }
