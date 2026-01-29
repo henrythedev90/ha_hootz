@@ -18,7 +18,7 @@ const socketSlice = createSlice({
   initialState,
   reducers: {
     setSocket: (state, action: PayloadAction<Socket | null>) => {
-      state.socket = action.payload as any;
+      state.socket = action.payload;
     },
     setConnected: (state, action: PayloadAction<boolean>) => {
       state.connected = action.payload;

@@ -84,7 +84,7 @@ export function AvatarSelectionModal({
   isOpen,
   playerName,
   onSelectAvatar,
-  onClose,
+  onClose: _onClose,
 }: AvatarSelectionModalProps) {
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);

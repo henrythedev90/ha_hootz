@@ -74,9 +74,9 @@ export default function PlayersListModal({
         } else {
           setError(data.error || "Failed to fetch players");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching players:", err);
-        setError(err.message || "Failed to fetch players");
+        setError(err instanceof Error ? err.message : "Failed to fetch players");
       } finally {
         setLoading(false);
       }

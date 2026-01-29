@@ -34,7 +34,7 @@ export default function DeleteConfirmationModal({
         </p>
         {playerMode ? null : (
           <p className="text-lg font-semibold text-text-light mb-4">
-            "{title}"
+            &quot;{title}&quot;
           </p>
         )}
         {countdown !== undefined && countdown > 0 && (

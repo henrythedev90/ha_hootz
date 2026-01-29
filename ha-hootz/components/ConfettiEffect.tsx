@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 
 interface ConfettiEffectProps {
@@ -7,24 +8,27 @@ interface ConfettiEffectProps {
   isTie: boolean;
 }
 
+const confettiColors = [
+  "#FFD700",
+  "#22D3EE",
+  "#6366F1",
+  "#22C55E",
+  "#F59E0B",
+];
+
 export default function ConfettiEffect({ show, isTie }: ConfettiEffectProps) {
+  // Generate confetti once on mount (not during render) to satisfy purity
+  const [confetti] = useState(() =>
+    Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+      delay: Math.random() * 2,
+      duration: 3 + Math.random() * 2,
+      x: Math.random() * 100,
+    }))
+  );
+
   if (!show || isTie) return null;
-
-  const confettiColors = [
-    "#FFD700",
-    "#22D3EE",
-    "#6366F1",
-    "#22C55E",
-    "#F59E0B",
-  ];
-
-  const confetti = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
-    delay: Math.random() * 2,
-    duration: 3 + Math.random() * 2,
-    x: Math.random() * 100,
-  }));
 
   return (
     <div

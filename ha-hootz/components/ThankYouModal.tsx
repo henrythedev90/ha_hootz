@@ -82,7 +82,7 @@ export default function ThankYouModal({
                     <span className="text-[#6366F1] font-semibold">
                       {hostName}
                     </span>
-                    's trivia event!
+                    &apos;s trivia event!
                   </p>
                 </motion.div>
               )}

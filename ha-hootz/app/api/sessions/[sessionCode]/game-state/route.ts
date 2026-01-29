@@ -35,7 +35,7 @@ export async function GET(
 
     // Get current game state from Redis
     const stateStr = await redis.get(gameStateKey(sessionId));
-    let gameState = stateStr ? JSON.parse(stateStr) : { status: "WAITING" };
+    const gameState = stateStr ? JSON.parse(stateStr) : { status: "WAITING" };
 
     // If there's an active question or game in progress, fetch the question details
     if (
@@ -53,7 +53,7 @@ export async function GET(
       success: true,
       gameState,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching game state:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },

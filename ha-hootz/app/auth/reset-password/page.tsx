@@ -94,14 +94,17 @@ function ResetPasswordContent() {
     }
   };
 
-  // Check if token is missing on mount
+  // Check if token is missing on mount (defer setState to avoid sync setState in effect)
   useEffect(() => {
     if (!token) {
-      setStatus("error");
-      setMessage("Missing reset token. Please check your email for a valid link.");
-      setTimeout(() => {
-        router.push("/auth?mode=signin&error=missing_token");
-      }, 3000);
+      const t = setTimeout(() => {
+        setStatus("error");
+        setMessage("Missing reset token. Please check your email for a valid link.");
+        setTimeout(() => {
+          router.push("/auth?mode=signin&error=missing_token");
+        }, 3000);
+      }, 0);
+      return () => clearTimeout(t);
     }
   }, [token, router]);
 

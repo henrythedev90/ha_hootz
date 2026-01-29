@@ -33,10 +33,10 @@ export async function GET(
       success: true,
       session: redisSession,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error getting session:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
     );
   }
@@ -86,10 +86,10 @@ export async function PUT(
       message: "Session status updated",
       status,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating session:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
     );
   }

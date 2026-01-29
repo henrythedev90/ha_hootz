@@ -44,7 +44,7 @@ export async function POST(
         ? "This name is already taken in this session"
         : undefined,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error checking name:", error);
     return NextResponse.json(
       { isAvailable: false, error: error.message || "Internal server error" },

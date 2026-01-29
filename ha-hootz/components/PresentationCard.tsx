@@ -61,9 +61,9 @@ export default function PresentationCard({
           `Game session started! Session ID: ${data.sessionId}\n\nPlease note the session code.`
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error starting presentation:", error);
-      alert(error.message || "Failed to start presentation. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to start presentation. Please try again.");
     } finally {
       setStarting(false);
     }

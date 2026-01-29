@@ -46,7 +46,7 @@ export default function WinnerDisplay({
   const isWinner = playerRank === 1;
   const isSecond = playerRank === 2;
   const isThird = playerRank === 3;
-  const isTopThree = playerRank !== null && playerRank <= 3;
+  const _isTopThree = playerRank !== null && playerRank <= 3;
 
   // Check for tie
   const isTie =

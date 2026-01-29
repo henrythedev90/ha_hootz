@@ -130,8 +130,12 @@ export default function Loading({
   );
 }
 
+interface SizeProps {
+  size: { dot?: number; container?: number | string; bar?: { width: number; height: number } };
+}
+
 // Variant 1: Pulsing Dots (Quiz Lights)
-function DotsAnimation({ size }: any) {
+function DotsAnimation({ size }: SizeProps) {
   const dotSize = size.dot;
   const colors = ["#6366F1", "#22D3EE", "#F59E0B", "#22C55E", "#A855F7"];
 
@@ -168,7 +172,7 @@ function DotsAnimation({ size }: any) {
 }
 
 // Variant 2: Pulsing Ring (Thinking/Syncing)
-function PulseAnimation({ size }: any) {
+function PulseAnimation({ size }: SizeProps) {
   const containerSize = typeof size.container === "number" ? size.container : parseFloat(size.container) || 440;
   const borderWidth = containerSize > 200 ? 8 : 4;
   
@@ -245,7 +249,7 @@ function PulseAnimation({ size }: any) {
 }
 
 // Variant 3: Horizontal Bars (Answer Choices Loading)
-function BarsAnimation({ size }: any) {
+function BarsAnimation({ size }: SizeProps) {
   const barWidth = size.bar.width;
   const barHeight = size.bar.height;
   const colors = ["#6366F1", "#22D3EE", "#A855F7", "#F59E0B"];
@@ -342,7 +346,7 @@ function OrbitAnimation({ size }: any) {
 }
 
 // Variant 5: Wave Animation (Soundwave/Pulse)
-function WaveAnimation({ size }: any) {
+function WaveAnimation({ size }: SizeProps) {
   const barWidth = size.bar.width;
   const maxHeight = size.bar.height;
   const bars = 7;

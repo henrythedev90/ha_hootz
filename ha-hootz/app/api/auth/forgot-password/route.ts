@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
           token: resetToken,
           name: user.name || undefined,
         });
-      } catch (tokenError: any) {
+      } catch (tokenError: unknown) {
         // Log error but don't reveal to user
         console.error("Error creating password reset token:", tokenError);
         // Continue to return success response

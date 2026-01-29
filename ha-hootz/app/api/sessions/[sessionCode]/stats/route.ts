@@ -73,7 +73,7 @@ export async function GET(
       playersWithAnswers,
       playerScores,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching stats:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },

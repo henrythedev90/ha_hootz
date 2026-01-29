@@ -43,7 +43,7 @@ export async function GET(
       questions,
       questionCount: triviaSession.questionCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching questions:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },

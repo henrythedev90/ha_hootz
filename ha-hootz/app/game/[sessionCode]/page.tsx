@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,6 +18,7 @@ import {
   setGameState,
   updateGameState,
 } from "@/store/slices/gameSlice";
+import type { GameState } from "@/store/slices/gameSlice";
 import {
   setPlayerId,
   setPlayerName,
@@ -102,9 +104,10 @@ export default function GamePage() {
     Record<string, { color: string; rgba: string }>
   >({});
 
-  // Track if component is mounted (client-side only)
+  // Track if component is mounted (client-side only); defer to avoid sync setState in effect
   useEffect(() => {
-    setMounted(true);
+    const id = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(id);
   }, []);
 
   // Keep gameStateRef in sync with Redux gameState
@@ -234,20 +237,9 @@ export default function GamePage() {
 
     const newSocket = io({
       path: "/api/socket",
-      // Use same origin (default behavior when no URL specified)
-      // This ensures correct protocol (http/https) and domain matching
       reconnection: true,
       reconnectionAttempts: 15,
-      reconnectionDelay: ((attemptNumber: number) => {
-        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
-        const baseDelay = 1000;
-        const maxDelay = 30000;
-        const delay = Math.min(
-          baseDelay * Math.pow(2, attemptNumber - 1),
-          maxDelay,
-        );
-        return delay;
-      }) as any,
+      reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
       // Ensure we use WebSocket transport (required for Fly.io)
       transports: ["websocket", "polling"],
@@ -282,7 +274,7 @@ export default function GamePage() {
     newSocket.on(
       "joined-session",
       (data: {
-        gameState: any;
+        gameState: (GameState & { playerAnswers?: Record<number, string> }) | null;
         sessionId?: string;
         playerId?: string;
         playerCount?: number;
@@ -291,42 +283,37 @@ export default function GamePage() {
           dispatch(setPlayerId(data.playerId));
         }
 
+        const g = data.gameState;
+        if (!g) return;
+
         // Check if player is joining mid-game (game already in progress)
         const isJoiningMidGame =
-          data.gameState.status === "QUESTION_ACTIVE" ||
-          data.gameState.status === "IN_PROGRESS" ||
-          data.gameState.status === "QUESTION_ENDED";
+          g.status === "QUESTION_ACTIVE" ||
+          g.status === "IN_PROGRESS" ||
+          g.status === "QUESTION_ENDED";
 
         dispatch(
           setGameState({
-            ...data.gameState,
-            sessionId: data.sessionId || data.gameState.sessionId,
-            randomizeAnswers: data.gameState.randomizeAnswers ?? false,
+            ...g,
+            status: g.status ?? "WAITING",
+            sessionId: data.sessionId || g.sessionId,
+            randomizeAnswers: g.randomizeAnswers ?? false,
           }),
         );
 
         // Generate answer colors if joining during an active question
-        // Players can join at any time, so generate colors immediately if question is active
         if (
-          (data.gameState.status === "QUESTION_ACTIVE" ||
-            data.gameState.status === "QUESTION_ENDED") &&
-          data.gameState.question &&
+          (g.status === "QUESTION_ACTIVE" || g.status === "QUESTION_ENDED") &&
+          g.question &&
           mounted
         ) {
           const newAnswerColors = generateAnswerColors(["A", "B", "C", "D"]);
           setAnswerColors(newAnswerColors);
         }
 
-        // Initialize answer order based on randomizeAnswers setting
-        // Only set if there's an active question, otherwise wait for question-started
-        // Only generate random values on client side (after hydration)
-        const shouldRandomize = data.gameState.randomizeAnswers ?? false;
-        if (
-          data.gameState.status === "QUESTION_ACTIVE" &&
-          data.gameState.question
-        ) {
+        const shouldRandomize = g.randomizeAnswers ?? false;
+        if (g.status === "QUESTION_ACTIVE" && g.question) {
           if (shouldRandomize && mounted) {
-            // Generate random order for this player (only on client)
             const options: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
             const shuffled = [...options].sort(() => Math.random() - 0.5);
             const displayLetters = ["A", "B", "C", "D"];
@@ -343,14 +330,12 @@ export default function GamePage() {
 
             setAnswerOrder({ displayToActual, actualToDisplay });
           } else {
-            // No randomization or not mounted yet - use identity mapping
             setAnswerOrder({
               displayToActual: { A: "A", B: "B", C: "C", D: "D" },
               actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
             });
           }
         } else if (!shouldRandomize) {
-          // Pre-initialize identity mapping for when questions start
           setAnswerOrder({
             displayToActual: { A: "A", B: "B", C: "C", D: "D" },
             actualToDisplay: { A: "A", B: "B", C: "C", D: "D" },
@@ -361,29 +346,22 @@ export default function GamePage() {
           dispatch(setPlayerCount(data.playerCount));
         }
 
-        // Restore player's previous answer if they had one for the current question
-        if (
-          data.gameState.playerAnswers &&
-          data.gameState.questionIndex !== undefined
-        ) {
-          const prevAnswer =
-            data.gameState.playerAnswers[data.gameState.questionIndex];
+        // Restore player's previous answer if server sent playerAnswers
+        const playerAnswers = g.playerAnswers;
+        if (playerAnswers && g.questionIndex !== undefined) {
+          const prevAnswer = playerAnswers[g.questionIndex];
           if (prevAnswer) {
             dispatch(setSelectedAnswer(prevAnswer as "A" | "B" | "C" | "D"));
           }
         }
 
-        // Set timer state based on current question status
-        if (data.gameState.status === "QUESTION_ACTIVE") {
+        if (g.status === "QUESTION_ACTIVE") {
           dispatch(setIsTimerExpired(false));
-          // Timer will be handled by the timer effect based on endAt
-        } else if (data.gameState.status === "QUESTION_ENDED") {
+        } else if (g.status === "QUESTION_ENDED") {
           dispatch(setIsTimerExpired(true));
           dispatch(setTimeRemaining(0));
         }
 
-        // Don't show welcome modal if joining mid-game
-        // Welcome modal should only show when game starts, not when joining mid-game
         if (isJoiningMidGame) {
           dispatch(setShowWelcomeModal(false));
         }
@@ -505,7 +483,7 @@ export default function GamePage() {
       },
     );
 
-    newSocket.on("question-ended", (data: any) => {
+    newSocket.on("question-ended", (_data: unknown) => {
       dispatch(updateGameState({ status: "QUESTION_ENDED" }));
       dispatch(setIsTimerExpired(true));
     });
@@ -645,7 +623,7 @@ export default function GamePage() {
       },
     );
 
-    newSocket.on("session-cancelled", (data: { message?: string }) => {
+    newSocket.on("session-cancelled", (_data: { message?: string }) => {
       dispatch(setShowThankYouModal(true));
       dispatch(updateGameState({ status: "QUESTION_ENDED" }));
       newSocket.disconnect();
@@ -702,6 +680,7 @@ export default function GamePage() {
       }
       newSocket.removeAllListeners();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mounted intentionally excluded to avoid re-running socket setup
   }, [sessionCode, playerName, sessionEnded, playerId, playerAvatar, dispatch]);
 
   const handleAnswerSelect = (displayAnswer: "A" | "B" | "C" | "D") => {
@@ -860,12 +839,12 @@ export default function GamePage() {
               </p>
             )}
             <div className="space-y-3.5">
-              <a
+              <Link
                 href="/"
                 className="block w-full px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md text-base"
               >
                 Go to Dashboard
-              </a>
+              </Link>
               <button
                 onClick={() => (window.location.href = "/auth/signup")}
                 className="w-full px-5 py-2.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium shadow-md text-base"
@@ -1000,9 +979,7 @@ export default function GamePage() {
 
     // Calculate timer percentage using actual question duration
     // Calculate from timeRemaining to avoid hydration mismatch with Date.now()
-    const questionDuration = (gameState.scoringConfig as any)?.questionDuration
-      ? (gameState.scoringConfig as any).questionDuration
-      : 30; // Default to 30 seconds
+    const questionDuration = gameState.scoringConfig?.questionDuration ?? 30; // Default to 30 seconds
     const timerPercentage =
       isQuestionActive && timeRemaining > 0
         ? Math.max(0, (timeRemaining / questionDuration) * 100)

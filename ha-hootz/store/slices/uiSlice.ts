@@ -71,7 +71,7 @@ const uiSlice = createSlice({
     setIsLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
-    resetUiState: (state) => {
+    resetUiState: (_state) => {
       return initialState;
     },
   },

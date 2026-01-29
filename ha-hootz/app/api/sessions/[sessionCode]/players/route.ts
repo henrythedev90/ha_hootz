@@ -11,7 +11,6 @@ import {
   playerAvatarsKey,
   playerStreaksKey,
 } from "@/lib/redis/keys";
-import { getPlayerStreak } from "@/lib/redis/triviaRedis";
 
 export async function GET(
   request: NextRequest,
@@ -76,7 +75,7 @@ export async function GET(
       players,
       playerCount: players.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching players:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },
