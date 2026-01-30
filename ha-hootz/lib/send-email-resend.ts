@@ -42,17 +42,21 @@ export async function sendEmailWithResend(
   options?: { jobId?: string },
 ): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = getFromEmail();
+
   if (!apiKey) {
     const msg = "RESEND_API_KEY is not set";
-    console.error("[Resend]", msg);
+    console.error("[Resend] CONFIG ERROR:", msg, "| fromEmail would be:", fromEmail);
     return { ok: false, error: msg };
   }
 
-  const fromEmail = getFromEmail();
   const { subject, html, text } =
     template === "verify_email"
       ? generateVerifyEmailContent(payload.token, payload.name)
       : generateResetPasswordEmailContent(payload.token, payload.name);
+
+  // Log attempt (no secrets) so Fly logs show what’s happening
+  console.log("[Resend] Sending", template, "to", toEmail, "from", fromEmail);
 
   try {
     const res = await fetch(RESEND_API_URL, {
@@ -70,7 +74,7 @@ export async function sendEmailWithResend(
       }),
     });
 
-    const body = (await res.json()) as { id?: string; message?: string };
+    const body = (await res.json()) as { id?: string; message?: string; name?: string };
     if (res.ok && res.status >= 200 && res.status < 300) {
       if (options?.jobId) {
         try {
@@ -79,9 +83,7 @@ export async function sendEmailWithResend(
           console.error("[Resend] Failed to mark job sent:", e);
         }
       }
-      if (process.env.NODE_ENV === "development") {
-        console.log("[Resend] Email sent to", toEmail, "id:", body.id);
-      }
+      console.log("[Resend] OK sent to", toEmail, "id:", body.id);
       return { ok: true, resendId: body.id };
     }
 
@@ -89,12 +91,20 @@ export async function sendEmailWithResend(
       typeof body?.message === "string"
         ? body.message
         : body?.message ?? `HTTP ${res.status}`;
-    console.error("[Resend] API error:", res.status, errorMsg);
+    const errorName = typeof body?.name === "string" ? body.name : "";
+    console.error(
+      "[Resend] API ERROR:",
+      "status=" + res.status,
+      "message=" + errorMsg,
+      errorName ? "name=" + errorName : "",
+      "| from=" + fromEmail,
+      "| to=" + toEmail,
+    );
     return { ok: false, error: errorMsg };
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to send email";
-    console.error("[Resend] Send failed:", message);
+    console.error("[Resend] SEND FAILED:", message, "| from=" + fromEmail, "| to=" + toEmail);
     return { ok: false, error: message };
   }
 }
