@@ -3,6 +3,7 @@ import { getHostCollection, getPresentationsCollection } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { createToken } from "@/lib/auth-tokens";
 import { createEmailJob } from "@/lib/email-jobs";
+import { sendEmailWithResend } from "@/lib/send-email-resend";
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,14 +113,22 @@ export async function POST(request: NextRequest) {
       // Continue with successful user creation
     }
 
-    // Generate email verification token and create email job
-    // This is done asynchronously - the email will be sent by the worker script
+    // Generate email verification token, create job, and send via Resend (works on Fly without worker)
     try {
       const verificationToken = await createToken(userId, "verify_email");
-      await createEmailJob(email, "verify_email", {
+      const jobId = await createEmailJob(email, "verify_email", {
         token: verificationToken,
         name: name || undefined,
       });
+      const sendResult = await sendEmailWithResend(
+        email,
+        "verify_email",
+        { token: verificationToken, name: name || undefined },
+        { jobId },
+      );
+      if (!sendResult.ok) {
+        console.error("Resend send failed (job remains pending):", sendResult.error);
+      }
     } catch (tokenError: unknown) {
       // Log error but don't fail registration
       // User can request a new verification email later

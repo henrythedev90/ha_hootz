@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getHostCollection } from "@/lib/db";
 import { createToken } from "@/lib/auth-tokens";
 import { createEmailJob } from "@/lib/email-jobs";
+import { sendEmailWithResend } from "@/lib/send-email-resend";
 
 /**
  * POST /api/auth/resend-verification
@@ -41,14 +42,23 @@ export async function POST(request: NextRequest) {
     const user = await hostsCollection.findOne({ email: normalizedEmail });
 
     if (user && !user.emailVerified) {
-      // User exists and email is not verified - create new verification token and email job
+      // User exists and email is not verified - create token, job, and send via Resend (works on Fly without worker)
       try {
         const userId = user._id.toString();
         const verificationToken = await createToken(userId, "verify_email");
-        await createEmailJob(normalizedEmail, "verify_email", {
+        const jobId = await createEmailJob(normalizedEmail, "verify_email", {
           token: verificationToken,
           name: user.name || undefined,
         });
+        const sendResult = await sendEmailWithResend(
+          normalizedEmail,
+          "verify_email",
+          { token: verificationToken, name: user.name || undefined },
+          { jobId },
+        );
+        if (!sendResult.ok) {
+          console.error("Resend send failed (job remains pending):", sendResult.error);
+        }
       } catch (tokenError: unknown) {
         // Log error but don't reveal to user
         console.error("Error creating verification token:", tokenError);

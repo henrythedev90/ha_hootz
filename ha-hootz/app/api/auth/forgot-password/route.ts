@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getHostCollection } from "@/lib/db";
 import { createToken } from "@/lib/auth-tokens";
 import { createEmailJob } from "@/lib/email-jobs";
+import { sendEmailWithResend } from "@/lib/send-email-resend";
 
 /**
  * POST /api/auth/forgot-password
@@ -41,14 +42,23 @@ export async function POST(request: NextRequest) {
     const user = await hostsCollection.findOne({ email: normalizedEmail });
 
     if (user) {
-      // User exists - create password reset token and email job
+      // User exists - create password reset token, job, and send via Resend (works on Fly without worker)
       try {
         const userId = user._id.toString();
         const resetToken = await createToken(userId, "reset_password");
-        await createEmailJob(normalizedEmail, "reset_password", {
+        const jobId = await createEmailJob(normalizedEmail, "reset_password", {
           token: resetToken,
           name: user.name || undefined,
         });
+        const sendResult = await sendEmailWithResend(
+          normalizedEmail,
+          "reset_password",
+          { token: resetToken, name: user.name || undefined },
+          { jobId },
+        );
+        if (!sendResult.ok) {
+          console.error("Resend send failed (job remains pending):", sendResult.error);
+        }
       } catch (tokenError: unknown) {
         // Log error but don't reveal to user
         console.error("Error creating password reset token:", tokenError);
