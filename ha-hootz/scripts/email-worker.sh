@@ -282,7 +282,7 @@ send_email() {
     local subject="$2"
     local html_content="$3"
     local text_content="$4"
-    local from_email="${RESEND_FROM_EMAIL:-onboarding@resend.dev}"
+    local from_email="${RESEND_FROM_EMAIL:-noreply@ha-hootz.com}"
     
     # Escape JSON special characters
     local escaped_html=$(echo "$html_content" | node -e "console.log(JSON.stringify(require('fs').readFileSync(0,'utf8')))")

@@ -18,7 +18,7 @@
 #
 # Environment Variables:
 #   RESEND_API_KEY   - Resend API key (required)
-#   RESEND_FROM_EMAIL - From email address (optional, defaults to onboarding@resend.dev)
+#   RESEND_FROM_EMAIL - From email address (optional, defaults to noreply@ha-hootz.com)
 #   APP_URL          - Base URL for generating links (optional, defaults to http://localhost:3000)
 #
 # Exit Codes:
@@ -76,7 +76,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 RESEND_API_URL="https://api.resend.com/emails"
-DEFAULT_FROM_EMAIL="onboarding@resend.dev"
+DEFAULT_FROM_EMAIL="noreply@ha-hootz.com"
 DEFAULT_APP_URL="http://localhost:3000"
 
 # Parse arguments

@@ -38,7 +38,7 @@ flyctl secrets set NEXTAUTH_URL="https://ha-hootz.fly.dev"
 
 ```bash
 flyctl secrets set RESEND_API_KEY="re_xxx"
-flyctl secrets set RESEND_FROM_EMAIL="onboarding@resend.dev"
+flyctl secrets set RESEND_FROM_EMAIL="noreply@ha-hootz.com"
 flyctl secrets set APP_URL="https://ha-hootz.fly.dev"
 ```
 
