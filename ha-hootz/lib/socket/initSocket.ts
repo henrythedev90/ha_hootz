@@ -142,7 +142,7 @@ export async function initSocket(io: Server) {
     try {
       if (pub.isOpen) await pub.quit();
       if (sub.isOpen) await sub.quit();
-    } catch (closeErr) {
+    } catch {
       // Ignore close errors
     }
     throw err;

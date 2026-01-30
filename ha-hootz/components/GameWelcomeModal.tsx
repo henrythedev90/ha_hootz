@@ -27,15 +27,13 @@ export default function GameWelcomeModal({
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  // Auto-close after 5 seconds with countdown
+  // Auto-close after 5 seconds with countdown (defer setState to satisfy react-hooks/set-state-in-effect)
   useEffect(() => {
     if (!isOpen) {
-      setCountdown(5);
-      return;
+      const id = setTimeout(() => setCountdown(5), 0);
+      return () => clearTimeout(id);
     }
-
-    // Reset countdown when modal opens
-    setCountdown(5);
+    const id = setTimeout(() => setCountdown(5), 0);
 
     // Update countdown every second
     const countdownInterval = setInterval(() => {
@@ -59,6 +57,7 @@ export default function GameWelcomeModal({
     }, 5000);
 
     return () => {
+      clearTimeout(id);
       clearInterval(countdownInterval);
       clearTimeout(timer);
     };

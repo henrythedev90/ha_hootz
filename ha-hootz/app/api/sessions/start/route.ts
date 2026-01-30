@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
     let sessionCode;
     try {
       sessionCode = await createSessionCode(sessionId, 60 * 60);
-    } catch (err: any) {
-      console.error("[sessions/start] Failed to create session code:", err.message);
+    } catch (err: unknown) {
+      console.error("[sessions/start] Failed to create session code:", err instanceof Error ? err.message : err);
       return NextResponse.json(
         { error: "Failed to generate session code. Redis may be unavailable." },
         { status: 503 }

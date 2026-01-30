@@ -93,6 +93,7 @@ export default function QuestionDisplay({
                       endAt
                         ? Math.max(
                             0,
+                            // eslint-disable-next-line react-hooks/purity -- timer-based progress bar needs current time
                             ((endAt - Date.now()) / questionDuration) * 100
                           )
                         : 0

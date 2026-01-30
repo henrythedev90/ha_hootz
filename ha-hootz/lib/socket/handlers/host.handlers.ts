@@ -16,7 +16,6 @@ import {
   calculateQuestionScores,
   getDefaultScoringConfig,
   setQuestion,
-  getPlayerStreak,
 } from "../../redis/triviaRedis";
 
 async function getRedis() {
@@ -565,7 +564,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
       const question = await getQuestion(sessionId, questionIndex);
       if (question) {
         // Calculate and store scores for all players
-        const scores = await calculateQuestionScores(
+        const _scores = await calculateQuestionScores(
           sessionId,
           questionIndex,
           question.correct,

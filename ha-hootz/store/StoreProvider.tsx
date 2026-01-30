@@ -13,6 +13,7 @@ export default function StoreProvider({
   if (storeRef.current == null) {
     storeRef.current = makeStore();
   }
+  // eslint-disable-next-line react-hooks/refs -- Redux store-in-ref pattern: single store per app
   const store = storeRef.current;
   return <Provider store={store}>{children}</Provider>;
 }

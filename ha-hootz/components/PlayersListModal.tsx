@@ -65,7 +65,7 @@ export default function PlayersListModal({
       return;
     }
 
-    const fetchPlayers = async () => {
+    const _fetchPlayers = async () => {
       try {
         const response = await fetch(`/api/sessions/${sessionCode}/players`);
         const data = await response.json();
@@ -402,7 +402,7 @@ export default function PlayersListModal({
                                 fill
                                 className="object-cover"
                                 unoptimized
-                                onError={(e) => {
+                                onError={(_e) => {
                                   // Fallback to initial if image fails to load
                                   if (process.env.NODE_ENV === "development") {
                                     console.warn(

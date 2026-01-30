@@ -96,6 +96,7 @@ export default function PresentationEditor() {
     }
 
     loadPresentation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- router identity stable; loadPresentation from useCallback
   }, [status, session, loadPresentation]);
 
   const handleSave = async () => {
@@ -307,8 +308,8 @@ export default function PresentationEditor() {
           setSelectedQuestionIndex(selectedQuestionIndex + 1);
         }
       }
-    } catch (err: any) {
-      alert(err.message || "Failed to reorder questions");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to reorder questions");
     }
   };
 

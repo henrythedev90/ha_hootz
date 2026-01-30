@@ -1222,7 +1222,7 @@ export default function GamePage() {
                 >
                   <div className="bg-card-bg border border-indigo/30 rounded-xl p-3.5">
                     <p className="text-base text-text-light/70">
-                      Time's up! Your answer has been submitted.
+                      Time&apos;s up! Your answer has been submitted.
                     </p>
                   </div>
                 </motion.div>

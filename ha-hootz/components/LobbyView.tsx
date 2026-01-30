@@ -35,7 +35,7 @@ export default function LobbyView({
   onStartGame,
   onCancelSession,
 }: LobbyViewProps) {
-  const joinUrl =
+  const _joinUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/join/${sessionCode}`
       : `/join/${sessionCode}`;
@@ -376,7 +376,7 @@ export default function LobbyView({
                             fill
                             className="object-cover"
                             unoptimized
-                            onError={(e) => {
+                            onError={(_e) => {
                               // Fallback to initial if image fails to load
                               console.warn(
                                 `[LobbyView] Failed to load avatar for ${player.name}`,

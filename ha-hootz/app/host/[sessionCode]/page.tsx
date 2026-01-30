@@ -296,6 +296,7 @@ export default function HostDashboard() {
     } else {
       dispatch(setTimeRemaining(0));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- gameState.question?.correct intentionally omitted to avoid timer reset on correct-answer change
   }, [
     gameState?.status,
     gameState?.endAt,
@@ -429,16 +430,7 @@ export default function HostDashboard() {
       // Use same origin (default behavior when no URL specified)
       reconnection: true,
       reconnectionAttempts: 15,
-      reconnectionDelay: ((attemptNumber: number) => {
-        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
-        const baseDelay = 1000;
-        const maxDelay = 30000;
-        const delay = Math.min(
-          baseDelay * Math.pow(2, attemptNumber - 1),
-          maxDelay,
-        );
-        return delay;
-      }) as any,
+      reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
       // Ensure we use WebSocket transport (required for Fly.io)
       transports: ["websocket", "polling"],
@@ -463,7 +455,7 @@ export default function HostDashboard() {
         `[HostDashboard] ❌ Socket connection error:`,
         error.message,
       );
-      console.error(`[HostDashboard] Error type:`, (error as any).type);
+      console.error(`[HostDashboard] Error type:`, (error as Error & { type?: string }).type);
       dispatch(setConnected(false));
     });
 
@@ -477,7 +469,7 @@ export default function HostDashboard() {
           avatarUrl?: string;
           streak?: number;
         }>;
-        gameState?: any;
+        gameState?: import("@/store/slices/gameSlice").GameState | null;
       }) => {
         // Ensure players is an array
         const safePlayers = Array.isArray(data.players) ? data.players : [];
@@ -684,7 +676,7 @@ export default function HostDashboard() {
       },
     );
 
-    newSocket.on("question-ended", (data: { questionIndex: number }) => {
+    newSocket.on("question-ended", (_data: { questionIndex: number }) => {
       dispatch(updateGameState({ status: "QUESTION_ENDED" }));
     });
 
@@ -904,7 +896,7 @@ export default function HostDashboard() {
 
     // Get question duration from scoring config (default to 30 seconds)
     const questionDuration =
-      ((gameState.scoringConfig as any)?.questionDuration || 30) * 1000; // Convert to milliseconds
+      (gameState.scoringConfig?.questionDuration ?? 30) * 1000; // Convert to milliseconds
 
     socket.emit("START_QUESTION", {
       sessionCode,
@@ -959,7 +951,7 @@ export default function HostDashboard() {
     }
   };
 
-  const handleEndQuestion = () => {
+  const _handleEndQuestion = () => {
     if (!socket || gameState?.questionIndex === undefined) return;
     socket.emit("END_QUESTION", {
       sessionCode,
@@ -1081,8 +1073,8 @@ export default function HostDashboard() {
   const currentIndex = gameState?.questionIndex ?? 0;
   const questionCount = gameState?.questionCount ?? safeQuestions.length;
   const isQuestionActive = gameState?.status === "QUESTION_ACTIVE";
-  const isQuestionEnded = gameState?.status === "QUESTION_ENDED";
-  const canNavigate = !isQuestionActive && gameState?.status !== "WAITING";
+  const _isQuestionEnded = gameState?.status === "QUESTION_ENDED";
+  const _canNavigate = !isQuestionActive && gameState?.status !== "WAITING";
 
   // Ensure modals are closed when game status is WAITING (new session)
   // But don't close EndGameModal if user is actively trying to cancel
@@ -1216,9 +1208,7 @@ export default function HostDashboard() {
                 timeRemaining={timeRemaining}
                 endAt={gameState?.endAt}
                 questionDuration={
-                  gameState?.scoringConfig?.questionDuration
-                    ? (gameState.scoringConfig as any).questionDuration * 1000
-                    : 30000
+                  (gameState?.scoringConfig?.questionDuration ?? 30) * 1000
                 }
                 answerDistribution={
                   stats?.answerDistribution || { A: 0, B: 0, C: 0, D: 0 }
@@ -1275,7 +1265,7 @@ export default function HostDashboard() {
         }
         winnerRevealed={winnerRevealed}
         onEndGame={() => dispatch(setShowEndGameModal(true))}
-        streakThresholds={(gameState?.scoringConfig as any)?.streakThresholds}
+        streakThresholds={(gameState?.scoringConfig as { streakThresholds?: number[] } | undefined)?.streakThresholds}
         isLastQuestion={questionCount > 0 && currentIndex >= questionCount - 1}
       />
 

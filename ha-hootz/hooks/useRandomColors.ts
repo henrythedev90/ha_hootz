@@ -39,26 +39,27 @@ export function useRandomColors<T extends { id: string }>(
   const [colors, setColors] = useState<Record<string, ColorData>>({});
 
   useEffect(() => {
-    setColors((prevColors) => {
-      const newColors: Record<string, ColorData> = { ...prevColors };
+    const id = setTimeout(() => {
+      setColors((prevColors) => {
+        const newColors: Record<string, ColorData> = { ...prevColors };
 
-      // Get items that don't have colors yet
-      const itemsNeedingColors = items.filter(
-        (item) => !newColors[item.id]
-      );
+        // Get items that don't have colors yet
+        const itemsNeedingColors = items.filter(
+          (item) => !newColors[item.id]
+        );
 
-      if (itemsNeedingColors.length === 0) {
-        return prevColors;
-      }
+        if (itemsNeedingColors.length === 0) {
+          return prevColors;
+        }
 
-      // If shuffle is enabled, shuffle the palette and assign in order
-      // Otherwise, randomly pick colors for each item
-      let availableColors = [...palette];
-      if (shouldShuffle) {
-        availableColors = [...palette].sort(() => Math.random() - 0.5);
-      }
+        // If shuffle is enabled, shuffle the palette and assign in order
+        // Otherwise, randomly pick colors for each item
+        let availableColors = [...palette];
+        if (shouldShuffle) {
+          availableColors = [...palette].sort(() => Math.random() - 0.5);
+        }
 
-      itemsNeedingColors.forEach((item, index) => {
+        itemsNeedingColors.forEach((item, index) => {
         let hexColor: string;
         if (shouldShuffle) {
           // Use colors in shuffled order
@@ -83,6 +84,8 @@ export function useRandomColors<T extends { id: string }>(
 
       return newColors;
     });
+    }, 0);
+    return () => clearTimeout(id);
   }, [items, palette, shouldShuffle, opacity]);
 
   return colors;

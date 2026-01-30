@@ -58,11 +58,12 @@ export default function GameModals({
     </>
   );
 
+  // Portal requires a DOM node; ref is populated in effect (createPortal pattern)
+  // eslint-disable-next-line react-hooks/refs -- portal target must be read for createPortal
   if (!mounted || !portalContainerRef.current) {
     return null;
   }
 
-  // Render modals in a portal to ensure they're always at the document body level
-  // This prevents React reconciliation issues when the component tree changes
+  // eslint-disable-next-line react-hooks/refs -- createPortal requires the container DOM node
   return createPortal(portalContent, portalContainerRef.current);
 }
