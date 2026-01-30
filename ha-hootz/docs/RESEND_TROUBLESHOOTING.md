@@ -1,6 +1,8 @@
-# Resend Not Working – Troubleshooting
+# Resend – Troubleshooting
 
-Emails are now sent **from the app** (register, forgot-password, resend-verification) via the Resend API. No separate email worker is required on Fly.io.
+**Production:** Resend is active at **https://www.ha-hootz.com**. Emails are sent from the app (register, forgot-password, resend-verification) via the Resend API. From address: **noreply@ha-hootz.com** (verify ha-hootz.com in [Resend → Domains](https://resend.com/domains)). No separate email worker is required on Fly.io.
+
+If emails are not sending or you see errors, follow the steps below.
 
 ## 1. Check Fly.io secrets
 

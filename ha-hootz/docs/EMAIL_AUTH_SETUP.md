@@ -7,7 +7,7 @@ This guide explains how to set up and use the email-based authentication system 
 The email authentication system provides:
 - **Email Verification**: Magic link verification for new user signups
 - **Password Reset**: Secure password reset via email links
-- **Asynchronous Email Delivery**: Email sending handled by a background worker script
+- **Email delivery via Resend**: Sent from the app on Fly.io (no worker required); optional shell worker for retries
 
 ## Architecture
 
@@ -20,21 +20,25 @@ The email authentication system provides:
    - `/reset-password` - Password reset completion
    - `/resend-verification` - Resend verification email
 
-2. **Token Management** (`lib/auth-tokens.ts`)
+2. **Resend sender** (`lib/send-email-resend.ts`)
+   - Sends verification and password-reset emails from the app via Resend API
+   - Used by register, forgot-password, and resend-verification routes
+   - No separate worker required on Fly.io
+
+3. **Token Management** (`lib/auth-tokens.ts`)
    - Secure token generation using `crypto.randomBytes`
    - Token hashing with bcrypt before storage
    - Single-use tokens with expiration
    - Rate limiting (3 tokens per hour per type)
 
-3. **Email Job System** (`lib/email-jobs.ts`)
-   - Asynchronous email job creation
+4. **Email Job System** (`lib/email-jobs.ts`)
+   - Email job creation (for audit and optional worker retries)
    - Job status tracking (pending, sent, failed)
-   - Retry logic with attempt counting
 
-4. **Email Worker Script** (`scripts/email-worker.sh`)
-   - Polls database for pending email jobs
-   - Sends emails via Resend API using curl
-   - Handles retries and error reporting
+5. **Email Worker Script** (`scripts/email-worker.sh`) — *optional*
+   - Polls database for pending email jobs (retries only)
+   - Sends via Resend API using `send-email.sh`
+   - Not required on Fly.io; the app sends immediately
 
 ## Database Collections
 
@@ -42,7 +46,7 @@ The email authentication system provides:
 Stores hashed authentication tokens for email verification and password reset.
 
 ### email_jobs
-Stores email jobs for asynchronous processing by the worker script.
+Stores email jobs (for audit and optional worker retries). The app sends immediately via Resend; the worker only processes any remaining pending jobs if you run it.
 
 ### hosts (updated)
 Users collection extended with `emailVerified` field.
@@ -72,52 +76,30 @@ APP_URL=http://localhost:3000  # Optional, defaults to NEXTAUTH_URL
 2. Create an API key in the dashboard
 3. Add it to your environment variables
 
-## Running the Email Worker
+## Production (Fly.io)
+
+On Fly.io, **no email worker is required**. The app sends verification and password-reset emails via Resend from the API routes. Set secrets and ensure your domain is verified in Resend:
+
+```bash
+fly secrets set RESEND_API_KEY="re_xxxxxxxx"
+fly secrets set RESEND_FROM_EMAIL="noreply@ha-hootz.com"
+fly apps restart ha-hootz
+```
+
+Verify **ha-hootz.com** in [Resend → Domains](https://resend.com/domains) so `noreply@ha-hootz.com` works. See [RESEND_TROUBLESHOOTING.md](./RESEND_TROUBLESHOOTING.md) if emails don’t send.
+
+## Running the Email Worker (optional, retries only)
+
+The worker is **optional**. Use it only if you want to retry jobs that failed to send (e.g. Resend was temporarily down).
 
 ### Development
-
-Run the worker script manually:
 
 ```bash
 cd ha-hootz
 ./scripts/email-worker.sh
 ```
 
-The script will:
-- Poll for pending email jobs every 10 seconds (configurable via `POLL_INTERVAL`)
-- Process up to 10 jobs per batch (configurable via `MAX_JOBS_PER_BATCH`)
-- Send emails via Resend API
-- Handle retries and errors
-
-### Production (Fly.io)
-
-1. **Option 1: Separate Process**
-
-   Add to your `fly.toml`:
-
-   ```toml
-   [processes]
-     app = "npm start"
-     email-worker = "./scripts/email-worker.sh"
-   ```
-
-   Scale the worker:
-
-   ```bash
-   fly scale count email-worker=1
-   ```
-
-2. **Option 2: Background Service**
-
-   Run the worker as a systemd service or similar process manager.
-
-3. **Option 3: Cron Job**
-
-   Run the worker periodically via cron (less ideal, but works):
-
-   ```bash
-   */1 * * * * cd /path/to/ha-hootz && ./scripts/email-worker.sh
-   ```
+The script polls for pending jobs, sends via Resend API, and handles retries. The app already sends immediately, so the worker mainly processes any leftover pending jobs.
 
 ## User Flows
 
@@ -193,10 +175,10 @@ db.auth_tokens.find({ expiresAt: { $lt: new Date() } })
 
 ### Emails Not Sending
 
-1. Check Resend API key is set correctly
-2. Verify email worker is running
-3. Check `email_jobs` collection for pending/failed jobs
-4. Review worker script logs for errors
+1. Check Resend API key is set (Fly: `fly secrets list`; local: `.env.local`)
+2. Verify ha-hootz.com is verified in [Resend → Domains](https://resend.com/domains) if using noreply@ha-hootz.com
+3. Check Fly logs for `[Resend]` errors: `fly logs`
+4. See [RESEND_TROUBLESHOOTING.md](./RESEND_TROUBLESHOOTING.md) for full steps
 
 ### Tokens Not Working
 
@@ -246,8 +228,9 @@ db.auth_tokens.find({ expiresAt: { $lt: new Date() } })
 ## Production Checklist
 
 - [ ] Set `RESEND_API_KEY` in Fly.io secrets
-- [ ] Set `RESEND_FROM_EMAIL` to verified domain
-- [ ] Configure email worker to run as separate process
+- [ ] Set `RESEND_FROM_EMAIL` to verified domain (e.g. noreply@ha-hootz.com)
+- [ ] Verify ha-hootz.com in Resend Domains so sending from noreply@ha-hootz.com works
+- [ ] (Optional) Run email worker only if you want retries for failed sends
 - [ ] Set up monitoring for email job failures
 - [ ] Configure proper `APP_URL` for production
 - [ ] Test email delivery in production

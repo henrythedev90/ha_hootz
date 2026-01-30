@@ -1,5 +1,7 @@
 # Resend Integration - Quick Reference
 
+**Production (Fly.io):** Emails are sent from the app at https://www.ha-hootz.com from noreply@ha-hootz.com. No worker required. Set `RESEND_API_KEY` (and optionally `RESEND_FROM_EMAIL`) in Fly secrets.
+
 ## Environment Variables
 
 ```bash

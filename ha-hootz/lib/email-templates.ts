@@ -1,12 +1,13 @@
 /**
  * Email template utilities for generating email content.
- * These templates are used by the shell script worker to send emails via Resend API.
+ * Used by the app (lib/send-email-resend.ts) and optionally by the shell script worker.
+ * In production (Fly.io), set NEXTAUTH_URL and APP_URL to https://www.ha-hootz.com so links in emails are correct.
  */
 
 export type EmailTemplate = "verify_email" | "reset_password";
 
 /**
- * Base URL for the application (from environment or default).
+ * Base URL for the application. In production (deployed app), NEXTAUTH_URL/APP_URL are set to https://www.ha-hootz.com.
  */
 function getBaseUrl(): string {
   return (

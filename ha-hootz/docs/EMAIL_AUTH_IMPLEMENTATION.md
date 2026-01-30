@@ -58,15 +58,13 @@
 - `lib/email-jobs.ts` - Email job management
 - `lib/email-templates.ts` - Email template generation
 
-### 5. Shell Script Email Worker
-- ✅ Polling loop for pending email jobs
-- ✅ Resend API integration via curl
-- ✅ Retry logic with exponential backoff
-- ✅ Error handling and job status updates
-- ✅ Node.js helper script for MongoDB operations
+### 5. Email Sending (Resend)
+- ✅ **App sends via Resend** (`lib/send-email-resend.ts`) — register, forgot-password, resend-verification; no worker required on Fly.io
+- ✅ Optional shell-script worker for retries: polling, Resend API via curl, retry logic
 
 **Files:**
-- `scripts/email-worker.sh` - Main worker script
+- `lib/send-email-resend.ts` - Sends from the app (production)
+- `scripts/email-worker.sh` - Optional worker for retrying failed jobs
 - `scripts/email-worker-helper.js` - MongoDB helper script
 
 ### 6. Security Features
@@ -133,18 +131,18 @@ APP_URL=http://localhost:3000  # Optional, defaults to NEXTAUTH_URL
 
 ### Development
 1. Start Next.js server: `npm run dev`
-2. Start email worker: `./scripts/email-worker.sh`
+2. (Optional) Start email worker for retries: `./scripts/email-worker.sh` — the app sends immediately, so the worker is only for retrying failed jobs
 
 ### Production (Fly.io)
-1. Set environment variables as Fly.io secrets
-2. Configure email worker as separate process in `fly.toml`
-3. Scale worker: `fly scale count email-worker=1`
+1. Set environment variables as Fly.io secrets (`RESEND_API_KEY`, `RESEND_FROM_EMAIL` optional)
+2. Emails are sent from the app; no worker required
+3. (Optional) Run email worker as separate process only if you want retries for failed sends
 
 ## Testing Checklist
 
 - [ ] User registration creates unverified account
 - [ ] Verification email is sent (check email_jobs)
-- [ ] Email worker processes jobs and sends emails
+- [ ] Verification / reset emails are sent (check inbox or Resend dashboard)
 - [ ] Magic link verifies email successfully
 - [ ] Verified user can sign in
 - [ ] Unverified user cannot sign in
@@ -156,11 +154,11 @@ APP_URL=http://localhost:3000  # Optional, defaults to NEXTAUTH_URL
 ## Next Steps
 
 1. **Set up Resend account** and get API key
-2. **Configure environment variables** in development and production
-3. **Test email delivery** in development
-4. **Deploy email worker** as separate process in production
-5. **Monitor email job status** in production
-6. **Set up alerts** for failed email jobs
+2. **Configure environment variables** (secrets on Fly.io)
+3. **Verify ha-hootz.com** in Resend Domains so noreply@ha-hootz.com works
+4. **Test email delivery** (register, forgot-password, resend-verification)
+5. **Monitor** Resend dashboard and Fly logs for send errors
+6. (Optional) **Run email worker** only if you want retries for failed sends
 
 ## Documentation
 
@@ -174,6 +172,7 @@ APP_URL=http://localhost:3000  # Optional, defaults to NEXTAUTH_URL
 - `lib/auth-tokens.ts`
 - `lib/email-jobs.ts`
 - `lib/email-templates.ts`
+- `lib/send-email-resend.ts` - Sends verification/reset emails from the app via Resend API
 - `app/api/auth/verify-email/route.ts`
 - `app/api/auth/forgot-password/route.ts`
 - `app/api/auth/reset-password/route.ts`

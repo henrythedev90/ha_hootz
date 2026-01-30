@@ -1,6 +1,7 @@
 /**
  * Send transactional emails via Resend API from the Node app.
- * Used so emails work on Fly.io (no separate shell-script worker required).
+ * Used in production (Fly.io) at https://www.ha-hootz.com — no separate worker required.
+ * Set RESEND_API_KEY and optionally RESEND_FROM_EMAIL (default below) in Fly secrets.
  */
 
 import {
@@ -12,8 +13,11 @@ import type { EmailTemplate } from "@/lib/email-jobs";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
+/** Default from address for the deployed app (verify ha-hootz.com in Resend Domains). */
+const DEFAULT_FROM_EMAIL = "noreply@ha-hootz.com";
+
 function getFromEmail(): string {
-  return process.env.RESEND_FROM_EMAIL || "noreply@ha-hootz.com";
+  return process.env.RESEND_FROM_EMAIL || DEFAULT_FROM_EMAIL;
 }
 
 export interface SendEmailPayload {

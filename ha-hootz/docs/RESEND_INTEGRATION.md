@@ -1,12 +1,21 @@
 # Resend Email Integration Guide
 
-This guide explains how to use the Resend email sending script for transactional emails.
+This guide covers Resend for transactional emails (verification, password reset) in Ha-Hootz.
 
 ## Overview
 
-The `send-email.sh` script is a production-ready shell script that sends transactional emails via Resend's REST API. It generates clean, minimal HTML email templates and handles errors gracefully.
+- **Production (Fly.io)**: Emails are sent **from the app** via the Resend API (`lib/send-email-resend.ts`). No separate worker is required. Set `RESEND_API_KEY` and optionally `RESEND_FROM_EMAIL` (defaults to `noreply@ha-hootz.com`). See [RESEND_TROUBLESHOOTING.md](./RESEND_TROUBLESHOOTING.md) if emails don’t send.
+- **Scripts**: `send-email.sh` and `email-worker.sh` are used by the optional shell-script worker (e.g. for retries or standalone use). They use the same Resend API and templates.
 
-## Prerequisites
+## Production (Fly.io / www.ha-hootz.com)
+
+After deployment, Resend is active at **https://www.ha-hootz.com** with:
+
+- **From address**: `noreply@ha-hootz.com` (verify **ha-hootz.com** in [Resend → Domains](https://resend.com/domains) and add the DNS records they provide)
+- **Secrets**: `RESEND_API_KEY` (required), `RESEND_FROM_EMAIL` (optional; defaults to noreply@ha-hootz.com)
+- **Sending**: Register, forgot-password, and resend-verification flows send immediately from the app; no worker required
+
+## Prerequisites (local / scripts)
 
 1. **Resend Account**: Sign up at [resend.com](https://resend.com)
 2. **API Key**: Get your API key from the Resend dashboard

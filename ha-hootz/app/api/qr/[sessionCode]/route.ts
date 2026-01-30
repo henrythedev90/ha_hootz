@@ -16,10 +16,11 @@ export async function GET(
       );
     }
 
-    // Get the full join URL
-    // Use NEXTAUTH_URL as the canonical base URL (set in production)
-    // Fall back to request origin for local development
-    const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+    // Get the full join URL (production: NEXTAUTH_URL/APP_URL = https://www.ha-hootz.com)
+    const baseUrl =
+      process.env.NEXTAUTH_URL ||
+      process.env.APP_URL ||
+      request.nextUrl.origin;
 
     // Ensure the URL is absolute and doesn't have a trailing slash
     const cleanBaseUrl = baseUrl.replace(/\/$/, "");
