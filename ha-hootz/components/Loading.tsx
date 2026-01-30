@@ -173,7 +173,12 @@ function DotsAnimation({ size }: SizeProps) {
 
 // Variant 2: Pulsing Ring (Thinking/Syncing)
 function PulseAnimation({ size }: SizeProps) {
-  const containerSize = typeof size.container === "number" ? size.container : parseFloat(size.container) || 440;
+  const containerSize =
+    typeof size.container === "number"
+      ? size.container
+      : typeof size.container === "string"
+        ? parseFloat(size.container) || 440
+        : 440;
   const borderWidth = containerSize > 200 ? 8 : 4;
   
   return (
@@ -250,8 +255,9 @@ function PulseAnimation({ size }: SizeProps) {
 
 // Variant 3: Horizontal Bars (Answer Choices Loading)
 function BarsAnimation({ size }: SizeProps) {
-  const barWidth = size.bar.width;
-  const barHeight = size.bar.height;
+  const bar = size.bar ?? { width: 6, height: 40 };
+  const barWidth = bar.width;
+  const barHeight = bar.height;
   const colors = ["#6366F1", "#22D3EE", "#A855F7", "#F59E0B"];
 
   return (
@@ -286,9 +292,14 @@ function BarsAnimation({ size }: SizeProps) {
 }
 
 // Variant 4: Orbiting Dots (Score Charging)
-function OrbitAnimation({ size }: any) {
-  const dotSize = size.dot;
-  const containerSize = typeof size.container === "number" ? size.container : parseFloat(size.container) || 440;
+function OrbitAnimation({ size }: SizeProps) {
+  const dotSize = size.dot ?? 12;
+  const containerSize =
+    typeof size.container === "number"
+      ? size.container
+      : typeof size.container === "string"
+        ? parseFloat(size.container) || 440
+        : 440;
   const orbitRadius = containerSize * 0.35;
   const colors = ["#6366F1", "#22D3EE", "#F59E0B"];
 
@@ -347,8 +358,9 @@ function OrbitAnimation({ size }: any) {
 
 // Variant 5: Wave Animation (Soundwave/Pulse)
 function WaveAnimation({ size }: SizeProps) {
-  const barWidth = size.bar.width;
-  const maxHeight = size.bar.height;
+  const bar = size.bar ?? { width: 6, height: 40 };
+  const barWidth = bar.width;
+  const maxHeight = bar.height;
   const bars = 7;
   const colors = ["#6366F1", "#22D3EE", "#A855F7"];
 
