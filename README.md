@@ -479,7 +479,7 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Password visibility toggle on sign in/sign up
   - User profiles with MongoDB Atlas storage
   - Session management with NextAuth.js
-  - Asynchronous email delivery via shell script worker
+  - Email delivery via Resend (sent from the app on Fly.io; no worker required)
 
 - **Host Dashboard Features**
 
@@ -1110,28 +1110,14 @@ Ha-Hootz includes a comprehensive email-based authentication system with email v
 
 - **Email Verification**: New users receive a magic link via email to verify their account
 - **Password Reset**: Users can request a password reset link via email
-- **Asynchronous Email Delivery**: Emails are sent asynchronously via a shell script worker
+- **Email delivery via Resend**: Emails are sent from the app (register, forgot-password, resend-verification). On Fly.io no separate worker is required.
 - **Security**: Tokens are hashed before storage, single-use, and expire after 15-30 minutes
 - **Rate Limiting**: Prevents token spam (max 3 tokens per user per type per hour)
 - **Email Enumeration Protection**: Same response for all requests to prevent email discovery
 
 ### Email Worker
 
-The email worker (`scripts/email-worker.sh`) is a shell script that:
-- Polls the `email_jobs` collection for pending emails
-- Sends emails via Resend API using `curl`
-- Handles retries with exponential backoff
-- Updates job status (sent/failed) in the database
-
-**Running the Email Worker:**
-
-```bash
-# Development
-./scripts/email-worker.sh
-
-# Production (Fly.io)
-# Configure as a separate process in fly.toml
-```
+On **Fly.io**, verification and password-reset emails are sent **from the app** via the Resend API. Set `RESEND_API_KEY` and optionally `RESEND_FROM_EMAIL` (defaults to noreply@ha-hootz.com); no separate worker is required. The shell script worker (`scripts/email-worker.sh`) is optional and only used to retry failed jobs if you run it.
 
 ### Email Templates
 
