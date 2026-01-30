@@ -11,9 +11,10 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 ### 🎯 Deployment Readiness Improvements
 
 #### Socket.io Connection Architecture
+
 - **Optimized Connection Method**: Changed from `io(socketUrl)` to `io({ path: "/api/socket" })` for same-origin connections, following Socket.io best practices
 - **SSR Safety**: Added `typeof window === "undefined"` checks to prevent server-side socket creation
-- **Enhanced Error Handling**: 
+- **Enhanced Error Handling**:
   - Specific error messages for CORS, timeout, and 400 errors
   - Detailed error logging with error type and message
   - User-friendly error messages for different failure scenarios
@@ -28,6 +29,7 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
   - Better error context logging for debugging
 
 #### Memory Leak Prevention
+
 - **Timeout Cleanup**: All `setTimeout` calls now have proper cleanup:
   - `copiedTimeoutRef` for copy link feedback
   - `modalToggleTimeoutRef` for modal state toggles
@@ -38,11 +40,12 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 - **Effect Cleanup**: All useEffect hooks have proper cleanup functions
 
 #### Array & Type Safety
+
 - **Defensive Programming**: All array operations validate input:
   - `Array.isArray()` checks before calling array methods
   - Safe defaults for empty arrays (`[]`)
   - Optional chaining for array access (`array[0]?.property`)
-- **Type Validation**: 
+- **Type Validation**:
   - Type checks for `playerCount`, `playerScores`, `streakThresholds`
   - Safe defaults for all object properties
   - Type guards for number/string/object types
@@ -52,22 +55,25 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
   - Stats object validation with safe defaults
 
 #### SSR Compatibility
+
 - **Portal Safety**: GameModals portal checks for `document.body` existence
 - **Window Checks**: All `window` and `navigator` usage wrapped in existence checks
 - **Client-Only Operations**: Socket connections, clipboard operations, and DOM manipulations only run on client
 
 #### Error Handling Enhancements
-- **Clipboard API**: 
+
+- **Clipboard API**:
   - Try-catch for `navigator.clipboard.writeText()`
   - Fallback to `document.execCommand("copy")` for older browsers
   - Availability checks before use
-- **QR Code Fetching**: 
+- **QR Code Fetching**:
   - Response status checking
   - `isMounted` flag to prevent state updates after unmount
   - Graceful fallback when QR code fails to load
 - **Image Loading**: Error handlers for avatar images with graceful fallback
 
 #### Performance Optimizations
+
 - **ConfettiEffect**: Limited animation repeats from `Infinity` to `1` to prevent performance issues
 - **Production Logging**: All debug `console.log` statements wrapped in `process.env.NODE_ENV === "development"` checks
 - **Memoization**: Leaderboard calculations memoized to prevent expensive re-sorts
@@ -75,6 +81,7 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 #### Component-Specific Fixes
 
 **LobbyView Component**:
+
 - Memory leak fix: setTimeout cleanup for pulse animation
 - QR code fetch: Improved error handling with `isMounted` flag
 - SSR safety: Safe `previousPlayerCount` initialization
@@ -82,22 +89,26 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 - Type safety: Player count validation
 
 **WinnerDisplay Component**:
+
 - Array safety: `safeLeaderboard` validation
 - Type safety: `playerId` and `playerName` validation
 - Optional chaining: Safe array access throughout
 - Production logging: Debug logs only in development
 
 **LeaderboardModal Component**:
+
 - Array safety: Players and `playerScores` validation in `useMemo`
 - Type safety: Streak value type checking
 - Memoization: Leaderboard calculation memoized
 - Production logging: Debug logs only in development
 
 **GameModals Component**:
+
 - SSR safety: Portal container existence check
 - Array safety: Leaderboard validation before passing to WinnerDisplay
 
 **Host Dashboard**:
+
 - Memory leak fixes: All timeouts properly cleaned up
 - Clipboard API: Error handling with fallback
 - Array safety: Players, questions, and stats validation
@@ -106,6 +117,7 @@ Version 1.0 represents the first production-ready release of Ha-Hootz, with comp
 ### 📋 Deployment Checklist
 
 All components now meet production standards:
+
 - ✅ No memory leaks (all timers cleaned up)
 - ✅ SSR compatible (no server-side errors)
 - ✅ Type safe (comprehensive type checking)
@@ -136,6 +148,7 @@ All components now meet production standards:
 ### 🚀 Ready for Production
 
 Version 1.0 is fully tested and ready for deployment to production environments including:
+
 - Fly.io (primary deployment target)
 - Any Node.js hosting platform
 - Docker containers
@@ -200,13 +213,11 @@ Version 1.0 is fully tested and ready for deployment to production environments 
 ### UI/UX Enhancements
 
 - **Loading Component**: Completely redesigned with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Reusable across the application for consistent loading states. Supports both full-screen and inline modes. Used throughout the application:
-
   - Players list modal shows animated loading when fetching players
   - Game page shows pulse animation when waiting for host to start question
   - Game in progress state displays animated loading indicator
 
 - **Game Welcome Modal**: Enhanced with smooth Framer Motion entrance animations using spring physics, countdown timer (auto-closes after 5 seconds), and improved visual design matching app theme. Features:
-
   - Staggered content reveals with spring animations
   - Animated CheckCircle icon from lucide-react
   - Countdown display showing "Closing automatically in X seconds"
@@ -214,7 +225,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Improved button effects and hover states
 
 - **Thank You Modal**: Redesigned with modern Framer Motion animations, gradient call-to-action card, and improved visual hierarchy. Features:
-
   - Staggered entrance animations with spring physics
   - Animated celebration emoji with rotation effects
   - ArrowRight and X icons from lucide-react
@@ -223,7 +233,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Smooth transitions and improved button effects
 
 - **Lobby View**: Complete redesign with improved layout and organization:
-
   - Single viewport, compact layout optimized for presentation-ready styling
   - Two-column grid layout with vertical divider between sections
   - Left column: Player preview with scrollable list
@@ -242,14 +251,12 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Responsive padding and spacing throughout
 
 - **Presentation Editor**: Made fully responsive for mobile devices:
-
   - Grid layout stacks on mobile (1 column) and expands on desktop (4 columns)
   - Questions section stacks vertically on mobile, horizontally on desktop
   - Responsive padding adjustments for all screen sizes
   - Desktop layout remains unchanged (lg: breakpoints)
 
 - **Question Navigation Sidebar**: Enhanced with multiple improvements:
-
   - Sticky "Question Bank" heading that stays in place on scroll with backdrop blur
   - Drag-and-drop functionality for reordering questions (HTML5 Drag and Drop API)
   - Visual feedback during drag operations (draggedIndex, dragOverIndex states)
@@ -259,7 +266,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Responsive width adjustments for mobile/desktop
 
 - **Answer Choice Randomization**: Enhanced visual experience for players:
-
   - Host can toggle "Randomize Answer Choices" option in lobby view
   - Each player sees answer options in a unique random order
   - Random border colors from palette: [#6366F1, #22D3EE, #F59E0B, #A855F7]
@@ -269,7 +275,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Randomization setting persists through game state
 
 - **Game Stats Sidebar**: Enhanced player list with visual feedback:
-
   - Players who have submitted answers show their selected avatar (or initial) instead of lightbulb emoji
   - Players who have submitted answers glow with success color (#22C55E)
   - Glow effect matches answer choice styling (shadow-[0_0_30px_rgba(34,197,94,0.3)])
@@ -280,21 +285,18 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Active players with streaks are highlighted during gameplay
 
 - **Winner Display**: Improved mobile experience:
-
   - Increased mobile proportions by ~56% (two 25% increases)
   - Responsive text sizes, padding, and spacing
   - Larger rank badges and improved touch targets
   - Desktop sizes remain unchanged
 
 - **Host Dashboard**: Responsive improvements:
-
   - Compact header with responsive padding and text sizes
   - Grid layout that fits content without scrolling
   - Improved spacing and padding for mobile devices
   - All content accessible without page scrolling
 
 - **Answer Choices Visual Design**: Enhanced with random colors and glow effects:
-
   - Each answer option gets a random color from the palette when question starts
   - Glow effects create visual interest and improve UX
   - Colors regenerate for each new question
@@ -309,7 +311,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
 - **Presentation Card**: Fixed button sizing inconsistencies and improved button dimensions for better usability and visual consistency.
 
 - **Avatar Selection System**: New player avatar selection feature:
-
   - Players select an avatar after entering their nickname via `AvatarSelectionModal`
   - Dark-themed modal with smooth animations and category filtering
   - Avatar selection is required (modal cannot be closed without selection)
@@ -323,7 +324,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Randomized border colors and glow effects for visual distinction
 
 - **Streak Feature UI**: Comprehensive streak tracking and display:
-
   - Streak badges (🔥) appear when players achieve configurable streak thresholds
   - Default threshold: 3+ consecutive correct answers (customizable in scoring config)
   - Streaks displayed in:
@@ -372,7 +372,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
 ### ✅ Host-Created Presentations (MVP)
 
 - **Presentation Management**
-
   - Create and manage trivia game presentations
   - Add multiple-choice questions (4 options required)
   - Edit and delete questions
@@ -386,7 +385,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Start game sessions from saved presentations
 
 - **Game Sessions**
-
   - Start live game sessions from presentations
   - 6-digit session codes for easy player joining
   - QR code generation for quick mobile access
@@ -438,7 +436,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
     - Prevents old game state from appearing in new sessions
 
 - **Player Experience (Mobile-First)**
-
   - **Nickname Entry**: Full-screen form for entering player nickname with validation
   - **Avatar Selection**: After entering nickname, players select an avatar from a curated collection:
     - Dark-themed modal with smooth animations
@@ -471,7 +468,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
     - Question status shows as ended (no timer)
 
 - **User Authentication**
-
   - Secure user registration and login
   - **Email Verification**: New users must verify their email address via magic link before signing in
   - **Forgot Password**: Secure password reset flow via email links
@@ -482,7 +478,6 @@ Version 1.0 is fully tested and ready for deployment to production environments 
   - Email delivery via Resend (sent from the app on Fly.io; no worker required)
 
 - **Host Dashboard Features**
-
   - Desktop-first two-column layout (question control on left, live monitoring on right)
   - Real-time player count and answer submission tracking
   - Live answer distribution visualization
@@ -552,7 +547,6 @@ npm install
 ```
 
 3. Set up MongoDB Atlas (see [MONGODB_SETUP.md](./MONGODB_SETUP.md) for detailed instructions):
-
    - Create a MongoDB Atlas account
    - Create a cluster
    - Create a database user
@@ -560,7 +554,6 @@ npm install
    - Get your connection string
 
 4. Set up Redis (see [REDIS_SETUP.md](./REDIS_SETUP.md) for detailed instructions):
-
    - Create a Redis instance (Upstash recommended for serverless)
    - Get your Redis connection URL
    - Redis is used for real-time game session management and Socket.io adapter
@@ -593,7 +586,6 @@ npm run dev
 **Note**: This project uses a custom server (`server.ts`) to properly integrate Socket.io with Next.js. The server automatically loads environment variables from `.env.local`.
 
 7. Open [http://localhost:3000](http://localhost:3000) in your browser
-
    - You should see a Redis connection log in your terminal: `✅ Redis configured - URL: redis://...`
    - You should see Socket.io initialization logs: `✅ Socket.io initialized`
 
@@ -981,16 +973,15 @@ ha-hootz/
 
 ## Environment Variables
 
-| Variable          | Description                               | Required |
-| ----------------- | ----------------------------------------- | -------- |
-| `MONGODB_URI`     | MongoDB Atlas connection string           | Yes      |
-| `MONGODB_DB_NAME` | Database name (defaults to 'ha-hootz')    | No       |
-| `REDIS_URL`       | Redis connection URL (Upstash compatible) | Yes      |
-| `NEXTAUTH_SECRET` | Secret for JWT signing                    | Yes      |
-| `NEXTAUTH_URL`    | Base URL of your application              | Yes      |
-| `APP_URL`         | Base URL for email links (defaults to NEXTAUTH_URL) | No       |
-| `ADDITIONAL_ORIGINS` | Comma-separated origins for Socket.io CORS (e.g. custom domain + fly.dev) | No       |
-| `RESEND_API_KEY`  | Resend API key for email delivery         | Yes      |
+| Variable            | Description                                                      | Required |
+| ------------------- | ---------------------------------------------------------------- | -------- |
+| `MONGODB_URI`       | MongoDB Atlas connection string                                  | Yes      |
+| `MONGODB_DB_NAME`   | Database name (defaults to 'ha-hootz')                           | No       |
+| `REDIS_URL`         | Redis connection URL (Upstash compatible)                        | Yes      |
+| `NEXTAUTH_SECRET`   | Secret for JWT signing                                           | Yes      |
+| `NEXTAUTH_URL`      | Base URL of your application                                     | Yes      |
+| `APP_URL`           | Base URL for email links (defaults to NEXTAUTH_URL)              | No       |
+| `RESEND_API_KEY`    | Resend API key for email delivery                                | Yes      |
 | `RESEND_FROM_EMAIL` | From email address for emails (defaults to noreply@ha-hootz.com) | No       |
 
 ## Development
@@ -1046,7 +1037,6 @@ npm run test:coverage
 Current test coverage includes:
 
 - **Scoring Logic** (`lib/scoring/calculateScore.test.ts`):
-
   - Time bonus calculations
   - Streak bonus calculations
   - Total score calculations with various configurations
@@ -1115,17 +1105,27 @@ Ha-Hootz includes a comprehensive email-based authentication system with email v
 - **Rate Limiting**: Prevents token spam (max 3 tokens per user per type per hour)
 - **Email Enumeration Protection**: Same response for all requests to prevent email discovery
 
-### Email Worker
+### Resend (production)
 
-On **Fly.io**, verification and password-reset emails are sent **from the app** via the Resend API. Set `RESEND_API_KEY` and optionally `RESEND_FROM_EMAIL` (defaults to noreply@ha-hootz.com); no separate worker is required. The shell script worker (`scripts/email-worker.sh`) is optional and only used to retry failed jobs if you run it.
+On **Fly.io**, verification and password-reset emails are sent **from the app** via the Resend API (`lib/send-email-resend.ts`). Set secrets and you’re done; no separate worker is required.
+
+- **From address**: `noreply@ha-hootz.com` (verify ha-hootz.com in [Resend Domains](https://resend.com/domains))
+- **Secrets**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (optional; defaults to noreply@ha-hootz.com)
+- **Troubleshooting**: See `docs/RESEND_TROUBLESHOOTING.md`
+
+### Email worker (optional, retries only)
+
+The shell script worker (`scripts/email-worker.sh`) is **optional**. It only retries jobs that failed to send (e.g. Resend was down). Use it if you run it locally or as a separate process; the app does not require it on Fly.io.
 
 ### Email Templates
 
 Email templates are generated using `lib/email-templates.ts`:
+
 - **Verification Email**: Magic link to verify email address
 - **Password Reset Email**: Secure link to reset password
 
 Both templates include:
+
 - HTML and plaintext versions
 - Responsive design
 - Clear call-to-action buttons
@@ -1140,6 +1140,7 @@ Both templates include:
 ### Documentation
 
 For detailed setup and implementation information, see:
+
 - `docs/EMAIL_AUTH_SETUP.md` - Setup and usage guide
 - `docs/EMAIL_AUTH_SCHEMA.md` - Database schema documentation
 - `docs/EMAIL_AUTH_IMPLEMENTATION.md` - Implementation details
