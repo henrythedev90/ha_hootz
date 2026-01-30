@@ -126,7 +126,7 @@ app
     });
 
     // Store io globally for access in API routes
-    (global as any).io = io;
+    (global as typeof globalThis & { io?: typeof io }).io = io;
     
     // Log Socket.io connection attempts for debugging
     io.engine.on("connection_error", (err) => {
@@ -167,8 +167,11 @@ app
         );
         await Promise.race([initSocket(io), timeoutPromise]);
         console.log("✅ Socket.io initialized with Redis adapter");
-      } catch (err: any) {
-        console.error("❌ Error initializing Socket.io:", err?.message || err);
+      } catch (err: unknown) {
+        console.error(
+          "❌ Error initializing Socket.io:",
+          err instanceof Error ? err.message : String(err)
+        );
         // Continue starting server even if Socket.io/Redis fails
         // This allows the app to be accessible for debugging
         console.warn("⚠️  Server will continue without Socket.io/Redis support");
@@ -206,11 +209,11 @@ app
     });
     
     // Handle binding errors
-    httpServer.once("error", (err: any) => {
+    httpServer.once("error", (err: unknown) => {
       console.error("❌ HTTP Server error:", err);
       console.error("❌ Server failed to bind - Fly.io cannot route traffic");
       console.error(`❌ Attempted to bind to: ${HOST}:${PORT}`);
-      if (err.code === "EADDRINUSE") {
+      if (err instanceof Error && "code" in err && err.code === "EADDRINUSE") {
         console.error(`❌ Port ${PORT} is already in use`);
       }
       process.exit(1);

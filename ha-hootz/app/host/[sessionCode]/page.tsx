@@ -43,6 +43,7 @@ import {
   resetUiState,
 } from "@/store/slices/uiSlice";
 import type { Question } from "@/store/slices/gameSlice";
+import type { ScoringConfig } from "@/types";
 
 export default function HostDashboard() {
   const params = useParams();
@@ -856,6 +857,8 @@ export default function HostDashboard() {
       newSocket.removeAllListeners();
       newSocket.disconnect();
     };
+    // Intentionally omit gameState/stats.playerScores to avoid re-subscribing on every state change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionCode, router, dispatch, params.sessionCode]);
 
   // Emit host-join when socket is connected and session is ready
@@ -1238,11 +1241,8 @@ export default function HostDashboard() {
               answerRevealed={gameState?.answerRevealed || false}
               correctAnswer={gameState?.correctAnswer}
               streakThresholds={
-                gameState?.scoringConfig &&
-                typeof (gameState.scoringConfig as any)?.streakThresholds !==
-                  "undefined"
-                  ? (gameState.scoringConfig as any).streakThresholds
-                  : undefined
+                (gameState?.scoringConfig as ScoringConfig | undefined)
+                  ?.streakThresholds
               }
             />
           </div>

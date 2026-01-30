@@ -367,7 +367,7 @@ export function registerHostHandlers(io: Server, socket: Socket) {
         gameState.scoringConfig || getDefaultScoringConfig();
 
       // Calculate and store scores for all players
-      const scores = await calculateQuestionScores(
+      await calculateQuestionScores(
         sessionId,
         questionIndex,
         question.correct,

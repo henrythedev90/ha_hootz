@@ -27,7 +27,6 @@ function getRedisUrl(): string {
 // Log Redis URL in development mode (mask password for security)
 // This will execute when the module is first imported
 let redis: RedisClientType;
-let redisPromise: Promise<RedisClientType>;
 
 function createRedisClient(): RedisClientType {
   // Get Redis URL (validates at runtime, not build time)
@@ -37,7 +36,11 @@ function createRedisClient(): RedisClientType {
   // Note: When using rediss://, the Redis client automatically handles TLS
   // Don't manually set TLS config in socket as it conflicts with protocol detection
   // For Upstash, TLS is handled automatically via the rediss:// protocol
-  const socketConfig: any = {
+  const socketConfig: {
+    reconnectStrategy: (retries: number) => number | Error;
+    connectTimeout?: number;
+    [key: string]: unknown;
+  } = {
     reconnectStrategy: (retries: number): number | Error => {
       if (retries > 20) {
         console.error("Redis: Max reconnection attempts reached");
@@ -167,7 +170,7 @@ function initializeRedisClient(): Promise<RedisClientType> {
         ensureConnected(client)
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // During build, if REDIS_URL is not set, return a rejected promise
     // that will fail at runtime (when env vars are available)
     const isBuildTime =
@@ -176,6 +179,7 @@ function initializeRedisClient(): Promise<RedisClientType> {
 
     if (
       isBuildTime &&
+      error instanceof Error &&
       error.message.includes("REDIS_URL is not set during build")
     ) {
       // Return a promise that will be rejected at runtime
@@ -199,7 +203,7 @@ function getRedisPromise(): Promise<RedisClientType> {
   if (!_lazyRedisPromise) {
     try {
       _lazyRedisPromise = initializeRedisClient();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If initialization fails, return a rejected promise
       _lazyRedisPromise = Promise.reject(error);
     }
@@ -210,10 +214,13 @@ function getRedisPromise(): Promise<RedisClientType> {
 // Export a promise-like object that initializes lazily
 // This works better than Proxy for Promise compatibility
 const lazyRedisExport = {
-  then: (onFulfilled?: any, onRejected?: any) =>
-    getRedisPromise().then(onFulfilled, onRejected),
-  catch: (onRejected?: any) => getRedisPromise().catch(onRejected),
-  finally: (onFinally?: any) => getRedisPromise().finally(onFinally),
+  then: (
+    onFulfilled?: (value: RedisClientType) => unknown,
+    onRejected?: (reason: unknown) => unknown
+  ) => getRedisPromise().then(onFulfilled, onRejected),
+  catch: (onRejected?: (reason: unknown) => unknown) =>
+    getRedisPromise().catch(onRejected),
+  finally: (onFinally?: () => void) => getRedisPromise().finally(onFinally),
   [Symbol.toStringTag]: "Promise",
 } as Promise<RedisClientType>;
 

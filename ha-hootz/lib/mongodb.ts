@@ -73,7 +73,7 @@ function getMongoPromise(): Promise<MongoClient> {
   if (!_lazyPromise) {
     try {
       _lazyPromise = createMongoClient();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If initialization fails, return a rejected promise
       _lazyPromise = Promise.reject(error);
     }
@@ -84,10 +84,13 @@ function getMongoPromise(): Promise<MongoClient> {
 // Export a promise-like object that initializes lazily
 // This works better than Proxy for Promise compatibility
 const lazyMongoExport = {
-  then: (onFulfilled?: any, onRejected?: any) =>
-    getMongoPromise().then(onFulfilled, onRejected),
-  catch: (onRejected?: any) => getMongoPromise().catch(onRejected),
-  finally: (onFinally?: any) => getMongoPromise().finally(onFinally),
+  then: (
+    onFulfilled?: (value: MongoClient) => unknown,
+    onRejected?: (reason: unknown) => unknown
+  ) => getMongoPromise().then(onFulfilled, onRejected),
+  catch: (onRejected?: (reason: unknown) => unknown) =>
+    getMongoPromise().catch(onRejected),
+  finally: (onFinally?: () => void) => getMongoPromise().finally(onFinally),
   [Symbol.toStringTag]: "Promise",
 } as Promise<MongoClient>;
 

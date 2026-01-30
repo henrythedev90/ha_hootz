@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 interface LoadingProps {
   message?: string;
