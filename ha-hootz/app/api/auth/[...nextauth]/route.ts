@@ -75,7 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/auth",
   },
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -83,11 +83,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return token;
     },
-    async session({ session, token }: any) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
+    async session({ session, token }) {
+      if (session?.user) {
+        (session.user as { id?: string; email?: string | null; name?: string | null }).id = token.id as string;
+        (session.user as { id?: string; email?: string | null; name?: string | null }).email = token.email as string;
+        (session.user as { id?: string; email?: string | null; name?: string | null }).name = token.name as string;
       }
       return session;
     },

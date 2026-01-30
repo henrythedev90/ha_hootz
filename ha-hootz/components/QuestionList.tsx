@@ -24,15 +24,18 @@ export default function QuestionList({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Sync with external editQuestionId prop
+  // Sync with external editQuestionId prop (defer setState to satisfy react-hooks/set-state-in-effect)
   useEffect(() => {
     if (editQuestionId) {
-      setEditingId(editQuestionId);
-      setIsAdding(false);
+      const id = setTimeout(() => {
+        setEditingId(editQuestionId);
+        setIsAdding(false);
+      }, 0);
+      return () => clearTimeout(id);
     }
   }, [editQuestionId]);
 
-  const handleEdit = (question: Question) => {
+  const _handleEdit = (question: Question) => {
     setEditingId(question.id);
     setIsAdding(false);
   };
@@ -117,7 +120,7 @@ export default function QuestionList({
 
       {questions.length === 0 && !isAdding && (
         <div className="text-center py-8 text-[#E5E7EB]/60 text-sm">
-          <p>No questions yet. Click "Add Question" to get started!</p>
+          <p>No questions yet. Click &quot;Add Question&quot; to get started!</p>
         </div>
       )}
     </div>

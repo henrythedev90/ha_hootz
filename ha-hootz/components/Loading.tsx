@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRef } from "react";
+import { useState } from "react";
 
 interface LoadingProps {
   message?: string;
@@ -25,13 +25,11 @@ export default function Loading({
   variant,
   size = "medium",
 }: LoadingProps) {
-  // Random loading variant for visual variety (only calculated once per component instance)
-  const randomLoadingVariant = useRef(
+  // Random loading variant for visual variety (computed once per mount via useState initializer to satisfy purity)
+  const [randomLoadingVariant] = useState(() =>
     loadingVariants[Math.floor(Math.random() * loadingVariants.length)],
-  ).current;
-
-  // Use provided variant or fall back to random variant
-  const selectedVariant = variant || randomLoadingVariant;
+  );
+  const selectedVariant = variant ?? randomLoadingVariant;
   const containerClasses = fullScreen
     ? "min-h-screen bg-[#0B1020] flex items-center justify-center"
     : "flex items-center justify-center p-8";
@@ -130,8 +128,12 @@ export default function Loading({
   );
 }
 
+interface SizeProps {
+  size: { dot?: number; container?: number | string; bar?: { width: number; height: number } };
+}
+
 // Variant 1: Pulsing Dots (Quiz Lights)
-function DotsAnimation({ size }: any) {
+function DotsAnimation({ size }: SizeProps) {
   const dotSize = size.dot;
   const colors = ["#6366F1", "#22D3EE", "#F59E0B", "#22C55E", "#A855F7"];
 
@@ -168,8 +170,13 @@ function DotsAnimation({ size }: any) {
 }
 
 // Variant 2: Pulsing Ring (Thinking/Syncing)
-function PulseAnimation({ size }: any) {
-  const containerSize = typeof size.container === "number" ? size.container : parseFloat(size.container) || 440;
+function PulseAnimation({ size }: SizeProps) {
+  const containerSize =
+    typeof size.container === "number"
+      ? size.container
+      : typeof size.container === "string"
+        ? parseFloat(size.container) || 440
+        : 440;
   const borderWidth = containerSize > 200 ? 8 : 4;
   
   return (
@@ -245,9 +252,10 @@ function PulseAnimation({ size }: any) {
 }
 
 // Variant 3: Horizontal Bars (Answer Choices Loading)
-function BarsAnimation({ size }: any) {
-  const barWidth = size.bar.width;
-  const barHeight = size.bar.height;
+function BarsAnimation({ size }: SizeProps) {
+  const bar = size.bar ?? { width: 6, height: 40 };
+  const barWidth = bar.width;
+  const barHeight = bar.height;
   const colors = ["#6366F1", "#22D3EE", "#A855F7", "#F59E0B"];
 
   return (
@@ -282,9 +290,14 @@ function BarsAnimation({ size }: any) {
 }
 
 // Variant 4: Orbiting Dots (Score Charging)
-function OrbitAnimation({ size }: any) {
-  const dotSize = size.dot;
-  const containerSize = typeof size.container === "number" ? size.container : parseFloat(size.container) || 440;
+function OrbitAnimation({ size }: SizeProps) {
+  const dotSize = size.dot ?? 12;
+  const containerSize =
+    typeof size.container === "number"
+      ? size.container
+      : typeof size.container === "string"
+        ? parseFloat(size.container) || 440
+        : 440;
   const orbitRadius = containerSize * 0.35;
   const colors = ["#6366F1", "#22D3EE", "#F59E0B"];
 
@@ -342,9 +355,10 @@ function OrbitAnimation({ size }: any) {
 }
 
 // Variant 5: Wave Animation (Soundwave/Pulse)
-function WaveAnimation({ size }: any) {
-  const barWidth = size.bar.width;
-  const maxHeight = size.bar.height;
+function WaveAnimation({ size }: SizeProps) {
+  const bar = size.bar ?? { width: 6, height: 40 };
+  const barWidth = bar.width;
+  const maxHeight = bar.height;
   const bars = 7;
   const colors = ["#6366F1", "#22D3EE", "#A855F7"];
 

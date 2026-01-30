@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
     let io;
     try {
       io = getSocketServer();
-    } catch (err: any) {
-      console.error("[sessions/start] Socket.io server not available:", err.message);
+    } catch (err: unknown) {
+      console.error("[sessions/start] Socket.io server not available:", err instanceof Error ? err.message : err);
       return NextResponse.json(
         { error: "Real-time server not available. Please try again." },
         { status: 503 }
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
     console.log(`[sessions/start] Creating Redis session`);
     try {
       await createSession(sessionId, triviaSession);
-    } catch (err: any) {
-      console.error("[sessions/start] Failed to create Redis session:", err.message);
+    } catch (err: unknown) {
+      console.error("[sessions/start] Failed to create Redis session:", err instanceof Error ? err.message : err);
       return NextResponse.json(
         { error: "Failed to create game session. Redis may be unavailable." },
         { status: 503 }
@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
     let sessionCode;
     try {
       sessionCode = await createSessionCode(sessionId, 60 * 60);
-    } catch (err: any) {
-      console.error("[sessions/start] Failed to create session code:", err.message);
+    } catch (err: unknown) {
+      console.error("[sessions/start] Failed to create session code:", err instanceof Error ? err.message : err);
       return NextResponse.json(
         { error: "Failed to generate session code. Redis may be unavailable." },
         { status: 503 }
@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
     let redis;
     try {
       redis = await redisPromise;
-    } catch (err: any) {
-      console.error("[sessions/start] Failed to get Redis client:", err.message);
+    } catch (err: unknown) {
+      console.error("[sessions/start] Failed to get Redis client:", err instanceof Error ? err.message : err);
       return NextResponse.json(
         { error: "Redis connection unavailable. Please try again." },
         { status: 503 }
@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
     
     try {
       await redis.set(gameStateKey(sessionId), JSON.stringify(initialGameState));
-    } catch (err: any) {
-      console.error("[sessions/start] Failed to set game state:", err.message);
+    } catch (err: unknown) {
+      console.error("[sessions/start] Failed to set game state:", err instanceof Error ? err.message : err);
       return NextResponse.json(
         { error: "Failed to initialize game state. Redis may be unavailable." },
         { status: 503 }
@@ -175,8 +175,8 @@ export async function POST(request: NextRequest) {
           });
         }
       }
-    } catch (err: any) {
-      console.error("[sessions/start] Failed to store questions:", err.message);
+    } catch (err: unknown) {
+      console.error("[sessions/start] Failed to store questions:", err instanceof Error ? err.message : err);
       return NextResponse.json(
         { error: "Failed to store questions. Redis may be unavailable." },
         { status: 503 }
@@ -190,8 +190,8 @@ export async function POST(request: NextRequest) {
         hostId: session.user.id,
         questionCount: presentation.questions.length,
       });
-    } catch (err: any) {
-      console.error("[sessions/start] Failed to emit event (non-critical):", err.message);
+    } catch (err: unknown) {
+      console.error("[sessions/start] Failed to emit event (non-critical):", err instanceof Error ? err.message : err);
       // Don't fail the request if emit fails - session is still created
     }
 
@@ -203,11 +203,11 @@ export async function POST(request: NextRequest) {
       message: "Game session created successfully",
       joinUrl: `/join/${sessionCode}`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[sessions/start] Unexpected error:", error);
-    console.error("[sessions/start] Error stack:", error.stack);
+    console.error("[sessions/start] Error stack:", error instanceof Error ? error.stack : "");
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
     );
   }

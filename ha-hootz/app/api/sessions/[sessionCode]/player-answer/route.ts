@@ -37,10 +37,10 @@ export async function GET(
       success: true,
       answer: answer || null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching player answer:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
     );
   }

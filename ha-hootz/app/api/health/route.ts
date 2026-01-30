@@ -18,11 +18,11 @@ export async function GET() {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
       {
         status: "error",
-        message: error?.message || "Unknown error",
+        message: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString(),
       },
       { status: 500 }

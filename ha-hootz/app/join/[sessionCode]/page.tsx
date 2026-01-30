@@ -71,7 +71,7 @@ export default function JoinPage() {
 
       setIsValidSession(true);
       setSessionCode(code);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error validating session:", err);
       setError("Failed to validate session. Please try again.");
       setIsValidSession(false);
@@ -134,7 +134,7 @@ export default function JoinPage() {
       setValidatedNickname(nickname.trim());
       setShowAvatarModal(true);
       setSubmitting(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error joining game:", err);
       setError("Failed to join game. Please try again.");
       setSubmitting(false);

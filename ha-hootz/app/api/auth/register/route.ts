@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
         token: verificationToken,
         name: name || undefined,
       });
-    } catch (tokenError: any) {
+    } catch (tokenError: unknown) {
       // Log error but don't fail registration
       // User can request a new verification email later
       console.error("Error creating verification email:", tokenError);

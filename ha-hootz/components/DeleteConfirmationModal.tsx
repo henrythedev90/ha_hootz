@@ -34,7 +34,7 @@ export default function DeleteConfirmationModal({
         </p>
         {playerMode ? null : (
           <p className="text-lg font-semibold text-text-light mb-4">
-            "{title}"
+            &quot;{title}&quot;
           </p>
         )}
         {countdown !== undefined && countdown > 0 && (
@@ -45,7 +45,7 @@ export default function DeleteConfirmationModal({
             <p className="text-xs text-text-light/70">
               Game will start automatically in{" "}
               <span className="font-bold text-cyan">{countdown}</span>{" "}
-              {countdown === 1 ? "second" : "seconds"} if you don't cancel.
+              {countdown === 1 ? "second" : "seconds"} if you don&apos;t cancel.
             </p>
           </div>
         )}

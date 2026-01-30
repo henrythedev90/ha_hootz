@@ -126,7 +126,7 @@ app
     });
 
     // Store io globally for access in API routes
-    (global as any).io = io;
+    (global as typeof globalThis & { io?: typeof io }).io = io;
     
     // Log Socket.io connection attempts for debugging
     io.engine.on("connection_error", (err) => {
@@ -167,8 +167,11 @@ app
         );
         await Promise.race([initSocket(io), timeoutPromise]);
         console.log("✅ Socket.io initialized with Redis adapter");
-      } catch (err: any) {
-        console.error("❌ Error initializing Socket.io:", err?.message || err);
+      } catch (err: unknown) {
+        console.error(
+          "❌ Error initializing Socket.io:",
+          err instanceof Error ? err.message : String(err)
+        );
         // Continue starting server even if Socket.io/Redis fails
         // This allows the app to be accessible for debugging
         console.warn("⚠️  Server will continue without Socket.io/Redis support");
@@ -177,33 +180,44 @@ app
       }
     };
     
-    // Start the server FIRST - this is critical for Fly.io health checks
+    // Start the server FIRST - this is critical for Fly.io health checks and TLS validation
     // CRITICAL: Must bind to 0.0.0.0 for Fly.io to route traffic
+    // CRITICAL: Server must listen BEFORE Socket.io initialization for health checks
     console.log(`🔧 Binding server to ${HOST}:${PORT}...`);
     
-    httpServer
-      .once("error", (err) => {
-        console.error("❌ HTTP Server error:", err);
-        console.error("❌ Server failed to bind - Fly.io cannot route traffic");
-        console.error(`❌ Attempted to bind to: ${HOST}:${PORT}`);
-        process.exit(1);
-      })
-      .listen(PORT, HOST, () => {
-        const address = httpServer.address();
-        console.log(`✅ Server listening on http://${HOST}:${PORT}`);
-        if (address && typeof address === 'object') {
-          console.log(`   Bound to: ${address.address}:${address.port}`);
-          // Verify the binding is correct
-          if (address.address !== "0.0.0.0") {
-            console.error(`❌ WARNING: Server bound to ${address.address} but Fly.io requires 0.0.0.0`);
-          } else {
-            console.log(`✅ Binding verified: ${address.address} is correct for Fly.io`);
-          }
+    // Bind server immediately - don't wait for anything else
+    httpServer.listen(PORT, HOST, () => {
+      const address = httpServer.address();
+      console.log(`✅ Server listening on http://${HOST}:${PORT}`);
+      if (address && typeof address === 'object') {
+        console.log(`   Bound to: ${address.address}:${address.port}`);
+        // Verify the binding is correct
+        if (address.address !== "0.0.0.0" && address.address !== "::") {
+          console.error(`❌ WARNING: Server bound to ${address.address} but Fly.io requires 0.0.0.0`);
+          process.exit(1);
+        } else {
+          console.log(`✅ Binding verified: ${address.address} is correct for Fly.io`);
         }
-        console.log(`> Socket.io available at http://${HOST}:${PORT}/api/socket`);
-        console.log("✅ Server is ready to accept connections");
-        console.log("✅ Fly.io proxy can now route traffic to this server");
-      });
+        // Log port explicitly for Fly.io validation
+        console.log(`✅ Fly.io internal_port mapping: ${address.port} -> 80/443`);
+      }
+      console.log(`> Socket.io available at http://${HOST}:${PORT}/api/socket`);
+      console.log(`> Health check available at http://${HOST}:${PORT}/api/health`);
+      console.log("✅ Server is ready to accept connections");
+      console.log("✅ Fly.io proxy can now route traffic to this server");
+      console.log("✅ TLS certificate validation can proceed");
+    });
+    
+    // Handle binding errors
+    httpServer.once("error", (err: unknown) => {
+      console.error("❌ HTTP Server error:", err);
+      console.error("❌ Server failed to bind - Fly.io cannot route traffic");
+      console.error(`❌ Attempted to bind to: ${HOST}:${PORT}`);
+      if (err instanceof Error && "code" in err && err.code === "EADDRINUSE") {
+        console.error(`❌ Port ${PORT} is already in use`);
+      }
+      process.exit(1);
+    });
 
     // Initialize Socket.io in the background AFTER server starts listening
     // This ensures the server is ready for health checks even if Socket.io fails

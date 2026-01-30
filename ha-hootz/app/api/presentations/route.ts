@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getPresentationsCollection } from "@/lib/db";
-import { Presentation } from "@/types";
-import { ObjectId } from "mongodb";
+import type { Presentation } from "@/types";
+import type { WithId } from "mongodb";
 
 // GET all presentations for the current user
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getSession();
 
@@ -19,20 +19,22 @@ export async function GET(request: NextRequest) {
       .toArray();
 
     // Convert MongoDB _id to id and remove _id
-    const formattedPresentations = presentations.map((pres: any) => {
-      const { _id, ...rest } = pres;
-      return {
-        ...rest,
-        id: _id.toString(),
-      };
-    });
+    const formattedPresentations = presentations.map(
+      (pres: WithId<Record<string, unknown>>) => {
+        const { _id, ...rest } = pres;
+        return {
+          ...rest,
+          id: _id.toString(),
+        };
+      },
+    );
 
     return NextResponse.json(formattedPresentations);
   } catch (error) {
     console.error("Error fetching presentations:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -73,13 +75,13 @@ export async function POST(request: NextRequest) {
         ...presentation,
         id: result.insertedId.toString(),
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Error creating presentation:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

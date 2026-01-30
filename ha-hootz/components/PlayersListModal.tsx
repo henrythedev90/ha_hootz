@@ -65,7 +65,7 @@ export default function PlayersListModal({
       return;
     }
 
-    const fetchPlayers = async () => {
+    const _fetchPlayers = async () => {
       try {
         const response = await fetch(`/api/sessions/${sessionCode}/players`);
         const data = await response.json();
@@ -74,9 +74,9 @@ export default function PlayersListModal({
         } else {
           setError(data.error || "Failed to fetch players");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching players:", err);
-        setError(err.message || "Failed to fetch players");
+        setError(err instanceof Error ? err.message : "Failed to fetch players");
       } finally {
         setLoading(false);
       }
@@ -402,7 +402,7 @@ export default function PlayersListModal({
                                 fill
                                 className="object-cover"
                                 unoptimized
-                                onError={(e) => {
+                                onError={(_e) => {
                                   // Fallback to initial if image fails to load
                                   if (process.env.NODE_ENV === "development") {
                                     console.warn(

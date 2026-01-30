@@ -41,7 +41,7 @@ export async function GET(
       qrCode: qrCodeDataUrl,
       joinUrl,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error generating QR code:", error);
     return NextResponse.json(
       { error: "Failed to generate QR code" },

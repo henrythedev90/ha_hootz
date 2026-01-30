@@ -8,7 +8,6 @@ import { getAllPresentations, deletePresentation } from "@/lib/storage";
 import PresentationCard from "@/components/PresentationCard";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import Loading from "@/components/Loading";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 
@@ -37,7 +36,8 @@ export default function Home() {
     hasLoadedRef.current = true;
 
     loadPresentations();
-  }, [session, status]); // Removed router from dependencies - it's stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadPresentations and router are stable; avoid refetch on their identity change
+  }, [session, status]);
 
   const loadPresentations = async () => {
     try {
@@ -45,9 +45,10 @@ export default function Home() {
       setError("");
       const data = await getAllPresentations();
       setPresentations(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to load presentations");
-      if (err.message?.includes("Unauthorized")) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load presentations";
+      setError(message || "Failed to load presentations");
+      if ((message || "").includes("Unauthorized")) {
         router.push("/auth/signin");
       }
     } finally {
@@ -70,8 +71,8 @@ export default function Home() {
       await loadPresentations();
       setDeleteModalOpen(false);
       setPresentationToDelete(null);
-    } catch (err: any) {
-      alert(err.message || "Failed to delete presentation");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to delete presentation");
     } finally {
       setDeleting(false);
     }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getPresentationsCollection } from "@/lib/db";
 import { Presentation } from "@/types";
-import { ObjectId } from "mongodb";
+import { ObjectId, type WithId } from "mongodb";
 
 // GET a single presentation
 export async function GET(
@@ -38,7 +38,7 @@ export async function GET(
       );
     }
 
-    const { _id, ...rest } = presentation as any;
+    const { _id, ...rest } = presentation as WithId<Record<string, unknown>>;
     return NextResponse.json({
       ...rest,
       id: _id.toString(),
@@ -108,7 +108,7 @@ export async function PUT(
       _id: new ObjectId(id),
     });
 
-    const { _id, ...rest } = updated as any;
+    const { _id, ...rest } = updated as WithId<Record<string, unknown>>;
     return NextResponse.json({
       ...rest,
       id: _id.toString(),

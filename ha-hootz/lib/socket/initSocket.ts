@@ -20,7 +20,11 @@ export async function initSocket(io: Server) {
   // Create socket configuration
   // Note: When using rediss://, the Redis client automatically handles TLS
   // Don't manually set TLS config as it conflicts with the protocol detection
-  const createSocketConfig = (): any => {
+  const createSocketConfig = (): {
+    reconnectStrategy: (retries: number) => number | Error;
+    connectTimeout: number;
+    keepAlive: boolean;
+  } => {
     return {
       reconnectStrategy: (retries: number): number | Error => {
         if (retries > 20) {
@@ -106,11 +110,11 @@ export async function initSocket(io: Server) {
           await Promise.race([connectPromise, timeoutPromise]);
           return;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (i === maxRetries - 1) {
           console.error(
             `❌ Failed to connect Redis ${name} after ${maxRetries} attempts:`,
-            err.message
+            err instanceof Error ? err.message : String(err)
           );
           throw err;
         }
@@ -142,7 +146,7 @@ export async function initSocket(io: Server) {
     try {
       if (pub.isOpen) await pub.quit();
       if (sub.isOpen) await sub.quit();
-    } catch (closeErr) {
+    } catch {
       // Ignore close errors
     }
     throw err;

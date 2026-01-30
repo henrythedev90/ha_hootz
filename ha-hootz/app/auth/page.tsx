@@ -27,8 +27,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ToggleSwitch } from "@/components/ui/toggle-switch";
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email address").min(1, "Email is required"),
@@ -164,7 +162,7 @@ function AuthPageContent() {
         router.push("/");
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -192,7 +190,7 @@ function AuthPageContent() {
       } else {
         setError("Failed to resend verification email. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -224,7 +222,7 @@ function AuthPageContent() {
       } else {
         setError(data.error || "Failed to send password reset email. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -266,7 +264,7 @@ function AuthPageContent() {
 
       // Don't auto sign in - user must verify email first
       setLoading(false);
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -731,7 +729,7 @@ function AuthPageContent() {
             </>
           ) : (
             <>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button
                 onClick={toggleMode}
                 className="text-cyan hover:text-cyan/80 transition-colors font-semibold"
@@ -756,14 +754,14 @@ function AuthPageContent() {
           </div>
           <div className="space-y-2">
             <p className="text-lg font-semibold text-text-light">
-              You're one step closer to enjoying Ha-Hootz!
+              You&apos;re one step closer to enjoying Ha-Hootz!
             </p>
             <p className="text-text-light/70">
-              We've sent a verification link to your email address. Please check
+              We&apos;ve sent a verification link to your email address. Please check
               your inbox and click the link to verify your account.
             </p>
             <p className="text-sm text-text-light/60 mt-4">
-              Once verified, you'll be able to sign in and start creating
+              Once verified, you&apos;ll be able to sign in and start creating
               amazing trivia presentations!
             </p>
           </div>
@@ -823,7 +821,7 @@ function AuthPageContent() {
               />
             </div>
             <p className="text-xs text-text-light/60 mt-2">
-              We'll send you a link to reset your password.
+              We&apos;ll send you a link to reset your password.
             </p>
           </div>
           <div className="flex gap-3 pt-2">

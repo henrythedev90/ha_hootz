@@ -18,7 +18,8 @@ const socketSlice = createSlice({
   initialState,
   reducers: {
     setSocket: (state, action: PayloadAction<Socket | null>) => {
-      state.socket = action.payload as any;
+      // Socket has readonly internals; we only store the reference, so assert for Immer draft compatibility
+      state.socket = action.payload as typeof state.socket;
     },
     setConnected: (state, action: PayloadAction<boolean>) => {
       state.connected = action.payload;

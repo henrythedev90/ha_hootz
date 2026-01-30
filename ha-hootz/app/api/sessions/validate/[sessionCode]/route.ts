@@ -94,7 +94,7 @@ export async function GET(
       sessionStatus: session.status,
       hostId: session.hostId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error validating session code:", error);
     return NextResponse.json(
       { valid: false, error: "Internal server error" },

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Presentation } from "@/types";
 import { formatDate } from "@/lib/utils";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Play, Edit, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -27,13 +26,6 @@ export default function PresentationCard({
       );
       return;
     }
-
-    // Start the presentation
-    const scoringConfig = {
-      timeBonusEnabled: presentation.scoringConfig?.timeBonusEnabled ?? false,
-      streakBonusEnabled:
-        presentation.scoringConfig?.streakBonusEnabled ?? false,
-    };
 
     try {
       setStarting(true);
@@ -61,9 +53,9 @@ export default function PresentationCard({
           `Game session started! Session ID: ${data.sessionId}\n\nPlease note the session code.`
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error starting presentation:", error);
-      alert(error.message || "Failed to start presentation. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to start presentation. Please try again.");
     } finally {
       setStarting(false);
     }

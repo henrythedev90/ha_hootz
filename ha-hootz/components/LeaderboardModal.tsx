@@ -118,7 +118,7 @@ export default function LeaderboardModal({
               {isTie ? (
                 <>
                   <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                    It's a Tie!
+                    It&apos;s a Tie!
                   </h3>
                   <p className="text-lg sm:text-xl text-white/90 mb-4">
                     Multiple winners with {winner?.score} points!
@@ -218,7 +218,7 @@ export default function LeaderboardModal({
                           </span>
                           {(player.streak ?? 0) >= firstThreshold && (
                             <span className="text-xs font-semibold text-cyan bg-cyan/20 px-2 py-0.5 rounded-full">
-                              You're on a streak! 🔥 + {player.streak}
+                              You&apos;re on a streak! 🔥 + {player.streak}
                             </span>
                           )}
                         </div>

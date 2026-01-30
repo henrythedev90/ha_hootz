@@ -75,9 +75,9 @@ export default function PresentationEditor() {
           router.push("/");
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error loading presentation:", err);
-      if (err.message?.includes("Unauthorized")) {
+      if (err instanceof Error && err.message?.includes("Unauthorized")) {
         router.push("/auth/signin");
       } else {
         router.push("/");
@@ -96,6 +96,7 @@ export default function PresentationEditor() {
     }
 
     loadPresentation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- router identity stable; loadPresentation from useCallback
   }, [status, session, loadPresentation]);
 
   const handleSave = async () => {
@@ -121,9 +122,9 @@ export default function PresentationEditor() {
 
       // Show success modal instead of redirecting
       setShowSaveSuccessModal(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err?.message || err?.toString() || "Failed to save presentation";
+        err instanceof Error ? err.message : String(err ?? "Failed to save presentation");
       console.error("Error saving presentation:", err);
       alert(errorMessage);
     } finally {
@@ -163,8 +164,8 @@ export default function PresentationEditor() {
       const saved = await savePresentation(updated);
       setPresentation(saved);
       setEditQuestionId(null); // Clear edit mode after saving
-    } catch (err: any) {
-      alert(err.message || "Failed to update question");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to update question");
     }
   };
 
@@ -202,8 +203,8 @@ export default function PresentationEditor() {
       };
       const saved = await savePresentation(updated);
       setPresentation(saved);
-    } catch (err: any) {
-      alert(err.message || "Failed to add question");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to add question");
     }
   };
 
@@ -239,8 +240,8 @@ export default function PresentationEditor() {
       if (editQuestionId === questionId) {
         setEditQuestionId(null);
       }
-    } catch (err: any) {
-      alert(err.message || "Failed to delete question");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to delete question");
     }
   };
 
@@ -307,8 +308,8 @@ export default function PresentationEditor() {
           setSelectedQuestionIndex(selectedQuestionIndex + 1);
         }
       }
-    } catch (err: any) {
-      alert(err.message || "Failed to reorder questions");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to reorder questions");
     }
   };
 
@@ -354,9 +355,9 @@ export default function PresentationEditor() {
           `Game session started! Session ID: ${data.sessionId}\n\nPlease note the session code.`
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error starting presentation:", error);
-      alert(error.message || "Failed to start presentation. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to start presentation. Please try again.");
     } finally {
       setStarting(false);
     }
