@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Modal from "./Modal";
 
 interface EndGameModalProps {
@@ -14,7 +13,7 @@ export default function EndGameModal({
   isOpen,
   onClose,
   onConfirm,
-  sessionCode,
+  sessionCode: _sessionCode,
 }: EndGameModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="End Game" size="md">

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import { motion } from "framer-motion";
 import Loading from "@/components/Loading";
 import CenteredLayout from "@/components/CenteredLayout";
 import PlayersListModal from "@/components/PlayersListModal";
@@ -20,11 +19,6 @@ import {
   setSessionCode,
   setGameState,
   updateGameState,
-  setQuestion,
-  setQuestionIndex,
-  setAnswerRevealed,
-  setCorrectAnswer,
-  setReviewMode,
   resetGameState,
 } from "@/store/slices/gameSlice";
 import {
@@ -36,7 +30,6 @@ import {
   updateStats,
   setTimeRemaining,
   setSessionStatus,
-  setLeaderboard,
   resetHostState,
 } from "@/store/slices/hostSlice";
 import {

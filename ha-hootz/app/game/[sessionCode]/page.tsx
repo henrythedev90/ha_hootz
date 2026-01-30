@@ -641,7 +641,7 @@ export default function GamePage() {
 
     newSocket.on("connect_error", (error) => {
       console.error("[Socket.io Client] Connection error:", error);
-      console.error("[Socket.io Client] Error type:", (error as any).type);
+      console.error("[Socket.io Client] Error type:", (error as Error & { type?: string }).type);
       console.error("[Socket.io Client] Error message:", error.message);
 
       // Provide more specific error messages
@@ -835,7 +835,7 @@ export default function GamePage() {
             </p>
             {hostName && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-3.5">
-                Thanks for playing {hostName}'s game!
+                Thanks for playing {hostName}&apos;s game!
               </p>
             )}
             <div className="space-y-3.5">
@@ -913,7 +913,7 @@ export default function GamePage() {
                 Welcome to Ha-Hootz!
               </motion.h1>
               <p className="text-text-light/70 mb-4.5 text-base">
-                You're all set! We're waiting for{" "}
+                You&apos;re all set! We&apos;re waiting for{" "}
                 {hostName ? (
                   <span className="font-semibold text-cyan">{hostName}</span>
                 ) : (

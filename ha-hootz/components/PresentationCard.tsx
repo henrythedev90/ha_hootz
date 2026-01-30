@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Presentation } from "@/types";
 import { formatDate } from "@/lib/utils";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Play, Edit, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -27,13 +26,6 @@ export default function PresentationCard({
       );
       return;
     }
-
-    // Start the presentation
-    const scoringConfig = {
-      timeBonusEnabled: presentation.scoringConfig?.timeBonusEnabled ?? false,
-      streakBonusEnabled:
-        presentation.scoringConfig?.streakBonusEnabled ?? false,
-    };
 
     try {
       setStarting(true);

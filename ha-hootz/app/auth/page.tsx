@@ -190,7 +190,7 @@ function AuthPageContent() {
       } else {
         setError("Failed to resend verification email. Please try again.");
       }
-    } catch (_err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);

@@ -8,7 +8,6 @@ import { getAllPresentations, deletePresentation } from "@/lib/storage";
 import PresentationCard from "@/components/PresentationCard";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import Loading from "@/components/Loading";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 

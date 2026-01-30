@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 interface LoadingProps {
   message?: string;
@@ -25,13 +25,11 @@ export default function Loading({
   variant,
   size = "medium",
 }: LoadingProps) {
-  // Random loading variant for visual variety (only calculated once per component instance)
-  const randomLoadingVariant = useRef(
+  // Random loading variant for visual variety (computed once per mount via useState initializer to satisfy purity)
+  const [randomLoadingVariant] = useState(() =>
     loadingVariants[Math.floor(Math.random() * loadingVariants.length)],
-  ).current;
-
-  // Use provided variant or fall back to random variant
-  const selectedVariant = variant || randomLoadingVariant;
+  );
+  const selectedVariant = variant ?? randomLoadingVariant;
   const containerClasses = fullScreen
     ? "min-h-screen bg-[#0B1020] flex items-center justify-center"
     : "flex items-center justify-center p-8";
