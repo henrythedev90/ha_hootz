@@ -575,7 +575,7 @@ NEXTAUTH_SECRET=your_generated_secret_here
 NEXTAUTH_URL=http://localhost:3000
 APP_URL=http://localhost:3000
 RESEND_API_KEY=re_your_resend_api_key
-RESEND_FROM_EMAIL=onboarding@resend.dev
+RESEND_FROM_EMAIL=noreply@ha-hootz.com
 ```
 
 Generate a secret:
@@ -989,8 +989,9 @@ ha-hootz/
 | `NEXTAUTH_SECRET` | Secret for JWT signing                    | Yes      |
 | `NEXTAUTH_URL`    | Base URL of your application              | Yes      |
 | `APP_URL`         | Base URL for email links (defaults to NEXTAUTH_URL) | No       |
+| `ADDITIONAL_ORIGINS` | Comma-separated origins for Socket.io CORS (e.g. custom domain + fly.dev) | No       |
 | `RESEND_API_KEY`  | Resend API key for email delivery         | Yes      |
-| `RESEND_FROM_EMAIL` | From email address for emails (defaults to onboarding@resend.dev) | No       |
+| `RESEND_FROM_EMAIL` | From email address for emails (defaults to noreply@ha-hootz.com) | No       |
 
 ## Development
 
