@@ -50,13 +50,20 @@ app
     });
 
     // Initialize Socket.io server
-    // CORS configuration: Allow connections from the app URL
+    // CORS: NEXTAUTH_URL is primary; ADDITIONAL_ORIGINS (comma-separated) for custom domain + fly.dev
     const allowedOrigin = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const additionalOrigins = (process.env.ADDITIONAL_ORIGINS || "")
+      .split(",")
+      .map((o) => o.trim().toLowerCase().replace(/\/$/, ""))
+      .filter(Boolean);
     const isDevelopment = process.env.NODE_ENV !== "production";
-    
+
     console.log(`[Socket.io] Configuring CORS for origin: ${allowedOrigin}`);
+    if (additionalOrigins.length) {
+      console.log(`[Socket.io] Additional allowed origins: ${additionalOrigins.join(", ")}`);
+    }
     console.log(`[Socket.io] Environment: ${isDevelopment ? "development" : "production"}`);
-    
+
     const io = new Server(httpServer, {
       path: "/api/socket",
       addTrailingSlash: false,
@@ -67,7 +74,7 @@ app
             console.log("[Socket.io] Allowing request with no origin");
             return callback(null, true);
           }
-          
+
           // In development, be more lenient - allow localhost variations
           if (isDevelopment) {
             const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
@@ -76,36 +83,42 @@ app
               return callback(null, true);
             }
           }
-          
+
           // Normalize origins (remove trailing slashes, handle protocol variations)
           const normalizeOrigin = (url: string) => {
-            return url.replace(/\/$/, '').toLowerCase();
+            return url.replace(/\/$/, "").toLowerCase();
           };
-          
+
           const normalizedRequestOrigin = normalizeOrigin(origin);
           const normalizedAllowedOrigin = normalizeOrigin(allowedOrigin);
-          
-          // Check exact match
+
+          // Check exact match (primary NEXTAUTH_URL)
           if (normalizedRequestOrigin === normalizedAllowedOrigin) {
             console.log(`[Socket.io] Allowing origin (exact match): ${origin}`);
             return callback(null, true);
           }
-          
+
+          // Check additional origins (e.g. custom domain, fly.dev during migration)
+          if (additionalOrigins.some((o) => normalizeOrigin(o) === normalizedRequestOrigin)) {
+            console.log(`[Socket.io] Allowing origin (additional): ${origin}`);
+            return callback(null, true);
+          }
+
           // Check if it's the same domain (http vs https)
-          const requestDomain = normalizedRequestOrigin.replace(/^https?:\/\//, '');
-          const allowedDomain = normalizedAllowedOrigin.replace(/^https?:\/\//, '');
-          
+          const requestDomain = normalizedRequestOrigin.replace(/^https?:\/\//, "");
+          const allowedDomain = normalizedAllowedOrigin.replace(/^https?:\/\//, "");
+
           if (requestDomain === allowedDomain) {
             console.log(`[Socket.io] Allowing origin (domain match): ${origin}`);
             return callback(null, true);
           }
-          
+
           // In development, allow any origin to help with debugging
           if (isDevelopment) {
             console.log(`[Socket.io] Allowing origin in development mode: ${origin}`);
             return callback(null, true);
           }
-          
+
           // Log blocked origin for debugging
           console.error(`[Socket.io] ❌ CORS blocked origin: ${origin}`);
           console.error(`[Socket.io] ❌ Allowed origin: ${allowedOrigin}`);

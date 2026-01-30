@@ -70,7 +70,13 @@ else
     echo "✅ All required secrets are set"
 fi
 
+# Remind about optional email auth secrets (signup, password reset)
 echo ""
+echo "Optional (for email auth - signup, password reset):"
+echo "  flyctl secrets set RESEND_API_KEY=\"re_xxx\" RESEND_FROM_EMAIL=\"noreply@yourdomain.com\""
+echo "  flyctl secrets set APP_URL=\"https://ha-hootz.fly.dev\"  # or same as NEXTAUTH_URL"
+echo ""
+
 echo "📦 Building and deploying..."
 echo ""
 
