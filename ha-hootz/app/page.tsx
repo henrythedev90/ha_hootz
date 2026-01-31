@@ -36,7 +36,7 @@ export default function Home() {
     hasLoadedRef.current = true;
 
     loadPresentations();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadPresentations and router are stable; avoid refetch on their identity change
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadPresentations and router are stable; avoid refetch on their identity change
   }, [session, status]);
 
   const loadPresentations = async () => {
@@ -46,7 +46,8 @@ export default function Home() {
       const data = await getAllPresentations();
       setPresentations(data);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to load presentations";
+      const message =
+        err instanceof Error ? err.message : "Failed to load presentations";
       setError(message || "Failed to load presentations");
       if ((message || "").includes("Unauthorized")) {
         router.push("/auth/signin");
@@ -72,7 +73,9 @@ export default function Home() {
       setDeleteModalOpen(false);
       setPresentationToDelete(null);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to delete presentation");
+      alert(
+        err instanceof Error ? err.message : "Failed to delete presentation",
+      );
     } finally {
       setDeleting(false);
     }

@@ -13,7 +13,7 @@ interface DeleteConfirmationModalProps {
   playerMode?: boolean;
   countdown?: number;
 }
-
+//Make improvements on this component. Add a second tier to the modal to confirm the deletion. Type in the name of the presentation to confirm the deletion.
 export default function DeleteConfirmationModal({
   isOpen,
   onClose,

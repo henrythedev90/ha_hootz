@@ -53,7 +53,7 @@ export default function JoinPage() {
       if (!response.ok || !data.isValid) {
         setError(
           data.error ||
-            "Invalid or expired session code. Please check and try again."
+            "Invalid or expired session code. Please check and try again.",
         );
         setIsValidSession(false);
         setLoading(false);
@@ -113,7 +113,7 @@ export default function JoinPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ playerName: nickname.trim() }),
-        }
+        },
       );
 
       const checkData = await checkResponse.json();
@@ -148,7 +148,7 @@ export default function JoinPage() {
 
     // Redirect to game page with just the nickname
     router.push(
-      `/game/${sessionCode}?name=${encodeURIComponent(validatedNickname)}`
+      `/game/${sessionCode}?name=${encodeURIComponent(validatedNickname)}`,
     );
   };
 
@@ -192,6 +192,7 @@ export default function JoinPage() {
   }
 
   return (
+    //Make improvements on this page. Must display the title of this presentation in the welcome message.
     <div className="h-screen overflow-hidden bg-deep-navy text-text-light flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
