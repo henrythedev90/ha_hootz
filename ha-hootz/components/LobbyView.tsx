@@ -64,17 +64,17 @@ export default function LobbyView({
   // Fetch QR code for compact display
   useEffect(() => {
     let isMounted = true;
-    
+
     const fetchQRCode = async () => {
       try {
         const response = await fetch(`/api/qr/${sessionCode}`);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch QR code: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         // Only update state if component is still mounted
         if (isMounted) {
           if (data.qrCode) {
@@ -110,6 +110,7 @@ export default function LobbyView({
   }, [sessionCode]);
 
   return (
+    // Need to find a way to display the title of the presentation in the header.
     <div className="bg-[#0B1020] text-[#E5E7EB] flex flex-col h-screen overflow-hidden md:px-50">
       {/* Compact Session Info Header */}
       <div className="px-6 py-4 border-b border-[#6366F1]/10 flex items-center justify-between shrink-0">
@@ -159,12 +160,13 @@ export default function LobbyView({
       {/* Main Content Area - Single Viewport Grid */}
       <div className="flex-[0.8] grid grid-cols-12 gap-6 px-6 py-5 min-h-0 overflow-hidden">
         {/* Left Side - Session Info & Settings */}
-        <div 
-          className="col-span-12 lg:col-span-6 flex flex-col gap-4 min-h-0 lg:pr-6 overflow-hidden"
-        >
-          <div 
+        <div className="col-span-12 lg:col-span-6 flex flex-col gap-4 min-h-0 lg:pr-6 overflow-hidden">
+          <div
             className="lg:border-r h-full flex flex-col gap-4 pr-6 -mr-6 overflow-hidden"
-            style={{ borderRightColor: 'rgba(99, 102, 241, 1)', borderRightWidth: '1px' }}
+            style={{
+              borderRightColor: "rgba(99, 102, 241, 1)",
+              borderRightWidth: "1px",
+            }}
           >
             {/* Session Info Area */}
             <div className="flex-1 flex items-center justify-center px-4 overflow-hidden">
