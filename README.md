@@ -187,15 +187,15 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
 
 ### Key Files for Deployment & Email
 
-| Purpose | File / Path |
-|--------|-------------|
-| Fly config | `ha-hootz/fly.toml` |
-| Docker build | `ha-hootz/Dockerfile` |
-| Deploy helper | `ha-hootz/deploy.sh` |
-| Resend sender | `ha-hootz/lib/send-email-resend.ts` |
-| Email templates | `ha-hootz/lib/email-templates.ts` |
-| Debug Resend | `GET /api/debug/resend` |
-| Custom domain docs | `ha-hootz/CUSTOM_DOMAIN.md` |
+| Purpose                  | File / Path                               |
+| ------------------------ | ----------------------------------------- |
+| Fly config               | `ha-hootz/fly.toml`                       |
+| Docker build             | `ha-hootz/Dockerfile`                     |
+| Deploy helper            | `ha-hootz/deploy.sh`                      |
+| Resend sender            | `ha-hootz/lib/send-email-resend.ts`       |
+| Email templates          | `ha-hootz/lib/email-templates.ts`         |
+| Debug Resend             | `GET /api/debug/resend`                   |
+| Custom domain docs       | `ha-hootz/CUSTOM_DOMAIN.md`               |
 | Resend DNS (Squarespace) | `ha-hootz/docs/RESEND_DNS_SQUARESPACE.md` |
 
 ---
@@ -257,11 +257,13 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
 ### UI/UX Enhancements
 
 - **Loading Component**: Completely redesigned with 5 animation variants (dots, pulse, bars, orbit, wave) and 3 size options (small, medium, large). Features smooth Framer Motion animations with app-themed colors. Reusable across the application for consistent loading states. Supports both full-screen and inline modes. Used throughout the application:
+
   - Players list modal shows animated loading when fetching players
   - Game page shows pulse animation when waiting for host to start question
   - Game in progress state displays animated loading indicator
 
 - **Game Welcome Modal**: Enhanced with smooth Framer Motion entrance animations using spring physics, countdown timer (auto-closes after 5 seconds), and improved visual design matching app theme. Features:
+
   - Staggered content reveals with spring animations
   - Animated CheckCircle icon from lucide-react
   - Countdown display showing "Closing automatically in X seconds"
@@ -269,6 +271,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
   - Improved button effects and hover states
 
 - **Thank You Modal**: Redesigned with modern Framer Motion animations, gradient call-to-action card, and improved visual hierarchy. Features:
+
   - Staggered entrance animations with spring physics
   - Animated celebration emoji with rotation effects
   - ArrowRight and X icons from lucide-react
@@ -277,6 +280,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
   - Smooth transitions and improved button effects
 
 - **Lobby View**: Complete redesign with improved layout and organization:
+
   - Single viewport, compact layout optimized for presentation-ready styling
   - Two-column grid layout with vertical divider between sections
   - Left column: Player preview with scrollable list
@@ -295,12 +299,14 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
   - Responsive padding and spacing throughout
 
 - **Presentation Editor**: Made fully responsive for mobile devices:
+
   - Grid layout stacks on mobile (1 column) and expands on desktop (4 columns)
   - Questions section stacks vertically on mobile, horizontally on desktop
   - Responsive padding adjustments for all screen sizes
   - Desktop layout remains unchanged (lg: breakpoints)
 
 - **Question Navigation Sidebar**: Enhanced with multiple improvements:
+
   - Sticky "Question Bank" heading that stays in place on scroll with backdrop blur
   - Drag-and-drop functionality for reordering questions (HTML5 Drag and Drop API)
   - Visual feedback during drag operations (draggedIndex, dragOverIndex states)
@@ -310,6 +316,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
   - Responsive width adjustments for mobile/desktop
 
 - **Answer Choice Randomization**: Enhanced visual experience for players:
+
   - Host can toggle "Randomize Answer Choices" option in lobby view
   - Each player sees answer options in a unique random order
   - Random border colors from palette: [#6366F1, #22D3EE, #F59E0B, #A855F7]
@@ -319,6 +326,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
   - Randomization setting persists through game state
 
 - **Game Stats Sidebar**: Enhanced player list with visual feedback:
+
   - Players who have submitted answers show their selected avatar (or initial) instead of lightbulb emoji
   - Players who have submitted answers glow with success color (#22C55E)
   - Glow effect matches answer choice styling (shadow-[0_0_30px_rgba(34,197,94,0.3)])
@@ -329,18 +337,21 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
   - Active players with streaks are highlighted during gameplay
 
 - **Winner Display**: Improved mobile experience:
+
   - Increased mobile proportions by ~56% (two 25% increases)
   - Responsive text sizes, padding, and spacing
   - Larger rank badges and improved touch targets
   - Desktop sizes remain unchanged
 
 - **Host Dashboard**: Responsive improvements:
+
   - Compact header with responsive padding and text sizes
   - Grid layout that fits content without scrolling
   - Improved spacing and padding for mobile devices
   - All content accessible without page scrolling
 
 - **Answer Choices Visual Design**: Enhanced with random colors and glow effects:
+
   - Each answer option gets a random color from the palette when question starts
   - Glow effects create visual interest and improve UX
   - Colors regenerate for each new question
@@ -355,6 +366,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
 - **Presentation Card**: Fixed button sizing inconsistencies and improved button dimensions for better usability and visual consistency.
 
 - **Avatar Selection System**: New player avatar selection feature:
+
   - Players select an avatar after entering their nickname via `AvatarSelectionModal`
   - Dark-themed modal with smooth animations and category filtering
   - Avatar selection is required (modal cannot be closed without selection)
@@ -416,6 +428,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
 ### ✅ Host-Created Presentations (MVP)
 
 - **Presentation Management**
+
   - Create and manage trivia game presentations
   - Add multiple-choice questions (4 options required)
   - Edit and delete questions
@@ -429,6 +442,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
   - Start game sessions from saved presentations
 
 - **Game Sessions**
+
   - Start live game sessions from presentations
   - 6-digit session codes for easy player joining
   - QR code generation for quick mobile access
@@ -480,6 +494,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
     - Prevents old game state from appearing in new sessions
 
 - **Player Experience (Mobile-First)**
+
   - **Nickname Entry**: Full-screen form for entering player nickname with validation
   - **Avatar Selection**: After entering nickname, players select an avatar from a curated collection:
     - Dark-themed modal with smooth animations
@@ -512,6 +527,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
     - Question status shows as ended (no timer)
 
 - **User Authentication**
+
   - Secure user registration and login
   - **Email Verification**: New users must verify their email address via magic link before signing in
   - **Forgot Password**: Secure password reset flow via email links
@@ -522,6 +538,7 @@ See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verifi
   - Email delivery via Resend (sent from the app on Fly.io; no worker required)
 
 - **Host Dashboard Features**
+
   - Desktop-first two-column layout (question control on left, live monitoring on right)
   - Real-time player count and answer submission tracking
   - Live answer distribution visualization
@@ -620,6 +637,7 @@ npm install
 ```
 
 3. Set up MongoDB Atlas (see [MONGODB_SETUP.md](./MONGODB_SETUP.md) for detailed instructions):
+
    - Create a MongoDB Atlas account
    - Create a cluster
    - Create a database user
@@ -627,6 +645,7 @@ npm install
    - Get your connection string
 
 4. Set up Redis (see [REDIS_SETUP.md](./REDIS_SETUP.md) for detailed instructions):
+
    - Create a Redis instance (Upstash recommended for serverless)
    - Get your Redis connection URL
    - Redis is used for real-time game session management and Socket.io adapter
@@ -1110,6 +1129,7 @@ npm run test:coverage
 Current test coverage includes:
 
 - **Scoring Logic** (`lib/scoring/calculateScore.test.ts`):
+
   - Time bonus calculations
   - Streak bonus calculations
   - Total score calculations with various configurations
