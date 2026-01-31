@@ -156,6 +156,50 @@ Version 1.0 is fully tested and ready for deployment to production environments 
 
 ---
 
+## Deployment & Production (Implemented)
+
+The following deployment and production features are implemented and documented.
+
+### Fly.io Deployment
+
+- **App**: Deployed as `ha-hootz` on Fly.io (region `iad`); single process runs custom server (`npx tsx server.ts`).
+- **Build**: Dockerfile (Node 20 Alpine, multi-stage); health check at `/api/health`.
+- **Secrets**: All config via Fly secrets (MONGODB_URI, REDIS_URL, NEXTAUTH_SECRET, NEXTAUTH_URL, APP_URL, RESEND_API_KEY, RESEND_FROM_EMAIL).
+- **Redeploy**: From app directory run `fly deploy`; no worker process required for email.
+
+See `ha-hootz/DEPLOY_NOW.md` for step-by-step deploy and `ha-hootz/DEPLOYMENT.md` for full Fly.io guide.
+
+### Custom Domain (www.ha-hootz.com)
+
+- **Domain**: www.ha-hootz.com and ha-hootz.com attached to the Fly app; TLS certificates via Fly.
+- **DNS**: Squarespace DNS — A records for traffic to Fly IPv4; TXT records for ACME DNS-01 when certs are “Awaiting configuration.”
+- **App URL**: NEXTAUTH_URL and APP_URL set to `https://www.ha-hootz.com` so auth, email links, and QR codes use the production URL.
+- **CORS**: Socket.io allows NEXTAUTH_URL plus optional ADDITIONAL_ORIGINS (e.g. ha-hootz.fly.dev, ha-hootz.com).
+
+See `ha-hootz/CUSTOM_DOMAIN.md` for DNS records, TLS troubleshooting, and verification checklist.
+
+### Resend Email (Production)
+
+- **Sending**: Verification and password-reset emails sent from the app via Resend API (`lib/send-email-resend.ts`); no separate email worker required on Fly.io.
+- **From address**: `noreply@ha-hootz.com`; requires ha-hootz.com verified in [Resend → Domains](https://resend.com/domains) with DKIM, SPF, and MX records added in Squarespace.
+- **Debug**: `GET /api/debug/resend` returns safe config (resendApiKeySet, fromEmail, baseUrlForLinks); Fly logs show `[Resend] Sending ...`, `[Resend] OK sent ...`, or `[Resend] API ERROR: ...` for troubleshooting.
+- **Docs**: `ha-hootz/docs/RESEND_TROUBLESHOOTING.md`, `ha-hootz/docs/RESEND_DNS_SQUARESPACE.md` for DNS setup and Resend issues.
+
+### Key Files for Deployment & Email
+
+| Purpose | File / Path |
+|--------|-------------|
+| Fly config | `ha-hootz/fly.toml` |
+| Docker build | `ha-hootz/Dockerfile` |
+| Deploy helper | `ha-hootz/deploy.sh` |
+| Resend sender | `ha-hootz/lib/send-email-resend.ts` |
+| Email templates | `ha-hootz/lib/email-templates.ts` |
+| Debug Resend | `GET /api/debug/resend` |
+| Custom domain docs | `ha-hootz/CUSTOM_DOMAIN.md` |
+| Resend DNS (Squarespace) | `ha-hootz/docs/RESEND_DNS_SQUARESPACE.md` |
+
+---
+
 ## Recent Updates
 
 #### Test Coverage Improvements
@@ -510,18 +554,47 @@ Version 1.0 is fully tested and ready for deployment to production environments 
 
 ## Tech Stack
 
+### Frontend
+
 - **Framework**: Next.js 16 (App Router) with custom server
 - **Language**: TypeScript
-- **Database**: MongoDB Atlas (for persistent data)
-- **Cache/Real-time**: Redis (Upstash compatible, serverless-safe)
-- **WebSocket**: Socket.io with Redis adapter (multi-server support)
-- **State Management**: Redux Toolkit with React-Redux for centralized state management
-- **Authentication**: NextAuth.js v5
+- **UI**: React 19, Radix UI primitives, Framer Motion, Lucide React icons
 - **Styling**: Tailwind CSS v4
-- **Testing**: Jest with React Testing Library, jsdom environment, ts-jest for TypeScript support
-- **Password Hashing**: bcryptjs
-- **QR Code Generation**: qrcode (server-side)
-- **Server Runtime**: tsx for TypeScript server execution
+- **State Management**: Redux Toolkit with React-Redux (game, host, player, socket, UI slices)
+- **Forms**: React Hook Form with Zod validation (@hookform/resolvers)
+
+### Backend & API
+
+- **Runtime**: Node.js 20, tsx for TypeScript server execution
+- **Server**: Custom HTTP server (`server.ts`) for Socket.io integration with Next.js
+- **API Routes**: Next.js App Router route handlers (auth, sessions, presentations, health, QR, debug)
+
+### Data & Real-time
+
+- **Database**: MongoDB Atlas (presentations, hosts/users, auth_tokens, email_jobs)
+- **Cache / Session Store**: Redis (Upstash compatible) for game state, player data, session codes
+- **WebSocket**: Socket.io with Redis adapter for multi-instance support; path `/api/socket`
+- **QR Codes**: qrcode (server-side) for join links
+
+### Auth & Email
+
+- **Authentication**: NextAuth.js v5 (credentials provider, email verification required)
+- **Password**: bcryptjs for hashing; auth tokens hashed with bcrypt
+- **Email**: Resend API for transactional email (verification, password reset)
+  - Sent from the app via `lib/send-email-resend.ts` (no separate worker required on Fly.io)
+  - From address: `noreply@ha-hootz.com` (verify ha-hootz.com in Resend Domains)
+  - Templates: `lib/email-templates.ts`; optional shell worker for retries
+
+### Deployment & Hosting
+
+- **Primary**: Fly.io (Dockerfile, fly.toml; health check `/api/health`)
+- **Custom Domain**: www.ha-hootz.com and ha-hootz.com (Squarespace DNS; TLS via Fly certs, DNS-01 when needed)
+- **Secrets**: Fly secrets for MONGODB_URI, REDIS_URL, NEXTAUTH_SECRET, NEXTAUTH_URL, APP_URL, RESEND_API_KEY, RESEND_FROM_EMAIL, ADDITIONAL_ORIGINS (optional)
+
+### Testing & Quality
+
+- **Testing**: Jest, React Testing Library, jsdom, ts-jest; mocks for Redis, Socket.io, Next router
+- **Linting**: ESLint (eslint-config-next)
 
 ## Getting Started
 

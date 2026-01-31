@@ -1,0 +1,62 @@
+=== HA-HOOTZ SCORING SYSTEM DESIGN ===
+
+BASE SCORING VARIABLES
+
+BASE_SCORE
+  Reference points for one correct answer at reference speed and reference difficulty.
+  Example: 100.
+
+GAME_SPEED_MULTIPLIER
+  Coarse multiplier for game pace. One of: SLOW, MEDIUM, FAST.
+  SLOW   = 0.75
+  MEDIUM = 1.00
+  FAST   = 1.25
+
+QUESTION_DIFFICULTY_MULTIPLIER
+  Coarse multiplier for question difficulty. One of: EASY, MEDIUM, HARD.
+  EASY   = 0.75
+  MEDIUM = 1.00
+  HARD   = 1.25
+
+Constraint: GAME_SPEED_MULTIPLIER × QUESTION_DIFFICULTY_MULTIPLIER ≤ 2.00 so that core score per question never exceeds 2 × BASE_SCORE before additive bonuses.
+
+
+SINGLE MULTIPLICATIVE LAYER
+
+CORE_SCORE = BASE_SCORE × GAME_SPEED_MULTIPLIER × QUESTION_DIFFICULTY_MULTIPLIER
+
+Applied only when the answer is correct. Incorrect answer yields 0 for that question (no multipliers, no time or streak bonus for that question).
+
+
+FINAL SCORE FORMULA (PER QUESTION)
+
+SCORE = CORE_SCORE + TIME_BONUS + STREAK_BONUS
+
+All terms after CORE_SCORE are additive. CORE_SCORE is the only multiplicative term (base × speed × difficulty).
+
+
+ADDITIVE EXTENSIONS
+
+TIME_BONUS
+  Optional. Based on how early the final submission occurs within the question window.
+  Inputs: question start time, question end time (timer expiry), final submission timestamp.
+  Rule: earlier submission within the window yields higher bonus; submission at or after expiry yields 0 time bonus.
+  Suggested shape: linear or simple curve in "time remaining" so that maximum time bonus is bounded (e.g. cap as a fraction of BASE_SCORE so total per-question score stays predictable).
+  When accuracy-focused mode is on: set TIME_BONUS to 0 (or a fixed minimal value) so score is driven by correctness and difficulty/speed only.
+
+STREAK_BONUS
+  Optional. Host-enabled. Additive bonus for consecutive correct answers.
+  Example: after 2 consecutive correct, add STREAK_BONUS_2; after 3, add STREAK_BONUS_3; etc. Each bonus is a fixed additive amount per question (no compounding).
+  Streak resets on first incorrect answer. Only the current question receives its streak bonus; do not retroactively multiply or compound previous scores.
+
+ACCURACY-FOCUSED MODE
+  When enabled: TIME_BONUS is 0 (or minimal). CORE_SCORE and optional STREAK_BONUS still apply. Faster correct answers do not gain extra points; harder and faster-paced games still score higher via multipliers only.
+
+
+BOUNDS AND FAIRNESS
+
+Per-question maximum (before any streak): CORE_SCORE + max(TIME_BONUS). Design TIME_BONUS cap so that this total remains intuitive and bounded (e.g. total per question never exceeds 2.5 × BASE_SCORE or a similar fixed ceiling if desired).
+
+No exponential or compounding multipliers. Only one multiplicative expression: BASE_SCORE × GAME_SPEED_MULTIPLIER × QUESTION_DIFFICULTY_MULTIPLIER. Everything else is additive.
+
+Only the final submission timestamp before the question timer expires is used; answer changes before the bell do not affect score.

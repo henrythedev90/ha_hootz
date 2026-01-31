@@ -1,0 +1,57 @@
+=== PRIMARY FEATURE NAME ===
+
+Quick Quiz
+Game in a Minute
+Trivia in a Snap
+Instant Round
+Olga’s Round
+
+=== FILE-BASED TRIVIA CREATION ===
+
+From Your Deck
+Upload & Play
+Deck to Quiz
+Your Slides, Your Quiz
+From a File
+
+=== PROMPT-BASED TRIVIA CREATION ===
+
+From an Idea
+Topic to Quiz
+Just Type It
+Idea to Round
+Start from a Topic
+
+=== FRIENDLY UI LABELS ===
+
+Primary CTA (file): “Upload slides or images”
+Primary CTA (prompt): “Describe your topic”
+Secondary: “Or type an idea and we’ll build a round”
+Helper: “Olga will turn this into questions”
+Empty state: “Drop a file or type what you want to quiz on”
+Success: “Your round is ready”
+Loading: “Olga is building your questions…”
+Error (retry): “Something went wrong. Try again?”
+Placeholder (prompt): “e.g. space, 90s hits, or your last team offsite”
+
+=== MICROCOPY (SHORT) ===
+
+“Olga turns your stuff into trivia.”
+“Drop a file or tell us the topic—we’ll do the rest.”
+“Your deck. Your topic. Your quiz.”
+“Questions in seconds, not hours.”
+“No prep needed. Just add your idea or file.”
+
+=== MICROCOPY (INLINE HELP) ===
+
+“Upload a PDF, doc, or image. We’ll pull out the good bits and make questions.”
+“Type anything—a theme, a subject, or an event. We’ll suggest questions.”
+“Olga builds the round; you run the game.”
+“Change anything before you start. It’s your round.”
+
+=== OLGA VOICE (ASSISTANT LINES) ===
+
+“Got it. Building your round…”
+“Done. You can edit any question before you launch.”
+“Need more questions? Add another topic or file.”
+“All set. Hit Start when you’re ready.”
