@@ -214,6 +214,7 @@ export default function JoinPage() {
         </div>
 
         {/* Form Card */}
+        {/*This component should be able to have a back button if the user would like to change his/her nickname feature only available for users with an account?? Just an idea.*/}
         <motion.div
           layout
           className="bg-card-bg rounded-2xl p-4 md:p-8 border-2 border-indigo/30 shadow-xl w-full"
